@@ -11,6 +11,8 @@ route('GET', '/public/info', function () {
         'min_app_version' => $s['min_app_version'],
         'latest_app_url' => $s['latest_app_url'],
         'server_time' => now(),
+        // Deployed commit (written by tools/cpanel-deploy.sh): CI checks it to confirm a deploy landed.
+        'commit' => deployed_version()['commit'] ?? null,
     ];
 }, ['public' => true]);
 

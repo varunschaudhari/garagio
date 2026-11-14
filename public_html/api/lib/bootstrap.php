@@ -45,6 +45,7 @@ require __DIR__ . '/notify.php';
 require __DIR__ . '/jobs.php';
 require __DIR__ . '/reminders.php';
 require __DIR__ . '/backup.php';
+require __DIR__ . '/migrations.php';
 
 set_error_handler(static function (int $no, string $msg, string $file, int $line): bool {
     if (!(error_reporting() & $no)) {

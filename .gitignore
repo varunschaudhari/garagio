@@ -29,3 +29,6 @@ mobile/expo-env.d.ts
 
 # Release packages (tools/make-release.mjs)
 dist/
+
+# Server-only deploy settings (tools/cpanel-deploy.sh)
+.deploy.env

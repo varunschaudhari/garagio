@@ -131,11 +131,80 @@ Notifications* → upload the FCM v1 service-account key. Rebuild the APK.
 When you publish a new APK, set **Settings → App → Minimum app version** to force old phones to update, and
 put the APK link in **Link to latest APK**.
 
-## Updating later
+## 9. Automatic deploys from GitHub (optional)
+
+Once the first install (steps 1–7) works, updates can go out from GitHub: automatically to the test site,
+and with one click (plus your approval) to the live site. Nothing is uploaded by hand any more.
+
+**How it works.** GitHub Actions calls the cPanel API → the server pulls the commit into its own copy of the
+repository and runs `.cpanel.yml` → `tools/cpanel-deploy.sh`:
+
+1. backup of the database (kept with the nightly ones),
+2. copy of the committed `public_html` files into the site folder – `api/config.php`, photos and logs are
+   never touched and nothing is deleted,
+3. database changes (`api/cron/migrate.php`),
+4. a note of the commit, which `https://<site>/api/public/info` reports. The workflow waits until the site
+   shows the new commit, so a deploy that did not land fails loudly.
+
+You need cPanel with **Git™ Version Control** and **Manage API Tokens** (most cPanel hosts have both), and
+the host must allow connections to cPanel's port 2083 from outside (almost all do).
+
+### One-time setup in cPanel (repeat for the test site with `-test` names)
+
+1. **Git Version Control → Create**. *Clone a Repository* on; Clone URL
+   `https://github.com/varunschaudhari/garagio.git`; Repository Path
+   `/home/<cpaneluser>/repositories/garagio-live`; Repository Name `garagio-live` → *Create*.
+   Then *Manage* → **Checked-Out Branch** `main` → *Update*.
+   (The repository is public. If you make it private, add the server's SSH key as a read-only
+   **deploy key** on GitHub and use the `git@github.com:…` clone URL.)
+2. **Terminal** (or File Manager → *+ File*) – create `/home/<cpaneluser>/repositories/garagio-live/.deploy.env`:
+
+   ```
+   DEPLOY_PATH=/home/<cpaneluser>/trimurti.foreverstory.in
+   PHP_BIN=/usr/local/bin/ea-php81
+   ```
+
+   `DEPLOY_PATH` is the subdomain's document root, `PHP_BIN` the PHP version from MultiPHP Manager.
+   (The file is git-ignored, so the repository stays "clean" for cPanel.)
+3. Try it by hand once: Git Version Control → *Manage* → **Pull or Deploy** → *Deploy HEAD Commit*.
+   Settings → System → "Deployed version" now shows the commit. If it failed, the deploy log is linked there.
+4. **Manage API Tokens → Create**: name `github-deploy`, expiry 1 year → copy the token (shown only once).
+
+### One-time setup on GitHub
+
+5. Repository → **Settings → Environments** → *New environment* `live` (and `test` for the test site).
+   On `live`, tick **Required reviewers** and add yourself – a live deploy then waits for your approval.
+6. In each environment add these **secrets**:
+
+   | Secret | Value |
+   |---|---|
+   | `CPANEL_HOST` | The server name you open cPanel at, without `https://` and `:2083` (from the hosting welcome e-mail, e.g. `server123.example-host.in`) |
+   | `CPANEL_USER` | Your cPanel username |
+   | `CPANEL_TOKEN` | The token from step 4 |
+   | `CPANEL_REPO_PATH` | `/home/<cpaneluser>/repositories/garagio-live` |
+
+   and one **variable**: `SITE_URL` = `https://trimurti.foreverstory.in` (test: `https://trimurti-test.foreverstory.in`).
+
+### Using it
+
+- Merge a change into `main` → CI runs → when it is green the **test** site updates by itself
+  (skipped quietly while the `test` environment is not set up).
+- **Live**: GitHub → **Actions → Deploy → Run workflow** → branch `main`, target `live` → approve.
+  About 2–3 minutes. Deploy outside shop hours when you can.
+- **Undo**: revert the bad commit on `main` and deploy again. If a database change went wrong, restore the
+  backup the deploy made just before (Settings → Backup, or phpMyAdmin → Import).
+- **Android app**: **Actions → Android APK → Run workflow**. Needs the `EXPO_TOKEN` secret
+  (expo.dev → Account settings → Access tokens) and `npx eas-cli init` run once in `mobile/` and committed.
+
+No Git Version Control or API tokens at your host? Keep updating by hand (below) with the release zip.
+
+## Updating by hand
 
 1. Back up first (Settings → Backup → Back up now).
-2. Upload the changed files over the old ones (never overwrite `api/config.php` or `api/storage/`).
-3. If the release has files in `database/migrations/`, import them in phpMyAdmin in number order.
+2. Upload the changed files over the old ones (never overwrite `api/config.php` or `api/storage/`) – easiest
+   is the site zip from `node tools/make-release.mjs`.
+3. If Settings → System shows **Database updates** pending, run `php api/cron/migrate.php` in cPanel →
+   Terminal (or as a one-time cron job).
 
 ## Troubleshooting
 

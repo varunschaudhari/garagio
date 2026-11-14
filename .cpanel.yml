@@ -1,0 +1,6 @@
+---
+# cPanel Git Version Control runs these tasks when a deployment starts (see tools/cpanel-deploy.sh and
+# docs/DEPLOY.md "Automatic deploys from GitHub"). Settings live in .deploy.env on the server.
+deployment:
+  tasks:
+    - /bin/bash tools/cpanel-deploy.sh

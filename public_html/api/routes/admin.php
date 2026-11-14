@@ -137,6 +137,11 @@ route('GET', '/admin/health', function () {
     $missingTables = array_values(array_diff($expected, $have));
     $hasLabourCol = !$missingTables && (bool) row("SHOW COLUMNS FROM invoice_items LIKE 'job_labour_id'");
     $add('db_schema', !$missingTables && $hasLabourCol ? 'ok' : 'fail', $missingTables ? implode(', ', $missingTables) : ($hasLabourCol ? null : 'invoice_items.job_labour_id'));
+    ensure_migrations_table();
+    $pending = array_map('basename', pending_migrations());
+    $add('db_migrations', $pending ? 'fail' : 'ok', $pending ? implode(', ', $pending) : null);
+    $dv = deployed_version();
+    $add('deployed', 'ok', $dv ? trim(($dv['commit'] ?? '') . ' · ' . ($dv['deployed_at'] ?? ''), ' ·') : null, $dv ? null : 'manual_upload');
 
     $url = (string) config('app_url', '');
     $add('app_url_https', str_starts_with($url, 'https://') ? 'ok' : 'warn', $url ?: null);

@@ -1054,7 +1054,9 @@
       "demo_data": "Demo customers / suppliers",
       "default_passwords": "Users still on the demo password",
       "live_since": "Live since",
-      "gst_registration": "GST registration"
+      "gst_registration": "GST registration",
+      "db_migrations": "Database updates",
+      "deployed": "Deployed version"
     },
     "fix": {
       "php_version": "cPanel → MultiPHP Manager: choose PHP 8.1 or newer.",
@@ -1075,7 +1077,9 @@
       "demo_data": "Remove the demo data with “Go live” below.",
       "default_passwords": "Those users should change their password, or reset it from Users.",
       "live_since": "Use “Go live” below when the trial is over.",
-      "gst_registration": "After registering, enter the GSTIN and turn on “Shop is GST-registered” (Settings → Shop). Until then bills are plain bills without GST."
+      "gst_registration": "After registering, enter the GSTIN and turn on “Shop is GST-registered” (Settings → Shop). Until then bills are plain bills without GST.",
+      "db_migrations": "Back up, then run api/cron/migrate.php (cPanel → Terminal, or let the GitHub deploy do it).",
+      "deployed": ""
     },
     "golive_title": "Go live – remove trial data",
     "golive_intro": "Use this once, when the trial is over. A full backup is taken first.",
@@ -1101,7 +1105,8 @@
       "inside_web": "Inside a website folder (public_html) – anyone could download it",
       "not_writable": "Cannot write to it",
       "cannot_create": "Cannot be created",
-      "not_registered": "Not registered – bills without GST"
+      "not_registered": "Not registered – bills without GST",
+      "manual_upload": "Uploaded by hand"
     }
   }
 }

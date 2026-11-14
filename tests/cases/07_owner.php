@@ -2,12 +2,12 @@
 declare(strict_types=1);
 
 /** Run a cron script with the test config; returns [exit code, output]. */
-function run_cron(string $script): array
+function run_cron(string $script, array $args = []): array
 {
     $root = dirname(__DIR__, 2);
     $env = getenv();
     $env['GM_CONFIG'] = __DIR__ . '/../config.test.php';
-    $proc = proc_open([PHP_BINARY, "$root/public_html/api/cron/$script"], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root, $env, ['bypass_shell' => true]);
+    $proc = proc_open([PHP_BINARY, "$root/public_html/api/cron/$script", ...$args], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root, $env, ['bypass_shell' => true]);
     $out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
     fclose($pipes[1]);
     fclose($pipes[2]);

@@ -36,9 +36,9 @@ pack('site', 'HEAD:public_html');
 pack('database', 'HEAD:database');
 pack('docs', 'HEAD:docs', 'DEPLOY.md', 'GO_LIVE.md', 'USER_GUIDE_MR.md', 'MOBILE_TEST_CHECKLIST.md', 'PRINTER_SETUP.md', 'API.md');
 
-const migrations = git('ls-tree', '--name-only', 'HEAD', 'database/migrations/').split('\n').filter((f) => f.endsWith('.sql'));
+const migrations = git('ls-tree', '--name-only', 'HEAD', 'public_html/api/migrations/').split('\n').filter((f) => f.endsWith('.sql'));
 console.log(`\nNext (see docs/DEPLOY.md):
   1. First install: import schema.sql then seed.sql; extract the site zip inside public_html; create api/config.php.
   2. Update: back up first, extract the site zip over public_html (keep api/config.php and api/storage/).
-${migrations.length ? '     Then import these migrations in order: ' + migrations.join(', ') : '     No database migrations in this release.'}
+${migrations.length ? '     Then run api/cron/migrate.php (applies: ' + migrations.map((m) => m.split('/').pop()).join(', ') + ')' : '     No database migrations in this release.'}
   3. Log in as owner → Settings → System: every line should be green or yellow.`);

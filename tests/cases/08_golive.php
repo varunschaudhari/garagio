@@ -146,6 +146,48 @@ test('billing: thermal receipt for phone printing (80 mm default here, 58 mm, cu
     eq(403, get("/invoices/{$inv['id']}/receipt", 'ramesh')['status']);
 });
 
+test('deploy: migrations run once each, in order; a failure stops; --status lists them', function () {
+    $dir = sys_get_temp_dir() . '/garagio-mig-' . bin2hex(random_bytes(3));
+    mkdir($dir);
+    file_put_contents("$dir/001_add_table.sql", "-- a comment line\nCREATE TABLE mig_test (id INT PRIMARY KEY, note VARCHAR(20));\nINSERT INTO mig_test VALUES (1, 'a;b');\n");
+    file_put_contents("$dir/002_add_row.sql", "INSERT INTO mig_test VALUES (2, 'two');\n");
+    [$code, $out] = run_cron('migrate.php', ["--dir=$dir"]);
+    eq(0, $code, $out);
+    eq(2, (int) tval('SELECT COUNT(*) FROM mig_test'));
+    eq('a;b', tval('SELECT note FROM mig_test WHERE id = 1'), 'a ";" inside a value does not split the statement');
+    [$code, $out] = run_cron('migrate.php', ["--dir=$dir"]);
+    ok($code === 0 && str_contains($out, '0 applied'), 'second run does nothing: ' . $out);
+    file_put_contents("$dir/003_bad.sql", "THIS IS NOT SQL;\n");
+    [$code, $out] = run_cron('migrate.php', ["--dir=$dir"]);
+    eq(1, $code, 'a failing migration fails the deploy');
+    eq(0, (int) tval("SELECT COUNT(*) FROM schema_migrations WHERE name = '003_bad.sql'"), 'not recorded');
+    [, $out] = run_cron('migrate.php', ["--dir=$dir", '--status']);
+    ok(str_contains($out, 'applied  001_add_table.sql') && str_contains($out, 'pending  003_bad.sql'), $out);
+    tdb()->exec('DROP TABLE mig_test');
+    tdb()->exec("DELETE FROM schema_migrations WHERE name IN ('001_add_table.sql', '002_add_row.sql')");
+    $ch = curl_init($GLOBALS['T_BASE'] . '/api/cron/migrate.php');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    eq(403, (int) curl_getinfo($ch, CURLINFO_HTTP_CODE), 'never runs over the web');
+    curl_close($ch);
+});
+
+test('deploy: the site reports the deployed commit; health shows pending migrations and the version', function () {
+    $h = array_column(status(200, get('/admin/health', 'admin'))['checks'], null, 'key');
+    eq('ok', $h['db_migrations']['status'], 'no migrations pending in api/migrations');
+    eq('manual_upload', $h['deployed']['note']);
+    eq(null, status(200, http('GET', '/public/info'))['commit'] ?? null);
+    $file = dirname(__DIR__, 2) . '/public_html/api/storage/deploy.json';
+    file_put_contents($file, json_encode(['commit' => 'abc1234', 'branch' => 'main', 'deployed_at' => '2026-11-14 10:00:00']));
+    try {
+        eq('abc1234', status(200, http('GET', '/public/info'))['commit']);
+        $h = array_column(status(200, get('/admin/health', 'admin'))['checks'], null, 'key');
+        eq('abc1234 · 2026-11-14 10:00:00', $h['deployed']['value']);
+    } finally {
+        @unlink($file);
+    }
+});
+
 test('backups: a folder below public_html (subdomain in public_html/<sub>) is not "outside the web"', function () {
     $base = sys_get_temp_dir() . '/garagio-webcheck-' . bin2hex(random_bytes(3));
     foreach (['public_html/backups', 'home/backups', 'www/x/backups'] as $d) {

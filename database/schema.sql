@@ -577,6 +577,14 @@ CREATE TABLE audit_log (
   CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Database changes after the first release: public_html/api/migrations/NNN_name.sql, applied once each by
+-- api/cron/migrate.php. When adding one, make the same change in this file and list its name below.
+CREATE TABLE schema_migrations (
+  name VARCHAR(190) NOT NULL PRIMARY KEY,
+  applied_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- INSERT INTO schema_migrations (name, applied_at) VALUES ('001_example.sql', NOW());
+
 -- circular references
 ALTER TABLE job_cards
   ADD CONSTRAINT fk_jobs_estimate FOREIGN KEY (approved_estimate_id) REFERENCES estimates(id),

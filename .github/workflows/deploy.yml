@@ -1,0 +1,95 @@
+name: Deploy
+
+# Automatic: when CI passes on main, the TEST site is updated.
+# Live site: Actions → Deploy → "Run workflow" → target: live (only from main).
+# The server pulls the commit through cPanel Git Version Control and runs .cpanel.yml
+# (tools/cpanel-deploy.sh: backup → copy → migrations). Setup: docs/DEPLOY.md "Automatic deploys".
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Which site
+        type: choice
+        options: [test, live]
+        default: test
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'test' }}
+      url: ${{ vars.SITE_URL }}
+    concurrency:
+      group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.target || 'test' }}
+      cancel-in-progress: false
+    env:
+      TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target || 'test' }}
+      BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref_name }}
+      SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
+      CPANEL_USER: ${{ secrets.CPANEL_USER }}
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      CPANEL_REPO_PATH: ${{ secrets.CPANEL_REPO_PATH }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    steps:
+      - name: Check settings
+        run: |
+          missing=""
+          for v in CPANEL_HOST CPANEL_USER CPANEL_TOKEN CPANEL_REPO_PATH SITE_URL; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            if [ "$GITHUB_EVENT_NAME" = "workflow_run" ]; then
+              echo "::notice::Automatic deploy skipped: environment '$TARGET' is not set up yet (missing:$missing)."
+              echo "SKIP=1" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            echo "::error::Environment '$TARGET' needs:$missing - see docs/DEPLOY.md (Automatic deploys)."
+            exit 1
+          fi
+          if [ "$TARGET" = "live" ] && [ "$BRANCH" != "main" ]; then
+            echo "::error::The live site is deployed only from main (this run is on '$BRANCH')."
+            exit 1
+          fi
+          echo "Deploying ${SHA:0:7} ($BRANCH) to $TARGET: $SITE_URL"
+
+      - name: Pull the commit into the server's repository
+        if: env.SKIP != '1'
+        run: |
+          out=$(curl -sS --max-time 180 -H "Authorization: cpanel $CPANEL_USER:$CPANEL_TOKEN" \
+            "https://$CPANEL_HOST:2083/execute/VersionControl/update" \
+            --data-urlencode "repository_root=$CPANEL_REPO_PATH" --data-urlencode "branch=$BRANCH")
+          echo "$out" | jq -e '.status == 1' > /dev/null || { echo "$out" | jq . || echo "$out"; exit 1; }
+
+      - name: Start the deployment (.cpanel.yml)
+        if: env.SKIP != '1'
+        run: |
+          out=$(curl -sS --max-time 60 -H "Authorization: cpanel $CPANEL_USER:$CPANEL_TOKEN" \
+            "https://$CPANEL_HOST:2083/execute/VersionControlDeployment/create" \
+            --data-urlencode "repository_root=$CPANEL_REPO_PATH")
+          echo "$out" | jq -e '.status == 1' > /dev/null || { echo "$out" | jq . || echo "$out"; exit 1; }
+          echo "$out" | jq -r '.data.log_path // empty' | sed 's/^/Deploy log on the server: /'
+
+      - name: Wait until the site runs the new commit
+        if: env.SKIP != '1'
+        run: |
+          for i in $(seq 1 36); do
+            live=$(curl -sS --max-time 10 "$SITE_URL/api/public/info" | jq -r '.commit // empty' || true)
+            if [ -n "$live" ] && [[ "$SHA" == "$live"* ]]; then
+              echo "Live on $TARGET: $live"
+              exit 0
+            fi
+            echo "waiting… site reports '${live:-nothing}'"
+            sleep 10
+          done
+          echo "::error::The site did not switch to ${SHA:0:7} within 6 minutes. Check the deploy log in cPanel → Git Version Control → Manage → Pull or Deploy."
+          exit 1
