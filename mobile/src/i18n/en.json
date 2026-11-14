@@ -415,7 +415,9 @@
     "invalid_state": "Choose a state",
     "zero": "Must not be zero",
     "wrong": "Wrong",
-    "same": "Must be different"
+    "same": "Must be different",
+    "future_date": "Date cannot be in the future",
+    "before_last_bill": "Cannot be earlier than the last bill"
   },
   "mobile": {
     "setup_title": "Connect to your shop",
@@ -1077,6 +1079,11 @@
     "golive_button": "Remove trial data",
     "golive_sure_title": "Remove trial data now?",
     "golive_sure": "This cannot be undone in the app – only by restoring the backup in phpMyAdmin.",
-    "golive_done": "Trial data removed. Backup: {{file}}"
+    "golive_done": "Trial data removed. Backup: {{file}}",
+    "note": {
+      "inside_web": "Inside public_html",
+      "not_writable": "Cannot write to it",
+      "cannot_create": "Cannot be created"
+    }
   }
 }

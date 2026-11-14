@@ -191,11 +191,81 @@ function record_customer_payment(?int $customerId, float $amount, string $mode, 
     return ['payment_id' => $pid, 'allocations' => $allocs, 'unallocated' => $left];
 }
 
+/** Line discounts keyed "part:<job_part_id>" / "labour:<job_labour_id>" / "line:<n>", each 0–100 %. */
+function clean_discounts($raw): array
+{
+    $out = [];
+    $errors = [];
+    foreach (is_array($raw) ? $raw : [] as $k => $v) {
+        $k = (string) $k;
+        if (!preg_match('/^(part|labour|line):\d+$/', $k)) {
+            $errors["discounts.$k"] = 'invalid';
+        } elseif ($v === '' || $v === null) {
+            $out[$k] = 0.0;
+        } elseif (!is_numeric($v)) {
+            $errors["discounts.$k"] = 'not_number';
+        } elseif ((float) $v < 0 || (float) $v > 100) {
+            $errors["discounts.$k"] = 'out_of_range';
+        } else {
+            $out[$k] = (float) $v;
+        }
+    }
+    if ($errors) {
+        fail(422, 'validation_failed', 'Discounts must be between 0 and 100 %', $errors);
+    }
+    return $out;
+}
+
+/**
+ * Money a customer has paid that no bill uses goes to their open bills, oldest bill first. The opening
+ * balance is the oldest due, so unallocated money covers it before anything else. Inside tx().
+ * Called after a bill is finalised or cancelled (a cancel frees the money that paid it).
+ */
+function apply_customer_advance(int $customerId): void
+{
+    $opening = max(0.0, (float) val('SELECT opening_balance FROM customers WHERE id = ? FOR UPDATE', [$customerId]));
+    $payments = rows(
+        'SELECT p.id, p.amount - COALESCE((SELECT SUM(a.amount) FROM payment_allocations a WHERE a.payment_id = p.id), 0) AS free
+         FROM customer_payments p WHERE p.customer_id = ? ORDER BY p.id',
+        [$customerId]
+    );
+    $sources = [];
+    foreach ($payments as $p) {
+        $free = r2((float) $p['free']);
+        $use = r2(min($free, $opening)); // the oldest money pays the opening balance
+        $opening = r2($opening - $use);
+        if ($free - $use > 0.004) {
+            $sources[] = ['id' => (int) $p['id'], 'left' => r2($free - $use)];
+        }
+    }
+    if (!$sources) {
+        return;
+    }
+    $bills = rows("SELECT id, balance FROM invoices WHERE customer_id = ? AND status = 'final' AND balance > 0 ORDER BY invoice_date, id FOR UPDATE", [$customerId]);
+    foreach ($bills as $b) {
+        $due = r2((float) $b['balance']);
+        foreach ($sources as &$src) {
+            if ($due <= 0.004) {
+                break;
+            }
+            $a = r2(min($due, $src['left']));
+            if ($a <= 0.004) {
+                continue;
+            }
+            insert('payment_allocations', ['payment_id' => $src['id'], 'invoice_id' => $b['id'], 'amount' => $a]);
+            $src['left'] = r2($src['left'] - $a);
+            $due = r2($due - $a);
+        }
+        unset($src);
+        refresh_invoice_payments((int) $b['id']);
+    }
+}
+
 function check_discount_rights(array $in): void
 {
     $hasDisc = !empty($in['bill_disc_pct']);
-    foreach ((array) ($in['discounts'] ?? []) as $d) {
-        if ((float) $d > 0) {
+    foreach (clean_discounts($in['discounts'] ?? []) as $d) {
+        if ($d > 0) {
             $hasDisc = true;
         }
     }
@@ -264,7 +334,7 @@ route('POST', '/invoices/preview', function () {
     check_discount_rights($body);
     $in = clean($body, ['job_card_id' => 'int', 'customer_id' => 'int', 'bill_disc_pct' => 'num|min:0|max:100|def:0']);
     $inv = ['inv_type' => !empty($in['job_card_id']) ? 'job' : 'counter', 'job_card_id' => $in['job_card_id'] ?? null];
-    $lines = invoice_source_lines($inv, (array) ($body['items'] ?? []), (array) ($body['discounts'] ?? []));
+    $lines = invoice_source_lines($inv, (array) ($body['items'] ?? []), clean_discounts($body['discounts'] ?? []));
     $gstin = !empty($in['customer_id']) ? val('SELECT gstin FROM customers WHERE id = ?', [$in['customer_id']]) : null;
     if (!$lines) {
         return ['lines' => [], 'totals' => null];
@@ -302,9 +372,17 @@ route('POST', '/invoices', function () {
             fail(409, 'nothing_to_bill', 'Add labour or issue parts before billing');
         }
         $id = tx(function () use ($job, $in, $body) {
+            // Re-check under a row lock: two people may press "Create bill" at the same moment.
+            $current = val('SELECT invoice_id FROM job_cards WHERE id = ? FOR UPDATE', [$job['id']]);
+            if ($current) {
+                if (val('SELECT status FROM invoices WHERE id = ?', [$current]) === 'final') {
+                    fail(409, 'already_billed', 'This job already has a final bill');
+                }
+                return (int) $current;
+            }
             $id = insert('invoices', ['inv_type' => 'job', 'job_card_id' => $job['id'], 'customer_id' => $job['customer_id'], 'status' => 'draft', 'created_by' => uid()]);
             update_row('job_cards', (int) $job['id'], ['invoice_id' => $id]);
-            rebuild_draft($id, [], (array) ($body['discounts'] ?? []), (float) $in['bill_disc_pct']);
+            rebuild_draft($id, [], clean_discounts($body['discounts'] ?? []), (float) $in['bill_disc_pct']);
             job_event((int) $job['id'], 'invoice_draft', ['invoice_id' => $id]);
             return $id;
         });
@@ -348,7 +426,7 @@ route('PUT', '/invoices/{id}', function ($p) {
         if ($inv['inv_type'] === 'counter') {
             update_row('invoices', $id, pick($in, ['customer_id', 'cust_name', 'cust_phone']));
         }
-        $discounts = array_key_exists('discounts', $body) ? (array) $body['discounts'] : null;
+        $discounts = array_key_exists('discounts', $body) ? clean_discounts($body['discounts']) : null;
         $items = $inv['inv_type'] === 'counter' && array_key_exists('items', $body) ? (array) $body['items'] : [];
         rebuild_draft($id, $items, $discounts, array_key_exists('bill_disc_pct', $in) ? (float) ($in['bill_disc_pct'] ?? 0) : null);
     });
@@ -426,6 +504,13 @@ route('POST', '/invoices/{id}/finalize', function ($p) {
         }
 
         $date = $in['invoice_date'] ?? today();
+        if ($date > today()) {
+            fail(422, 'validation_failed', 'The bill date cannot be in the future', ['invoice_date' => 'future_date']);
+        }
+        $lastDate = val("SELECT MAX(invoice_date) FROM invoices WHERE status <> 'draft' AND invoice_no IS NOT NULL");
+        if ($lastDate && $date < $lastDate) {
+            fail(422, 'validation_failed', 'The bill date cannot be earlier than the last bill (' . $lastDate . ')', ['invoice_date' => 'before_last_bill']);
+        }
         $cust = $customerId ? row('SELECT name, phone, gstin, state_code FROM customers WHERE id = ?', [$customerId]) : null;
         $data = [
             'invoice_no' => next_invoice_no($date),
@@ -450,6 +535,9 @@ route('POST', '/invoices/{id}/finalize', function ($p) {
             record_customer_payment($customerId, (float) $pay['amount'], $pay['mode'], $pay['reference'] ?? null, $id);
         }
         refresh_invoice_payments($id);
+        if ($customerId) {
+            apply_customer_advance($customerId);
+        }
         if ((float) $inv['discount_total'] > 0) {
             audit('invoice_discount', 'invoice', $id, null, ['invoice_no' => $data['invoice_no'], 'discount_total' => (float) $inv['discount_total'], 'bill_disc_pct' => (float) $inv['bill_disc_pct']]);
         }
@@ -494,6 +582,9 @@ route('POST', '/invoices/{id}/cancel', function ($p) {
         // Money received stays with the customer as an advance; it no longer pays this bill.
         q('DELETE FROM payment_allocations WHERE invoice_id = ?', [$id]);
         update_row('invoices', $id, ['status' => 'cancelled', 'cancel_reason' => $in['reason'], 'cancelled_by' => uid(), 'cancelled_at' => now(), 'paid_total' => 0, 'balance' => 0]);
+        if ($inv['customer_id']) {
+            apply_customer_advance((int) $inv['customer_id']);
+        }
         if ($inv['job_card_id']) {
             $job = row('SELECT status FROM job_cards WHERE id = ?', [$inv['job_card_id']]);
             update_row('job_cards', (int) $inv['job_card_id'], ['invoice_id' => null, 'status' => 'ready', 'delivered_at' => null]);

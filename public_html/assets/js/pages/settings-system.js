@@ -12,6 +12,7 @@ const STATUS_ICON = { ok: 'circle-check', warn: 'triangle-alert', fail: 'circle-
 const DATETIME_KEYS = ['last_backup', 'cron_reminders_at', 'cron_backup_at'];
 
 const checkValue = (c) => {
+  if (c.note) return t('system.note.' + c.note);
   if (c.value === null || c.value === undefined || c.value === '') return '';
   if (DATETIME_KEYS.includes(c.key)) return datetime(c.value);
   if (c.key === 'live_since') return date(c.value);

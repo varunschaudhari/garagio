@@ -11,7 +11,7 @@ const GO_LIVE_WIPE = [
     'estimate_items', 'estimates', 'job_parts', 'part_request_items', 'part_requests',
     'job_labour', 'job_photos', 'job_cards',
     'purchase_items', 'supplier_payments', 'purchases',
-    'stock_movements', 'stock_counts', 'mechanic_payments',
+    'stock_counts', 'mechanic_payments', // stock_movements: stock_restart_ledger()
     'notifications', 'message_log', 'login_attempts', 'counters',
 ];
 
@@ -56,7 +56,7 @@ route('POST', '/admin/go-live', function () {
 
     // Safety net first: a full backup the owner can restore from phpMyAdmin.
     try {
-        $backup = basename(backup_database());
+        $backup = basename(backup_database(BACKUP_KEEP_FOREVER));
     } catch (Throwable $e) {
         log_error($e);
         fail(500, 'backup_failed', 'Could not take a backup, so nothing was removed. Check the backup folder in config.php.');
@@ -70,16 +70,15 @@ route('POST', '/admin/go-live', function () {
             $removed[$table] = q("DELETE FROM `$table`")->rowCount();
         }
 
+        // Ledger and balances restart at zero (stock.php owns current_stock)...
+        $had = stock_restart_ledger();
         if ($in['parts'] === 'delete') {
             $removed['parts'] = q('DELETE FROM parts')->rowCount();
-        } else {
-            // The ledger is empty now; zero every balance so ledger and stock agree...
-            $stock = rows('SELECT id, current_stock, avg_cost FROM parts WHERE current_stock > 0 ORDER BY id');
-            q('UPDATE parts SET current_stock = 0');
-            if ($in['parts'] === 'keep') {
-                // ...then post today's quantities back as opening stock at the current average cost.
-                foreach ($stock as $p) {
-                    stock_move((int) $p['id'], (float) $p['current_stock'], 'opening', 'part', (int) $p['id'], (float) $p['avg_cost'], 'Opening stock (go live)');
+        } elseif ($in['parts'] === 'keep') {
+            // ...then today's quantities come back as opening stock at their current average cost.
+            foreach ($had as $partId => [$qty, $avg]) {
+                if ($qty > 0) {
+                    stock_move($partId, $qty, 'opening', 'part', $partId, $avg, 'Opening stock (go live)');
                 }
             }
         }
@@ -123,8 +122,9 @@ function remove_dir_contents(string $dir): void
 
 route('GET', '/admin/health', function () {
     $checks = [];
-    $add = function (string $key, string $status, $value = null) use (&$checks) {
-        $checks[] = ['key' => $key, 'status' => $status, 'value' => $value];
+    // value: data shown as-is (versions, dates, counts); note: a code the client translates (system.note.*).
+    $add = function (string $key, string $status, $value = null, ?string $note = null) use (&$checks) {
+        $checks[] = ['key' => $key, 'status' => $status, 'value' => $value, 'note' => $note];
     };
 
     $add('php_version', version_compare(PHP_VERSION, '8.1.0', '>=') ? 'ok' : 'fail', PHP_VERSION);
@@ -150,13 +150,14 @@ route('GET', '/admin/health', function () {
 
     try {
         $dir = backup_dir();
-        $outside = !str_starts_with(realpath($dir) ?: '', realpath(WEB_ROOT) ?: '#');
-        $add('backup_dir', is_writable($dir) && $outside ? 'ok' : ($outside ? 'fail' : 'warn'), $outside ? null : 'inside public_html');
+        $writable = is_writable($dir);
+        $outside = backup_dir_outside_web($dir);
+        $add('backup_dir', !$writable ? 'fail' : ($outside ? 'ok' : 'warn'), null, !$writable ? 'not_writable' : ($outside ? null : 'inside_web'));
         $latest = list_backups()[0] ?? null;
         $age = $latest ? (time() - strtotime($latest['created_at'])) / 3600 : null;
         $add('last_backup', $latest === null ? 'warn' : ($age > 36 ? 'warn' : 'ok'), $latest['created_at'] ?? null);
     } catch (Throwable $e) {
-        $add('backup_dir', 'fail', 'cannot create');
+        $add('backup_dir', 'fail', null, 'cannot_create');
     }
 
     foreach (['cron_reminders_at', 'cron_backup_at'] as $k) {

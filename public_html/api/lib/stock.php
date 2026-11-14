@@ -54,12 +54,12 @@ function stock_move(
     if ($qty > 0 && in_array($mtype, COSTED_INBOUND, true) && $unitCost !== null) {
         $cost = max(0.0, $unitCost);
         $avg = $cur <= 0 ? $cost : (($cur * $avg) + ($qty * $cost)) / ($cur + $qty);
+    } elseif ($qty > 0 && $avg <= 0 && ($fallback = net_cost((float) $part['last_purchase_price'], (float) $part['last_purchase_disc_pct'])) > 0) {
+        // Uncosted stock (count / adjustment) on a part with no average cost yet: value only the
+        // new units at the last purchase price; units already on hand keep their cost of 0.
+        $cost = $fallback;
+        $avg = $cur <= 0 ? $cost : (($cur * $avg) + ($qty * $cost)) / ($cur + $qty);
     } else {
-        if ($qty > 0 && $avg <= 0) {
-            // Uncosted stock found in a count / adjustment on a part that never had a cost:
-            // value it at the last purchase price rather than zero.
-            $avg = net_cost((float) $part['last_purchase_price'], (float) $part['last_purchase_disc_pct']);
-        }
         $cost = $avg;
     }
 
@@ -77,6 +77,25 @@ function stock_move(
         'user_id' => $u['id'] ?? null,
     ]);
     return ['id' => $id, 'balance_after' => $new, 'unit_cost' => round($cost, 4), 'previous' => $cur];
+}
+
+/**
+ * Go-live only: delete the whole stock ledger and set every balance to zero, so ledger and stock
+ * agree before opening stock is posted again with stock_move(). Must run inside tx().
+ * Returns [part_id => [qty, avg_cost]] for the parts that had stock.
+ */
+function stock_restart_ledger(): array
+{
+    if (!db()->inTransaction()) {
+        throw new LogicException('stock_restart_ledger must run inside a transaction');
+    }
+    $had = [];
+    foreach (rows('SELECT id, current_stock, avg_cost FROM parts WHERE current_stock <> 0 ORDER BY id FOR UPDATE') as $p) {
+        $had[(int) $p['id']] = [(float) $p['current_stock'], (float) $p['avg_cost']];
+    }
+    q('DELETE FROM stock_movements');
+    q('UPDATE parts SET current_stock = 0, updated_at = ? WHERE current_stock <> 0', [now()]);
+    return $had;
 }
 
 function fmt_qty(float $q): string

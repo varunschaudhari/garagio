@@ -8,7 +8,9 @@ declare(strict_types=1);
  */
 
 const BACKUP_KEEP = 14;
-const BACKUP_PATTERN = '/^garage-\d{8}-\d{6}\.sql\.gz$/';
+const BACKUP_PATTERN = '/^garage-(golive-)?\d{8}-\d{6}\.sql\.gz$/';
+/** Backups taken before a go-live reset are kept for good (never pruned). */
+const BACKUP_KEEP_FOREVER = 'golive';
 
 function backup_dir(): string
 {
@@ -19,11 +21,24 @@ function backup_dir(): string
     return $dir;
 }
 
-/** Dump every table (structure + data) and return the file path. */
-function backup_database(): string
+/** Is the backup folder outside the website (public_html)? */
+function backup_dir_outside_web(string $dir): bool
+{
+    $real = realpath($dir);
+    $web = realpath(WEB_ROOT);
+    if ($real === false || $web === false) {
+        return false;
+    }
+    $norm = static fn (string $p) => rtrim(str_replace('\\', '/', $p), '/') . '/';
+    $cmp = PHP_OS_FAMILY === 'Windows' ? 'strtolower' : static fn ($x) => $x;
+    return !str_starts_with($cmp($norm($real)), $cmp($norm($web)));
+}
+
+/** Dump every table (structure + data) and return the file path. $tag 'golive' keeps the file forever. */
+function backup_database(string $tag = ''): string
 {
     $dir = backup_dir();
-    $file = $dir . '/garage-' . date('Ymd-His') . '.sql.gz';
+    $file = $dir . '/garage-' . ($tag ? "$tag-" : '') . date('Ymd-His') . '.sql.gz';
     $gz = gzopen($file, 'wb6');
     if (!$gz) {
         throw new RuntimeException("Cannot write $file");
@@ -57,7 +72,7 @@ function backup_database(): string
 /** Remove our own old backup files beyond the newest BACKUP_KEEP. */
 function prune_backups(string $dir): void
 {
-    $files = list_backups();
+    $files = array_values(array_filter(list_backups(), static fn ($f) => !str_contains($f['name'], '-' . BACKUP_KEEP_FOREVER . '-')));
     foreach (array_slice($files, BACKUP_KEEP) as $f) {
         if (preg_match(BACKUP_PATTERN, $f['name'])) {
             @unlink($dir . '/' . $f['name']);
@@ -75,6 +90,7 @@ function list_backups(): array
             $out[] = ['name' => $name, 'size' => filesize("$dir/$name"), 'created_at' => date('Y-m-d H:i:s', filemtime("$dir/$name"))];
         }
     }
-    usort($out, static fn ($a, $b) => strcmp($b['name'], $a['name']));
+    // Newest first by time (names with a tag would not sort by date).
+    usort($out, static fn ($a, $b) => [$b['created_at'], $b['name']] <=> [$a['created_at'], $a['name']]);
     return $out;
 }

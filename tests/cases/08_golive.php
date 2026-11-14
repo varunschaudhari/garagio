@@ -16,12 +16,65 @@ test('admin: health check is owner-only and reports schema, secret and https', f
     ok(in_array($h['status'], ['ok', 'warn', 'fail'], true));
 });
 
-test('stock: a count on a part that never had a cost is valued at its last purchase price', function () {
+test('stock: uncosted stock on a part with no average cost is valued at its last purchase price', function () {
     $p = status(200, post('/parts', ['part_no' => 'NOCOST-1', 'name_en' => 'No cost yet', 'selling_price' => 300, 'last_purchase_price' => 200, 'last_purchase_disc_pct' => 10], 'admin'))['item'];
     eq(0.0, (float) tval('SELECT avg_cost FROM parts WHERE id = ?', [$p['id']]));
     status(200, post("/parts/{$p['id']}/adjust", ['qty' => 4, 'reason' => 'Found on rack'], 'admin'));
     eq(180.0, (float) tval('SELECT avg_cost FROM parts WHERE id = ?', [$p['id']]));
     eq(180.0, (float) tval("SELECT unit_cost FROM stock_movements WHERE part_id = ? AND mtype = 'adjustment'", [$p['id']]));
+    // Units already on hand at cost 0 keep it: only the new units take the fallback price.
+    $q = status(200, post('/parts', ['part_no' => 'NOCOST-2', 'name_en' => 'Zero cost stock', 'selling_price' => 300, 'last_purchase_price' => 200, 'last_purchase_disc_pct' => 10, 'opening_stock' => 10, 'opening_cost' => 0], 'admin'))['item'];
+    status(200, post("/parts/{$q['id']}/adjust", ['qty' => 5, 'reason' => 'Found more'], 'admin'));
+    eq(60.0, (float) tval('SELECT avg_cost FROM parts WHERE id = ?', [$q['id']]), '(10 × 0 + 5 × 180) / 15');
+    eq(900.0, (float) tval('SELECT SUM(qty * unit_cost) FROM stock_movements WHERE part_id = ?', [$q['id']]), 'ledger value = stock value');
+});
+
+test('billing: line discounts must be 0–100 % with known keys', function () {
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 2 ORDER BY id LIMIT 1');
+    $items = [['part_id' => $pid, 'qty' => 1]];
+    $r = post('/invoices', ['items' => $items, 'discounts' => ['line:0' => -50]], 'desk');
+    eq(422, $r['status']);
+    eq('out_of_range', $r['json']['fields']['discounts.line:0']);
+    eq(422, post('/invoices', ['items' => $items, 'discounts' => ['line:0' => 150]], 'admin')['status']);
+    eq('invalid', post('/invoices', ['items' => $items, 'discounts' => ['oops' => 5]], 'admin')['json']['fields']['discounts.oops']);
+});
+
+test('billing: bill date cannot be in the future or before the last bill', function () {
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 2 ORDER BY id LIMIT 1');
+    $inv = status(200, post('/invoices', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'desk'))['item'];
+    $pay = [['mode' => 'cash', 'amount' => $inv['grand_total']]];
+    $r = post("/invoices/{$inv['id']}/finalize", ['payments' => $pay, 'invoice_date' => date('Y-m-d', strtotime('+1 day'))], 'desk');
+    eq('future_date', $r['json']['fields']['invoice_date']);
+    $r = post("/invoices/{$inv['id']}/finalize", ['payments' => $pay, 'invoice_date' => date('Y-m-d', strtotime('-1 day'))], 'desk');
+    eq('before_last_bill', $r['json']['fields']['invoice_date']);
+    eq('final', status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => $pay], 'desk'))['item']['status']);
+});
+
+test('billing: money freed by a cancelled bill pays the customer\'s next credit bill', function () {
+    $c = status(200, post('/customers', ['name' => 'Advance Test', 'phone' => '9011100099'], 'desk'))['item'];
+    status(200, put("/customers/{$c['id']}/credit", ['is_trusted' => true, 'credit_limit' => 0], 'admin'));
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 2 ORDER BY id LIMIT 1');
+    $a = status(200, post('/invoices', ['customer_id' => $c['id'], 'items' => [['part_id' => $pid, 'qty' => 1]]], 'desk'))['item'];
+    $a = status(200, post("/invoices/{$a['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $a['grand_total']]]], 'desk'))['item'];
+    status(200, post("/invoices/{$a['id']}/cancel", ['reason' => 'Wrong part'], 'admin'));
+    $b = status(200, post('/invoices', ['customer_id' => $c['id'], 'items' => [['part_id' => $pid, 'qty' => 1]]], 'desk'))['item'];
+    $b = status(200, post("/invoices/{$b['id']}/finalize", ['payments' => []], 'desk'))['item'];
+    eq('paid', $b['pay_status']);
+    eq(0.0, (float) $b['balance']);
+    eq(0.0, (float) status(200, get("/customers/{$c['id']}", 'desk'))['item']['balance']);
+});
+
+test('backups: the go-live safety backup is never pruned', function () {
+    $dir = sys_get_temp_dir() . '/garagio-test-backups';
+    @mkdir($dir, 0777, true);
+    touch("$dir/garage-golive-20200101-000000.sql.gz", strtotime('2020-01-01'));
+    for ($i = 1; $i <= 16; $i++) {
+        touch(sprintf('%s/garage-202001%02d-000000.sql.gz', $dir, $i + 1), strtotime('2020-01-01') + $i * 86400);
+    }
+    status(200, post('/backups', [], 'admin'));
+    ok(is_file("$dir/garage-golive-20200101-000000.sql.gz"), 'golive backup kept');
+    ok(!is_file("$dir/garage-20200102-000000.sql.gz"), 'oldest normal backup pruned');
+    @unlink("$dir/garage-golive-20200101-000000.sql.gz");
 });
 
 test('admin: go-live reset is guarded (owner, RESET, password)', function () {

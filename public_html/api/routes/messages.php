@@ -9,7 +9,7 @@ route('GET', '/messages/due', function () {
 /* ------------------------------------------------------------------ backups (owner) */
 
 route('GET', '/backups', function () {
-    return ['items' => list_backups(), 'dir_outside_web' => !str_starts_with(realpath(backup_dir()) ?: '', realpath(WEB_ROOT) ?: '#')];
+    return ['items' => list_backups(), 'dir_outside_web' => backup_dir_outside_web(backup_dir())];
 }, ['roles' => [ROLE_OWNER]]);
 
 route('POST', '/backups', function () {
