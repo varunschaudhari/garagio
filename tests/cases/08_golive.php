@@ -64,6 +64,27 @@ test('billing: money freed by a cancelled bill pays the customer\'s next credit 
     eq(0.0, (float) status(200, get("/customers/{$c['id']}", 'desk'))['item']['balance']);
 });
 
+test('security: a mechanic sees bike history only for bikes on their own jobs, without phone or amounts', function () {
+    $ramesh = uid_of('ramesh');
+    $own = (int) tval('SELECT vehicle_id FROM job_cards WHERE mechanic_id = ? ORDER BY id LIMIT 1', [$ramesh]);
+    $other = (int) tval('SELECT id FROM vehicles WHERE id NOT IN (SELECT vehicle_id FROM job_cards WHERE mechanic_id = ?) ORDER BY id LIMIT 1', [$ramesh]);
+    ok($own > 0 && $other > 0, 'test data has both kinds of bike');
+    eq('not_your_job', get("/vehicles/$other/history", 'ramesh')['json']['code']);
+    $h = status(200, get("/vehicles/$own/history", 'ramesh'))['item'];
+    ok(!array_key_exists('customer_phone', $h), 'no customer phone for mechanics');
+    ok($h['jobs'] && !array_key_exists('invoice_total', $h['jobs'][0]), 'no bill amounts for mechanics');
+    ok(array_key_exists('customer_phone', status(200, get("/vehicles/$other/history", 'desk'))['item']), 'front desk still sees the phone');
+});
+
+test('security: CSV cells that look like formulas are neutralised', function () {
+    eq("'=HYPERLINK(\"x\")", csv_safe('=HYPERLINK("x")'));
+    eq("'+91 hack", csv_safe('+91 hack'));
+    eq("'@SUM(A1)", csv_safe('@SUM(A1)'));
+    eq('-50.00', csv_safe('-50.00'), 'negative numbers stay numbers');
+    eq(-50.0, csv_safe(-50.0));
+    eq('Rahul', csv_safe('Rahul'));
+});
+
 test('backups: the go-live safety backup is never pruned', function () {
     $dir = sys_get_temp_dir() . '/garagio-test-backups';
     @mkdir($dir, 0777, true);

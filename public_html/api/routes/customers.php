@@ -196,11 +196,23 @@ route('PUT', '/vehicles/{id}', function ($p) {
 
 route('GET', '/vehicles/{id}/history', function ($p) {
     $v = row('SELECT v.*, c.name AS customer_name, c.phone AS customer_phone FROM vehicles v JOIN customers c ON c.id = v.customer_id WHERE v.id = ?', [(int) $p['id']]) ?? not_found('Vehicle');
+    $mechanic = is_role(ROLE_MECHANIC);
+    // Mechanics see the history of bikes they work on, without the customer's phone or bill amounts.
+    if ($mechanic && !val('SELECT 1 FROM job_cards WHERE vehicle_id = ? AND mechanic_id = ? LIMIT 1', [$v['id'], uid()])) {
+        fail(403, 'not_your_job', 'This bike is not on one of your jobs');
+    }
     $v['jobs'] = rows(
         "SELECT j.id, j.job_no, j.status, j.odometer, j.complaint, j.created_at, j.delivered_at, m.name AS mechanic_name, i.invoice_no, i.grand_total AS invoice_total
          FROM job_cards j LEFT JOIN users m ON m.id = j.mechanic_id LEFT JOIN invoices i ON i.id = j.invoice_id
          WHERE j.vehicle_id = ? ORDER BY j.id DESC",
         [$v['id']]
     );
+    if ($mechanic) {
+        unset($v['customer_phone']);
+        foreach ($v['jobs'] as &$jr) {
+            unset($jr['invoice_total']);
+        }
+        unset($jr);
+    }
     return ['item' => $v];
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC]]);

@@ -69,13 +69,22 @@ function html_response(string $html, int $status = 200): RawResponse
 }
 
 /** Build a CSV download from a header row and data rows. */
+/** Text typed by staff (names, notes) must not run as a formula when the CSV opens in Excel. */
+function csv_safe($v)
+{
+    if (is_string($v) && $v !== '' && !is_numeric($v) && in_array($v[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+        return "'" . $v;
+    }
+    return $v;
+}
+
 function csv_response(string $filename, array $header, array $rows): RawResponse
 {
     $fh = fopen('php://temp', 'r+');
     fwrite($fh, "\xEF\xBB\xBF"); // BOM so Excel opens Marathi text correctly
     fputcsv($fh, $header);
     foreach ($rows as $row) {
-        fputcsv($fh, array_values($row));
+        fputcsv($fh, array_map('csv_safe', array_values($row)));
     }
     rewind($fh);
     $csv = stream_get_contents($fh);
