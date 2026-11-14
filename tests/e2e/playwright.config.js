@@ -34,7 +34,8 @@ export default defineConfig({
   ],
   webServer: {
     command: `"${php}" -S 127.0.0.1:8098 -t "${resolve(root, 'public_html')}" "${resolve(root, 'tools/dev-router.php')}"`,
-    url: 'http://127.0.0.1:8098/api/public/info',
+    // A static file: the API needs garage_e2e, which globalSetup creates only after the server is up.
+    url: 'http://127.0.0.1:8098/index.html',
     reuseExistingServer: false,
     stdout: 'ignore',
     stderr: 'ignore',
