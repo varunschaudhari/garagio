@@ -41,9 +41,9 @@ export function apiUrl(server: Server, path: string, params?: Params): string {
   return `${server.base}/api/index.php?${all.toString()}`;
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = TIMEOUT_MS): Promise<Response> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: ctrl.signal });
   } catch {
@@ -86,6 +86,8 @@ export async function probeServer(input: string): Promise<{ server: Server; info
 interface RequestOpts {
   body?: unknown;
   params?: Params;
+  /** Longer for uploads that the server passes on (e.g. job card reading). */
+  timeoutMs?: number;
 }
 
 export async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
@@ -103,7 +105,7 @@ export async function request<T>(method: string, path: string, opts: RequestOpts
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(opts.body);
   }
-  const res = await fetchWithTimeout(apiUrl(server, path, opts.params), { method, headers, body });
+  const res = await fetchWithTimeout(apiUrl(server, path, opts.params), { method, headers, body }, opts.timeoutMs);
   if (!res.ok) {
     const data = isJson(res) ? ((await res.json().catch(() => null)) as { error?: string; code?: string; fields?: Record<string, unknown> } | null) : null;
     if (res.status === 401 && path !== '/auth/login' && token) {
@@ -120,4 +122,5 @@ export const api = {
   post: <T>(path: string, body: unknown = {}) => request<T>('POST', path, { body }),
   put: <T>(path: string, body: unknown = {}) => request<T>('PUT', path, { body }),
   del: <T>(path: string) => request<T>('DELETE', path),
+  upload: <T>(path: string, body: FormData, timeoutMs = 60000) => request<T>('POST', path, { body, timeoutMs }),
 };

@@ -32,6 +32,13 @@ return [
     // (same site) or the Android app. Use ['*'] only for local development.
     'cors_origins' => [],
 
+    // Reading photos of handwritten paper job cards (New job → "Scan paper job card"), optional.
+    // Create the key in Google AI Studio for a Google Cloud project WITH BILLING ENABLED: on the free
+    // tier Google may use the photos (customer names, phone numbers) to improve its products and people
+    // may read them. Leave empty to switch the feature off.
+    'gemini_api_key' => '',
+    'gemini_model' => 'gemini-3.8-flash',
+
     // Set true to stop sending Expo push notifications (in-app notifications still work).
     'push_disabled' => false,
 ];

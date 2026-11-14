@@ -405,7 +405,10 @@
     "overpaid": "Payment is more than the amount due.",
     "no_phone": "No phone number on this bill.",
     "invoice_no_too_long": "Invoice number is too long; shorten the prefix in Settings.",
-    "backup_failed": "Could not take a backup, so nothing was removed. Check the backup folder in config.php."
+    "backup_failed": "Could not take a backup, so nothing was removed. Check the backup folder in config.php.",
+    "scan_not_configured": "Reading job cards is not set up on the server.",
+    "scan_failed": "Could not read the job card. Try a clearer photo, or type the details.",
+    "scan_limit": "Too many job card scans in the last hour. Try again later."
   },
   "fields": {
     "required": "Required",
@@ -697,7 +700,13 @@
       "parts_unavailable": "Part not available",
       "invoice_draft": "Bill drafted",
       "invoice_final": "Bill finalised"
-    }
+    },
+    "scan_card": "Scan paper job card",
+    "scan_reading": "Reading the job card…",
+    "scan_done": "Filled in from the photo – check everything before saving.",
+    "scan_check": "Look again at: {{fields}}",
+    "scan_hint": "Photograph the handwritten card from straight above, whole card in view, in good light. The form fills in by itself.",
+    "scan_view": "Job card photo"
   },
   "estimates": {
     "title": "Estimate",
@@ -1056,7 +1065,8 @@
       "live_since": "Live since",
       "gst_registration": "GST registration",
       "db_migrations": "Database updates",
-      "deployed": "Deployed version"
+      "deployed": "Deployed version",
+      "job_card_scan": "Job card reading (Gemini)"
     },
     "fix": {
       "php_version": "cPanel → MultiPHP Manager: choose PHP 8.1 or newer.",
@@ -1106,7 +1116,8 @@
       "not_writable": "Cannot write to it",
       "cannot_create": "Cannot be created",
       "not_registered": "Not registered – bills without GST",
-      "manual_upload": "Uploaded by hand"
+      "manual_upload": "Uploaded by hand",
+      "scan_off": "Not set up (optional)"
     }
   }
 }

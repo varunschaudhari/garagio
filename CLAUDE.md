@@ -62,6 +62,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
   `sale_bill()`, which drops GST while setting `gst_registered` is 0 (shop not registered yet; bills `BIL/…`,
   `invoices.gst_registered` keeps each bill's mode). Purchases use `gst_bill` directly.
 - Numbers: `next_job_no()`, `next_estimate_no()`, `next_invoice_no($date)` (locked counter rows).
+- Job card photos → `POST /jobs/scan-card` → `lib/jobcard.php` (Gemini generateContent, key only in config.php,
+  `ai_stub` file in tests). Result only pre-fills New job; `scan_id` on POST /jobs attaches the card photo.
 
 ## Mobile conventions (`mobile/`)
 - Expo SDK 58, RN 0.88, React 19.3, expo-router, TS strict. Install native modules with `npx expo install`.

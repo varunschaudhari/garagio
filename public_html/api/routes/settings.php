@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 route('GET', '/settings', function () {
     $s = settings_all();
+    $s['job_card_scan'] = job_card_scan_enabled() ? '1' : '0'; // server feature, not a stored setting
     return ['settings' => $s, 'states' => GST_STATES];
 }, ['pw' => true]);
 

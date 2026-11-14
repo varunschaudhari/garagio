@@ -18,6 +18,67 @@ test('admin: health check is owner-only and reports schema, secret and https', f
     ok(in_array($h['status'], ['ok', 'warn', 'fail'], true));
 });
 
+/** Upload a tiny image to the job card reader (the canned Gemini answer is tests/fixtures/gemini-jobcard.json). */
+function scan_card(string $as, bool $withPhoto = true): array
+{
+    $file = tempnam(sys_get_temp_dir(), 'gm') . '.png';
+    file_put_contents($file, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+    $ch = curl_init($GLOBALS['T_BASE'] . '/api/jobs/scan-card');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $withPhoto ? ['photo' => new CURLFile($file, 'image/png', 'card.png')] : ['x' => '1'],
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . token($as), 'Accept: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+    ]);
+    $out = (string) curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    @unlink($file);
+    return ['status' => $code, 'json' => json_decode($out, true), 'body' => $out];
+}
+
+test('job card scan: photo of a paper card → cleaned fields, unclear list, no match for a new customer', function () {
+    eq('1', status(200, get('/settings', 'desk'))['settings']['job_card_scan'], 'feature switched on (stub)');
+    eq(403, scan_card('ramesh')['status'], 'mechanics cannot scan');
+    eq('required', scan_card('desk', false)['json']['fields']['photo']);
+    $r = status(200, scan_card('desk'));
+    ok((bool) preg_match('/^[a-f0-9]{24}$/', $r['scan_id']), 'scan id');
+    $f = $r['fields'];
+    eq('सुनील पाटील', $f['customer_name']);
+    eq('9822012345', $f['phone'], 'phone digits only');
+    eq('MH19ZZ9999', $f['reg_no'], 'bike number normalised');
+    eq(23450, $f['odometer']);
+    eq('1/2', $f['fuel_level']);
+    eq(uid_of('ramesh'), $f['mechanic_id'], 'mechanic matched from the list');
+    eq('2026-11-15 18:00:00', $f['promised_at']);
+    eq(['odometer'], $r['unclear'], 'only known field names');
+    eq(null, $r['match']['customer']);
+    ok(job_card_scan_file($r['scan_id']) !== null, 'card photo kept for the new job');
+    $GLOBALS['T_SCAN'] = $r;
+});
+
+test('job card scan: the job made from it keeps the card photo; a second scan finds the customer and bike', function () {
+    $f = $GLOBALS['T_SCAN']['fields'];
+    $job = status(200, post('/jobs', [
+        'customer' => ['name' => $f['customer_name'], 'phone' => $f['phone']],
+        'vehicle' => ['reg_no' => $f['reg_no'], 'make' => $f['make'], 'model' => $f['model']],
+        'odometer' => $f['odometer'], 'fuel_level' => $f['fuel_level'], 'complaint' => $f['complaint'],
+        'mechanic_id' => $f['mechanic_id'], 'scan_id' => $GLOBALS['T_SCAN']['scan_id'],
+    ], 'desk'))['item'];
+    eq(1, count($job['photos']), 'card photo attached');
+    eq(null, job_card_scan_file($GLOBALS['T_SCAN']['scan_id']), 'moved, not copied');
+    eq(200, get("/jobs/{$job['id']}/photos/{$job['photos'][0]['id']}", 'ramesh')['status']);
+
+    $again = status(200, scan_card('desk'));
+    eq($job['customer_id'], $again['match']['customer']['id']);
+    eq($job['vehicle_id'], $again['match']['vehicle_id']);
+    eq($job['job_no'], $again['match']['customer']['open_job']['job_no'], 'warns about the open job');
+    @unlink((string) job_card_scan_file($again['scan_id']));
+
+    $h = array_column(status(200, get('/admin/health', 'admin'))['checks'], null, 'key');
+    eq('ok', $h['job_card_scan']['status']);
+});
+
 test('stock: uncosted stock on a part with no average cost is valued at its last purchase price', function () {
     $p = status(200, post('/parts', ['part_no' => 'NOCOST-1', 'name_en' => 'No cost yet', 'selling_price' => 300, 'last_purchase_price' => 200, 'last_purchase_disc_pct' => 10], 'admin'))['item'];
     eq(0.0, (float) tval('SELECT avg_cost FROM parts WHERE id = ?', [$p['id']]));

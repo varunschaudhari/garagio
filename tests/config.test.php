@@ -15,4 +15,6 @@ return [
     'cors_origins' => [],
     'push_disabled' => true,
     'push_outbox' => sys_get_temp_dir() . '/garagio-test-push.jsonl',
+    // Canned Gemini answer instead of calling Google (job card scan tests).
+    'ai_stub' => __DIR__ . '/fixtures/gemini-jobcard.json',
 ];

@@ -154,12 +154,51 @@ route('POST', '/jobs', function () {
         job_event($id, 'job_created', ['status' => 'pending']);
         return $id;
     });
+    // A job made from a scanned paper card keeps the card photo.
+    $scan = is_string($body['scan_id'] ?? null) ? job_card_scan_file($body['scan_id']) : null;
+    if ($scan) {
+        $dir = photo_dir($jobId);
+        if ((is_dir($dir) || mkdir($dir, 0750, true)) && rename($scan, $dir . '/' . basename($scan))) {
+            insert('job_photos', ['job_card_id' => $jobId, 'path' => $jobId . '/' . basename($scan), 'user_id' => uid()]);
+        }
+    }
     $job = job_row($jobId);
     if ($job['mechanic_id']) {
         notify_users([(int) $job['mechanic_id']], 'job_assigned', 'notify.job_assigned_title', 'notify.job_assigned_body',
             ['job' => $job['job_no'], 'reg' => $job['reg_no'], 'complaint' => mb_substr((string) $job['complaint'], 0, 60)], '#/jobs/' . $jobId);
     }
     return ['item' => job_detail($jobId)];
+}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+
+/* Read a photo of a handwritten paper job card (Gemini) → fields to pre-fill New job. Staff check before saving. */
+route('POST', '/jobs/scan-card', function () {
+    if (!job_card_scan_enabled()) {
+        fail(409, 'scan_not_configured', 'Reading job cards is not set up on this server');
+    }
+    if (job_card_scans_last_hour() >= JOBCARD_SCANS_PER_HOUR) {
+        fail(429, 'scan_limit', 'Too many job card scans in the last hour');
+    }
+    $f = $_FILES['photo'] ?? null;
+    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        fail(422, 'validation_failed', 'Choose a photo', ['photo' => 'required']);
+    }
+    if ($f['size'] > PHOTO_MAX_BYTES) {
+        fail(422, 'validation_failed', 'Photo is too large (max 6 MB)', ['photo' => 'too_long']);
+    }
+    $info = @getimagesize($f['tmp_name']);
+    $ext = match ($info[2] ?? 0) {
+        IMAGETYPE_JPEG => 'jpg',
+        IMAGETYPE_PNG => 'png',
+        IMAGETYPE_WEBP => 'webp',
+        default => null,
+    };
+    if (!$ext) {
+        fail(422, 'validation_failed', 'Only JPEG, PNG or WebP photos', ['photo' => 'invalid']);
+    }
+    $mechanics = rows("SELECT id, name FROM users WHERE role = 'mechanic' AND active = 1 ORDER BY name");
+    $scanId = job_card_store($f['tmp_name'], $ext);
+    $raw = gemini_read_job_card(JOBCARD_SCAN_DIR . "/$scanId.$ext", (string) $info['mime'], $mechanics);
+    return ['scan_id' => $scanId] + job_card_normalize($raw, $mechanics);
 }, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
 
 route('GET', '/jobs/{id}', function ($p) {

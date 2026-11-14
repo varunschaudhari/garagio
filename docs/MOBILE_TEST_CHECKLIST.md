@@ -84,6 +84,9 @@ Tabs: owner Home · Approvals · Jobs · More; inventory Queue · Approvals · S
 front desk Jobs · New job · Customers · Stock · Me; mechanic My jobs · Requests · Stock · Me.
 
 - [ ] Front desk: New job → type a phone or bike number → pick the bike (or create customer + bike) → complaint chips, mechanic, promised time → job opens.
+- [ ] (Gemini key set) **Scan paper job card**: photo of a real handwritten card (Marathi and English) → form fills in within ~15 s;
+      unclear fields listed in yellow; tapping the thumbnail shows the card; an existing customer / bike is picked automatically;
+      after saving, the job shows the card photo. A blurred photo gives a clear "could not read" message, never a wrong save.
 - [ ] Prepare estimate (labour from the rate list, parts from search) → "Send on WhatsApp" opens WhatsApp to the customer with the link.
 - [ ] Customer opens the link on their phone (no login): bilingual page, Approve → job shows Approved. "Call me" notifies desk and owner.
 - [ ] "Approved on call" with a note also approves.

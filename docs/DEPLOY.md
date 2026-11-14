@@ -141,6 +141,33 @@ Notifications* → upload the FCM v1 service-account key. Rebuild the APK.
 When you publish a new APK, set **Settings → App → Minimum app version** to force old phones to update, and
 put the APK link in **Link to latest APK**.
 
+## 8a. Reading handwritten job cards (optional)
+
+Front desk can photograph the paper job card on the phone (**New job → Scan paper job card**); Google's
+Gemini reads the handwriting (Marathi or English) and fills the form. Staff check every field and save.
+The card photo is stored on the job. Without a key the button is simply not shown.
+
+1. Google Cloud: create (or pick) a project and **turn on billing** for it. This matters: on Google's free
+   tier the photos – customer names and phone numbers – may be used to improve Google's products and read
+   by human reviewers. With billing on, Google does not use them for that.
+2. https://aistudio.google.com → **Get API key** → *Create API key* in that billing-enabled project → copy it.
+   (Optional, safer: Google Cloud → APIs & Services → Credentials → the key → restrict it to the
+   *Generative Language API*.)
+3. In `api/config.php` add:
+
+   ```php
+   'gemini_api_key' => 'AIza…your key…',
+   'gemini_model' => 'gemini-3.8-flash',
+   ```
+
+4. Settings → System shows **Job card reading (Gemini)** with the model name. Phones show the scan button
+   after reopening New job.
+
+**Cost:** one photo is roughly 1,500 input and up to ~1,000 output tokens – with `gemini-3.8-flash` about
+one US cent (under ₹1) per card at January 2027 prices; `gemini-3.5-flash-lite` is about a third of that but
+reads messy handwriting less well. The server refuses more than 60 scans an hour as a safety limit.
+Google's prices: https://aistudio.google.com/docs/pricing
+
 ## 9. Automatic deploys from GitHub (optional)
 
 Once the first install (steps 1–7) works, updates can go out from GitHub: automatically to the test site,

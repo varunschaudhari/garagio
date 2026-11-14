@@ -1,10 +1,11 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Bike, Check, Plus, Search, UserPlus } from 'lucide-react-native';
+import { Bike, Camera, Check, Plus, Search, UserPlus, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { api, ApiError } from '@/api/client';
-import { useMechanics, useWorkMutation } from '@/api/queries';
+import { useMechanics, useSettings, useWorkMutation } from '@/api/queries';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Chip, Field, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { money } from '@/format';
@@ -14,6 +15,37 @@ import type { Customer, JobDetail, Lang } from '@/types';
 
 const CHIPS = ['general_service', 'brake', 'starting', 'oil_leak', 'noise', 'clutch', 'electrical', 'puncture', 'pickup', 'chain'] as const;
 const FUEL = ['E', '1/4', '1/2', '3/4', 'F'];
+
+/** What POST /jobs/scan-card returns for a photo of a handwritten paper job card. */
+interface ScanResult {
+  scan_id: string;
+  fields: {
+    customer_name: string | null;
+    phone: string | null;
+    reg_no: string | null;
+    make: string | null;
+    model: string | null;
+    odometer: number | null;
+    fuel_level: string | null;
+    complaint: string | null;
+    mechanic_id: number | null;
+    promised_at: string | null;
+  };
+  unclear: string[];
+  match: { customer: Customer | null; vehicle_id: number | null };
+}
+const SCAN_LABEL: Record<string, string> = {
+  customer_name: 'jobs.customer_name',
+  phone: 'common.phone',
+  reg_no: 'jobs.reg_no',
+  make: 'jobs.make',
+  model: 'jobs.model',
+  odometer: 'jobs.odometer',
+  fuel_level: 'jobs.fuel',
+  complaint: 'jobs.complaint',
+  mechanic: 'jobs.mechanic',
+  promised_at: 'jobs.promised',
+};
 
 function promisedOptions() {
   const d = new Date();
@@ -60,6 +92,8 @@ export default function NewJob() {
   const { c, font } = useTheme();
   const params = useLocalSearchParams<{ customer?: string }>();
   const mechanics = useMechanics();
+  const settings = useSettings();
+  const scanEnabled = settings.data?.job_card_scan === '1';
   const create = useWorkMutation((body: Record<string, unknown>) => api.post<{ item: JobDetail }>('/jobs', body));
 
   const [q, setQ] = useState('');
@@ -79,6 +113,10 @@ export default function NewJob() {
   const [mechanicId, setMechanicId] = useState<number | null>(null);
   const [promised, setPromised] = useState(promisedOptions()[1].value);
   const [errs, setErrs] = useState<Record<string, string>>({});
+  const [scanning, setScanning] = useState(false);
+  const [scan, setScan] = useState<{ id: string; uri: string; unclear: string[] } | null>(null);
+  const [showCard, setShowCard] = useState(false);
+  const [promisedExtra, setPromisedExtra] = useState<string | null>(null);
 
   useEffect(() => {
     if (!params.customer) return;
@@ -114,6 +152,65 @@ export default function NewJob() {
     setComplaint((cur) => (cur.trim() ? `${cur.trim()}, ${text}` : text));
   };
 
+  /** Photo of the handwritten paper card → the server reads it → fill the form; staff check and save. */
+  const scanCard = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) return;
+    const shot = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 });
+    if (shot.canceled || !shot.assets[0]) return;
+    const uri = shot.assets[0].uri;
+    setScanning(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', { uri, name: 'card.jpg', type: 'image/jpeg' } as unknown as Blob);
+      const r = await api.upload<ScanResult>('/jobs/scan-card', fd);
+      const f = r.fields;
+      const cu = r.match.customer;
+      if (cu) {
+        setFound([cu]);
+        setCustomer(cu);
+        setIsNew(false);
+        setQ(cu.phone);
+        setVehicleId(r.match.vehicle_id ?? 'new');
+      } else {
+        setFound([]);
+        setCustomer(null);
+        setIsNew(true);
+        setQ('');
+        setCName(f.customer_name ?? '');
+        setCPhone(f.phone ?? '');
+      }
+      if (!r.match.vehicle_id) {
+        setReg(f.reg_no ?? '');
+        setMake(f.make ?? '');
+        setModel(f.model ?? '');
+      }
+      if (f.odometer !== null) setOdometer(String(f.odometer));
+      if (f.fuel_level) setFuel(f.fuel_level);
+      if (f.complaint) setComplaint(f.complaint);
+      if (f.mechanic_id) setMechanicId(f.mechanic_id);
+      if (f.promised_at) {
+        setPromisedExtra(f.promised_at);
+        setPromised(f.promised_at);
+      }
+      setErrs({});
+      setScan({ id: r.scan_id, uri, unclear: r.unclear });
+      toast(t('jobs.scan_done'));
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const promisedChoices = () => {
+    const base = promisedOptions();
+    if (promisedExtra && !base.some((o) => o.value === promisedExtra)) {
+      base.push({ value: promisedExtra, label: `${promisedExtra.slice(8, 10)}-${promisedExtra.slice(5, 7)} ${promisedExtra.slice(11, 16)}` });
+    }
+    return base;
+  };
+
   const submit = async () => {
     const body: Record<string, unknown> = {
       odometer: odometer || undefined,
@@ -121,6 +218,7 @@ export default function NewJob() {
       complaint,
       mechanic_id: mechanicId ?? undefined,
       promised_at: promised || undefined,
+      scan_id: scan?.id,
     };
     const e: Record<string, string> = {};
     if (isNew) {
@@ -150,6 +248,8 @@ export default function NewJob() {
       setIsNew(false);
       setComplaint('');
       setOdometer('');
+      setScan(null);
+      setPromisedExtra(null);
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) {
         setErrs(Object.fromEntries(Object.entries(err.fields).map(([k, v]) => [k, fieldError(v)])));
@@ -164,6 +264,28 @@ export default function NewJob() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={90}>
       <OfflineBanner />
       <ScrollView contentContainerStyle={{ padding: space[4], gap: space[4], paddingBottom: space[10] }} keyboardShouldPersistTaps="handled">
+        {scanEnabled ? (
+          <Card style={{ gap: space[3] }}>
+            <Button title={scanning ? t('jobs.scan_reading') : t('jobs.scan_card')} icon={Camera} variant="secondary" onPress={scanCard} loading={scanning} needsOnline />
+            {scan ? (
+              <View style={{ flexDirection: 'row', gap: space[3], alignItems: 'flex-start' }}>
+                <Pressable onPress={() => setShowCard(true)} accessibilityRole="imagebutton" accessibilityLabel={t('jobs.scan_view')}>
+                  <Image source={{ uri: scan.uri }} style={[styles.thumb, { borderColor: c.border }]} />
+                </Pressable>
+                <View style={{ flex: 1, gap: space[2] }}>
+                  <Txt size="sm">{t('jobs.scan_done')}</Txt>
+                  {scan.unclear.length ? (
+                    <Banner tone="warning" text={t('jobs.scan_check', { fields: scan.unclear.map((k) => t(SCAN_LABEL[k] ?? k)).join(', ') })} />
+                  ) : null}
+                </View>
+              </View>
+            ) : (
+              <Txt size="sm" muted>
+                {t('jobs.scan_hint')}
+              </Txt>
+            )}
+          </Card>
+        ) : null}
         <Card style={{ gap: space[3] }}>
           <Txt weight="semibold">{t('jobs.lookup_title')}</Txt>
           <View style={[styles.search, { borderColor: errs.lookup ? c.danger : c.borderStrong, backgroundColor: c.bg }]}>
@@ -279,10 +401,16 @@ export default function NewJob() {
           <Txt size="sm" weight="semibold">
             {t('jobs.promised')}
           </Txt>
-          <Chips options={promisedOptions()} value={promised} onChange={setPromised} />
+          <Chips options={promisedChoices()} value={promised} onChange={setPromised} />
         </Card>
         <Button title={t('jobs.create')} icon={Check} onPress={submit} loading={create.isPending} needsOnline />
       </ScrollView>
+      <Modal visible={showCard && !!scan} transparent animationType="fade" onRequestClose={() => setShowCard(false)}>
+        <View style={styles.viewer}>
+          {scan ? <Image source={{ uri: scan.uri }} style={{ flex: 1 }} resizeMode="contain" accessibilityLabel={t('jobs.scan_view')} /> : null}
+          <Button title={t('common.close')} icon={X} variant="secondary" onPress={() => setShowCard(false)} />
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -292,4 +420,6 @@ const styles = StyleSheet.create({
   cust: { borderWidth: 2, borderRadius: radius.card, padding: space[3], gap: space[2] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.chip, paddingHorizontal: space[3], minHeight: 40 },
+  thumb: { width: 72, height: 96, borderRadius: radius.input, borderWidth: 1 },
+  viewer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', padding: space[4], paddingTop: space[10], gap: space[4] },
 });

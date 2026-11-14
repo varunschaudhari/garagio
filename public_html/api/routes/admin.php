@@ -148,6 +148,7 @@ route('GET', '/admin/health', function () {
     $secret = (string) config('jwt_secret', '');
     $add('jwt_secret', strlen($secret) >= 32 && !str_starts_with($secret, 'CHANGE_ME') ? 'ok' : 'fail');
     $add('debug_off', config('debug', false) ? 'warn' : 'ok');
+    $add('job_card_scan', 'ok', job_card_scan_enabled() ? (string) config('gemini_model', GEMINI_DEFAULT_MODEL) : null, job_card_scan_enabled() ? null : 'scan_off');
     $add('cors', in_array('*', (array) config('cors_origins', []), true) ? 'warn' : 'ok');
 
     $storage = API_DIR . '/storage';

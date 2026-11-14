@@ -1,0 +1,19 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "Reading the card…",
+            "thought": true
+          },
+          {
+            "text": "```json\n{\n \"customer_name\": \"सुनील पाटील\",\n \"phone\": \"98220 12345\",\n \"reg_no\": \"mh-19 zz 9999\",\n \"make\": \"Hero\",\n \"model\": \"Splendor\",\n \"odometer\": \"23450\",\n \"fuel_level\": \"1/2\",\n \"complaint\": \"सर्व्हिसिंग, ब्रेक आवाज\",\n \"mechanic\": \"रमेश\",\n \"mechanic_id\": 4,\n \"promised_at\": \"2026-11-15 18:00:00\",\n \"unclear\": [\n  \"odometer\",\n  \"bogus\"\n ]\n}\n```"
+          }
+        ]
+      },
+      "finishReason": "STOP"
+    }
+  ]
+}
