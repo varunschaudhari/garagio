@@ -17,8 +17,7 @@
         "backgroundColor": "#F97316"
       },
       "permissions": ["android.permission.CAMERA", "android.permission.VIBRATE"],
-      "softwareKeyboardLayoutMode": "pan",
-      "edgeToEdgeEnabled": true
+      "softwareKeyboardLayoutMode": "pan"
     },
     "plugins": [
       "expo-router",
