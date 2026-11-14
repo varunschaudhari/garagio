@@ -17,6 +17,10 @@ $GLOBALS['T_CFG'] = require $configPath;
 
 echo "Resetting test database…\n";
 reset_database($GLOBALS['T_CFG']);
+// The seed is for Trimurti Auto, not yet GST-registered. Most billing tests check GST maths, so the test
+// shop is registered (without a GSTIN, so the health check still has something to flag); 08_golive.php
+// switches registration off to test plain bills.
+test_pdo($GLOBALS['T_CFG'])->exec("UPDATE settings SET svalue = '1' WHERE skey = 'gst_registered'");
 
 // Load the API libraries in-process for unit tests of pure functions.
 putenv('GM_CONFIG=' . $configPath);

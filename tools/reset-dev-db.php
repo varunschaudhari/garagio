@@ -12,5 +12,8 @@ if (in_array('--e2e', $argv, true)) {
     $pdo->exec("UPDATE users SET must_change_password = 0 WHERE username <> 'desk'");
     // Owner, stock and desk use English in specs; mechanics stay Marathi to exercise the Marathi UI.
     $pdo->exec("UPDATE users SET language = 'en' WHERE username IN ('admin', 'stock', 'desk')");
+    // Specs check tax invoices: a GST-registered shop (the real seed is not registered yet).
+    $pdo->exec("UPDATE settings SET svalue = '1' WHERE skey = 'gst_registered'");
+    $pdo->exec("UPDATE settings SET svalue = '27ABCDE1234F1Z5' WHERE skey = 'shop_gstin'");
 }
 echo "{$cfg['db']['name']} rebuilt. Log in as admin / garage123\n";

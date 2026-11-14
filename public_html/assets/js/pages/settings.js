@@ -50,6 +50,7 @@ export default async function settingsPage(ctx) {
         ${field({ name: 'shop_phone', label: t('settings.shop_phone'), value: s.shop_phone, type: 'tel' })}
         ${field({ name: 'shop_email', label: t('settings.shop_email'), value: s.shop_email, type: 'email' })}
         ${field({ name: 'shop_gstin', label: t('settings.shop_gstin'), value: s.shop_gstin, placeholder: '27ABCDE1234F1Z5' })}
+        ${field({ name: 'gst_registered', label: t('settings.gst_registered'), type: 'switch', value: s.gst_registered, hint: t('settings.gst_registered_hint'), span2: true })}
         ${field({ name: 'shop_state_code', label: t('settings.shop_state_code'), type: 'select', value: s.shop_state_code, options: Object.entries(states).map(([c, n]) => ({ value: c, label: `${c} · ${n}` })) })}
       `));
     } else if (tab === 'billing') {
@@ -58,7 +59,7 @@ export default async function settingsPage(ctx) {
         ${field({ name: 'default_part_gst_rate', label: t('settings.default_part_gst_rate'), type: 'number', value: s.default_part_gst_rate })}
         ${field({ name: 'labour_gst_rate', label: t('settings.labour_gst_rate'), type: 'number', value: s.labour_gst_rate })}
         ${field({ name: 'labour_sac', label: t('settings.labour_sac'), value: s.labour_sac })}
-        ${field({ name: 'upi_id', label: t('settings.upi_id'), value: s.upi_id, placeholder: 'shopname@upi' })}
+        ${field({ name: 'upi_id', label: t('settings.upi_id'), value: s.upi_id, placeholder: t('settings.upi_placeholder'), hint: t('settings.upi_hint') })}
         ${field({ name: 'receipt_width', label: t('settings.receipt_width'), type: 'select', value: s.receipt_width || '58', options: [{ value: '58', label: t('settings.receipt_58') }, { value: '80', label: t('settings.receipt_80') }] })}
         ${field({ name: 'invoice_terms_en', label: t('settings.invoice_terms_en'), type: 'textarea', value: s.invoice_terms_en, span2: true })}
         ${field({ name: 'invoice_terms_mr', label: t('settings.invoice_terms_mr'), type: 'textarea', value: s.invoice_terms_mr, span2: true })}
@@ -68,6 +69,7 @@ export default async function settingsPage(ctx) {
         ${field({ name: 'job_prefix', label: t('settings.job_prefix'), value: s.job_prefix })}
         ${field({ name: 'estimate_prefix', label: t('settings.estimate_prefix'), value: s.estimate_prefix })}
         ${field({ name: 'invoice_prefix', label: t('settings.invoice_prefix'), value: s.invoice_prefix, hint: t('settings.invoice_preview', { no: invoicePreview() }) })}
+        ${field({ name: 'bill_prefix', label: t('settings.bill_prefix'), value: s.bill_prefix, hint: t('settings.bill_prefix_hint') })}
       `));
     } else if (tab === 'workflow') {
       setHTML(body, settingsForm(html`

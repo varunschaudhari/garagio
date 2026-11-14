@@ -83,7 +83,7 @@ function job_money(array $job): array
             $labour += $l['unit_price'];
         }
     }
-    $current = $lines ? gst_bill($lines, setting('prices_include_gst') === '1', false)['totals']['grand_total'] : 0.0;
+    $current = $lines ? sale_bill($lines)['totals']['grand_total'] : 0.0;
     $approved = $job['approved_estimate_id'] ? (float) val('SELECT grand_total FROM estimates WHERE id = ?', [$job['approved_estimate_id']]) : null;
     $pendingRevision = (bool) val(
         "SELECT COUNT(*) FROM estimates WHERE job_card_id = ? AND status IN ('draft','sent') AND (? IS NULL OR id > ?)",

@@ -166,7 +166,11 @@ route('GET', '/admin/health', function () {
     }
 
     // Bills say "Tax Invoice" and charge GST, so billing without a GSTIN is a real problem, not a reminder.
-    $add('shop_gstin', setting('shop_gstin') ? 'ok' : 'fail', setting('shop_gstin') ?: null);
+    if (!gst_registered()) {
+        $add('gst_registration', 'warn', null, 'not_registered'); // plain bills without GST until registration
+    } else {
+        $add('shop_gstin', setting('shop_gstin') ? 'ok' : 'fail', setting('shop_gstin') ?: null);
+    }
     $add('shop_address', setting('shop_address') && setting('shop_phone') ? 'ok' : 'warn');
     $demo = (int) val('SELECT COUNT(*) FROM customers WHERE ' . DEMO_NAME_SQL) + (int) val('SELECT COUNT(*) FROM suppliers WHERE ' . DEMO_NAME_SQL);
     $add('demo_data', $demo ? 'warn' : 'ok', $demo ?: null);

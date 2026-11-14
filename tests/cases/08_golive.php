@@ -87,22 +87,61 @@ test('security: CSV cells that look like formulas are neutralised', function () 
     eq('Rahul', csv_safe('Rahul'));
 });
 
-test('billing: thermal receipt for phone printing (58 mm default, 80 mm, customer language)', function () {
+test('gst: before registration bills carry no GST, use the BIL series and say "Bill"; purchase GST is cost', function () {
+    status(200, put('/settings', ['gst_registered' => false], 'admin'));
+    $p = trows("SELECT id, selling_price FROM parts WHERE current_stock > 2 AND gst_rate = 18 ORDER BY id LIMIT 1")[0];
+    $pv = status(200, post('/invoices/preview', ['items' => [['part_id' => $p['id'], 'qty' => 1]]], 'desk'));
+    eq(0.0, $pv['totals']['cgst'] + $pv['totals']['sgst'] + $pv['totals']['igst'], 'no GST charged');
+    eq(round((float) $p['selling_price']), $pv['totals']['grand_total'], 'the price is the whole amount');
+
+    $inv = status(200, post('/invoices', ['items' => [['part_id' => $p['id'], 'qty' => 1]]], 'desk'))['item'];
+    $bil = status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk'))['item'];
+    eq('BIL/' . fy_label_test() . '/00001', $bil['invoice_no'], 'own series from 00001');
+    eq(0, (int) $bil['gst_registered']);
+    $rc = get("/invoices/{$bil['id']}/receipt?lang=en", 'desk')['body'];
+    ok(str_contains($rc, '>Bill<') && !str_contains($rc, 'Tax Invoice') && !str_contains($rc, 'CGST'), 'receipt is a plain bill');
+    ok(str_contains($rc, 'GST not charged'), 'receipt says why');
+    $a4 = get("/invoices/{$bil['id']}/html?lang=en", 'desk')['body'];
+    ok(!str_contains($a4, 'Tax Invoice') && !str_contains($a4, 'HSN') && str_contains($a4, 'GST not charged'), 'A4 bill has no tax columns');
+
+    // Purchases: no input-tax credit, so the supplier's GST is part of the stock cost.
+    $pp = trows("SELECT id FROM parts WHERE gst_rate = 18 ORDER BY id LIMIT 1 OFFSET 1")[0];
+    $pur = status(200, post('/purchases', ['supplier_id' => 1, 'bill_no' => 'NOGST-1', 'bill_date' => date('Y-m-d'), 'payment_mode' => 'cash',
+        'items' => [['part_id' => $pp['id'], 'qty' => 1, 'price' => 100]]], 'stock'))['item'];
+    eq(118.0, (float) tval("SELECT unit_cost FROM stock_movements WHERE ref_type = 'purchase' AND ref_id = ?", [$pur['id']]), '100 + 18 % GST');
+
+    $h = array_column(status(200, get('/admin/health', 'admin'))['checks'], null, 'key');
+    eq('not_registered', $h['gst_registration']['note']);
+    ok(!isset($h['shop_gstin']), 'no "missing GSTIN" alarm while not registered');
+
+    // Registration day: GST cannot be turned on without the GSTIN; with it, tax invoices start in the INV series.
+    eq('gstin_required', put('/settings', ['gst_registered' => true], 'admin')['json']['fields']['shop_gstin']);
+    status(200, put('/settings', ['gst_registered' => true, 'shop_gstin' => '27ABCDE1234F1Z5'], 'admin'));
+    $inv2 = status(200, post('/invoices', ['items' => [['part_id' => $p['id'], 'qty' => 1]]], 'desk'))['item'];
+    ok($inv2['cgst'] > 0, 'GST charged again');
+    $tax = status(200, post("/invoices/{$inv2['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv2['grand_total']]]], 'desk'))['item'];
+    ok(str_starts_with($tax['invoice_no'], 'INV/'), 'tax invoice series: ' . $tax['invoice_no']);
+    ok(str_contains(get("/invoices/{$bil['id']}/receipt?lang=en", 'desk')['body'], '>Bill<'), 'old bills still reprint as plain bills');
+    eq(422, put('/settings', ['shop_gstin' => ''], 'admin')['status'], 'cannot clear the GSTIN while registered');
+});
+
+test('billing: thermal receipt for phone printing (80 mm default here, 58 mm, customer language)', function () {
     $inv = trows("SELECT id, invoice_no, grand_total FROM invoices WHERE status = 'final' ORDER BY id DESC LIMIT 1")[0];
     $r = get("/invoices/{$inv['id']}/receipt?lang=en", 'desk');
     eq(200, $r['status']);
     ok(str_starts_with($r['type'], 'text/html'), 'html');
     ok(str_contains($r['body'], $inv['invoice_no']), 'invoice number');
-    ok(str_contains($r['body'], 'width: 48mm'), '58 mm paper by default');
-    ok(str_contains($r['body'], 'Dharangaon'), 'shop address');
+    ok(str_contains($r['body'], 'width: 72mm'), 'the shop\'s 80 mm printer by default');
+    $phone = (string) tval("SELECT svalue FROM settings WHERE skey = 'shop_phone'"); // 03_settings_users changes it
+    ok(str_contains($r['body'], 'Dharangaon') && $phone !== '' && str_contains($r['body'], $phone), 'shop address and phone');
     ok(str_contains($r['body'], number_format((float) $inv['grand_total'], 2, '.', ',')), 'grand total');
-    ok(str_contains($r['body'], 'HSN'), 'HSN per line');
+    ok(str_contains($r['body'], 'HSN') && str_contains($r['body'], 'GSTIN: 27ABCDE1234F1Z5'), 'HSN per line, shop GSTIN');
     ok(!str_contains($r['body'], 'unit_cost') && !str_contains($r['body'], '#4B5563'), 'no cost, no grey ink');
-    ok(str_contains(get("/invoices/{$inv['id']}/receipt?width=80", 'desk')['body'], 'width: 72mm'), '80 mm on request');
-    status(200, put('/settings', ['receipt_width' => '80'], 'admin'));
-    ok(str_contains(get("/invoices/{$inv['id']}/receipt", 'desk')['body'], 'width: 72mm'), '80 mm from settings');
-    eq(422, put('/settings', ['receipt_width' => '100'], 'admin')['status']);
+    ok(str_contains(get("/invoices/{$inv['id']}/receipt?width=58", 'desk')['body'], 'width: 48mm'), '58 mm on request');
     status(200, put('/settings', ['receipt_width' => '58'], 'admin'));
+    ok(str_contains(get("/invoices/{$inv['id']}/receipt", 'desk')['body'], 'width: 48mm'), '58 mm from settings');
+    eq(422, put('/settings', ['receipt_width' => '100'], 'admin')['status']);
+    status(200, put('/settings', ['receipt_width' => '80'], 'admin'));
     ok(str_contains(get("/invoices/{$inv['id']}/receipt?lang=mr", 'desk')['body'], 'धरणगाव'), 'Marathi address');
     eq(403, get("/invoices/{$inv['id']}/receipt", 'ramesh')['status']);
 });

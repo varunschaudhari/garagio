@@ -104,8 +104,8 @@ function rebuild_draft(int $invoiceId, array $counterItems = [], ?array $discoun
     $billDisc ??= (float) $inv['bill_disc_pct'];
     $lines = invoice_source_lines($inv, $counterItems, $discounts);
     $gstin = $inv['customer_id'] ? val('SELECT gstin FROM customers WHERE id = ?', [$inv['customer_id']]) : $inv['cust_gstin'];
-    $inter = is_interstate($gstin ?: null);
-    $bill = $lines ? gst_bill($lines, setting('prices_include_gst') === '1', $inter, $billDisc) : ['lines' => [], 'totals' => ['discount_total' => 0, 'taxable_total' => 0, 'cgst' => 0, 'sgst' => 0, 'igst' => 0, 'round_off' => 0, 'grand_total' => 0]];
+    $inter = gst_registered() && is_interstate($gstin ?: null);
+    $bill = $lines ? sale_bill($lines, $inter, $billDisc) : ['lines' => [], 'totals' => ['discount_total' => 0, 'taxable_total' => 0, 'cgst' => 0, 'sgst' => 0, 'igst' => 0, 'round_off' => 0, 'grand_total' => 0]];
     q('DELETE FROM invoice_items WHERE invoice_id = ?', [$invoiceId]);
     foreach ($bill['lines'] as $l) {
         insert('invoice_items', [
@@ -134,6 +134,7 @@ function rebuild_draft(int $invoiceId, array $counterItems = [], ?array $discoun
     $t = $bill['totals'];
     update_row('invoices', $invoiceId, [
         'is_interstate' => $inter ? 1 : 0,
+        'gst_registered' => gst_registered() ? 1 : 0,
         'bill_disc_pct' => $billDisc,
         'discount_total' => $t['discount_total'],
         'taxable_total' => $t['taxable_total'],
@@ -339,7 +340,7 @@ route('POST', '/invoices/preview', function () {
     if (!$lines) {
         return ['lines' => [], 'totals' => null];
     }
-    $bill = gst_bill($lines, setting('prices_include_gst') === '1', is_interstate($gstin ?: null), (float) $in['bill_disc_pct']);
+    $bill = sale_bill($lines, is_interstate($gstin ?: null), (float) $in['bill_disc_pct']);
     return strip_cost(['lines' => $bill['lines'], 'totals' => $bill['totals'], 'by_rate' => $bill['by_rate']]);
 }, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
 
@@ -477,6 +478,10 @@ route('POST', '/invoices/{id}/finalize', function ($p) {
                 fail(409, 'revision_pending', 'A revised estimate is waiting for the customer\'s approval');
             }
             // Pick up any change on the job since the draft was made (keeps discounts).
+            rebuild_draft($id);
+            $inv = row('SELECT * FROM invoices WHERE id = ?', [$id]);
+        } elseif ((int) $inv['gst_registered'] !== (gst_registered() ? 1 : 0)) {
+            // GST registration changed while this counter draft was open: recompute with today's rule.
             rebuild_draft($id);
             $inv = row('SELECT * FROM invoices WHERE id = ?', [$id]);
         }

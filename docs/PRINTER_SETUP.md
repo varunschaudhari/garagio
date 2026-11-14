@@ -8,8 +8,8 @@ as printer text.
 
 ## 1. Which printer
 
-- A **58 mm (2 inch)** Bluetooth thermal printer is enough for bills; **80 mm (3 inch)** gives bigger text.
-  Both work – set the width in the app (section 3).
+- Trimurti Auto uses an **80 mm (3 inch)** printer – the app is already set to 80 mm. A 58 mm (2 inch)
+  printer also works: change the width in the app (section 3).
 - It must say **ESC/POS** and **Android** support (almost all do). Battery-powered portable models are fine.
 - Paper: plain thermal rolls of the same width (58 mm × 40 mm or 80 mm × 80 mm diameter).
 
@@ -19,7 +19,7 @@ as printer text.
    (PIN is usually `0000` or `1234`).
 2. Install a **print service** for ESC/POS printers from the Play Store – for example **RawBT** – or the
    printer maker's app if it adds itself to Android printing.
-3. Open that app once: choose the paired printer, connection **Bluetooth**, paper **58 mm** (or 80 mm).
+3. Open that app once: choose the paired printer, connection **Bluetooth**, paper **80 mm** (or 58 mm for a 2-inch printer).
    Print its test page.
 4. Android **Settings → Connected devices → Connection preferences → Printing** (the path differs a little
    by phone; search Settings for "Printing") → turn the print service **on**.

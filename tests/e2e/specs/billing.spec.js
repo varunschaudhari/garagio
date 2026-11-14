@@ -17,13 +17,14 @@ test('counter sale by barcode, paid by UPI, bill printed', async ({ page, contex
   await bill.waitForLoadState();
   await expect(bill.locator('body')).toContainText('कर बीजक');
   await expect(bill.locator('body')).toContainText('Two Hundred Sixty');
-  // Thermal receipt for the phone printer: one language (walk-in → Marathi), 58 mm by default.
+  // Thermal receipt for the phone printer: one language (walk-in → Marathi), the shop's 80 mm paper.
   const [receipt] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Print receipt' }).click()]);
   await receipt.waitForLoadState();
   await expect(receipt.locator('.r')).toContainText('कर बीजक');
   await expect(receipt.locator('.r')).toContainText('₹260.00');
   await expect(receipt.locator('.r')).not.toContainText('Tax Invoice');
-  expect(await receipt.locator('.r').evaluate((el) => el.getBoundingClientRect().width)).toBeLessThan(200); // 48 mm ≈ 181 px
+  const width = await receipt.locator('.r').evaluate((el) => el.getBoundingClientRect().width);
+  expect(Math.round(width)).toBe(272); // 80 mm paper → 72 mm printable ≈ 272 px
 });
 
 test('walk-in customer cannot take credit', async ({ page }) => {

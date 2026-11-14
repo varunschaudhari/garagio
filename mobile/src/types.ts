@@ -401,6 +401,8 @@ export interface Invoice extends InvoiceListItem {
   is_trusted: number | null;
   credit_limit: number | null;
   is_interstate: number;
+  /** 0 for bills made before GST registration (no tax lines). */
+  gst_registered?: number;
   bill_disc_pct: number;
   discount_total: number;
   taxable_total: number;

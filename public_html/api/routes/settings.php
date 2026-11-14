@@ -11,6 +11,12 @@ route('GET', '/settings', function () {
 route('PUT', '/settings', function () {
     $in = clean(body(), SETTING_RULES, true);
     $before = settings_all();
+    // Tax invoices need the shop's GSTIN: turning GST on (or clearing the GSTIN while on) is refused.
+    $registered = array_key_exists('gst_registered', $in) ? (int) $in['gst_registered'] === 1 : ($before['gst_registered'] ?? '1') === '1';
+    $gstin = array_key_exists('shop_gstin', $in) ? (string) ($in['shop_gstin'] ?? '') : (string) ($before['shop_gstin'] ?? '');
+    if ($registered && $gstin === '' && (array_key_exists('gst_registered', $in) || array_key_exists('shop_gstin', $in))) {
+        fail(422, 'validation_failed', 'Enter the shop GSTIN before turning on GST', ['shop_gstin' => 'gstin_required']);
+    }
     tx(function () use ($in) {
         foreach ($in as $k => $v) {
             save_setting($k, $v ?? '');

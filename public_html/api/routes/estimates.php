@@ -106,7 +106,7 @@ route('POST', '/jobs/{id}/estimates', function ($p) {
         fail(422, 'validation_failed', 'Some lines need attention', $errors);
     }
 
-    $bill = gst_bill(array_map(static fn ($i) => $i + ['disc_pct' => 0], $items), setting('prices_include_gst') === '1', false);
+    $bill = sale_bill(array_map(static fn ($i) => $i + ['disc_pct' => 0], $items));
     $partsTotal = 0.0;
     $labourTotal = 0.0;
     foreach ($items as $it) {

@@ -41,6 +41,8 @@ const SETTING_DEFAULTS = [
     'job_prefix' => 'JC-',
     'estimate_prefix' => 'EST-',
     'invoice_prefix' => 'INV',
+    'bill_prefix' => 'BIL',
+    'gst_registered' => '1',
     'prices_include_gst' => '1',
     'default_part_gst_rate' => '18',
     'labour_gst_rate' => '18',
@@ -55,7 +57,7 @@ const SETTING_DEFAULTS = [
     'upi_id' => '',
     'min_app_version' => '1.0.0',
     'latest_app_url' => '',
-    'receipt_width' => '58',
+    'receipt_width' => '80',
     // Written by the system, not editable in Settings:
     'live_since' => '',
     'cron_reminders_at' => '',
@@ -76,6 +78,8 @@ const SETTING_RULES = [
     'job_prefix' => 'str|max:6',
     'estimate_prefix' => 'str|max:6',
     'invoice_prefix' => 'str|max:4',
+    'bill_prefix' => 'str|max:4',
+    'gst_registered' => 'bool',
     'prices_include_gst' => 'bool',
     'default_part_gst_rate' => 'num|min:0|max:40',
     'labour_gst_rate' => 'num|min:0|max:40',
@@ -163,8 +167,10 @@ function next_estimate_no(): string
 function next_invoice_no(string $date): string
 {
     $fy = fy_label($date);
-    $n = next_counter('invoice_' . $fy);
-    $no = setting('invoice_prefix', 'INV') . '/' . $fy . '/' . str_pad((string) $n, 5, '0', STR_PAD_LEFT);
+    // Tax invoices (GST-registered) and plain bills (not registered) are separate series, each from 00001.
+    $prefix = gst_registered() ? setting('invoice_prefix', 'INV') : setting('bill_prefix', 'BIL');
+    $n = next_counter('invoice_' . $prefix . '_' . $fy);
+    $no = $prefix . '/' . $fy . '/' . str_pad((string) $n, 5, '0', STR_PAD_LEFT);
     if (strlen($no) > 16) {
         fail(409, 'invoice_no_too_long', 'Invoice number exceeds 16 characters; shorten the invoice prefix in Settings');
     }

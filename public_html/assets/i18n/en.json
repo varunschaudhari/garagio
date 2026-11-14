@@ -310,7 +310,13 @@
     "system": "System",
     "receipt_width": "Thermal printer paper width",
     "receipt_58": "58 mm (2 inch)",
-    "receipt_80": "80 mm (3 inch)"
+    "receipt_80": "80 mm (3 inch)",
+    "gst_registered": "Shop is GST-registered",
+    "gst_registered_hint": "Off: plain bills without GST (BIL/…). On registration day enter the GSTIN and turn this on – tax invoices then start at INV/…/00001.",
+    "bill_prefix": "Bill prefix (before GST registration)",
+    "bill_prefix_hint": "Plain bills look like BIL/26-27/00001.",
+    "upi_placeholder": "e.g. name@okaxis",
+    "upi_hint": "The shop’s UPI ID from PhonePe / Google Pay / Paytm (profile → UPI ID). Bills with money due then show a scan-to-pay QR. Empty = no QR."
   },
   "users": {
     "title": "Users",
@@ -420,7 +426,8 @@
     "wrong": "Wrong",
     "same": "Must be different",
     "future_date": "Date cannot be in the future",
-    "before_last_bill": "Cannot be earlier than the last bill"
+    "before_last_bill": "Cannot be earlier than the last bill",
+    "gstin_required": "Enter the shop GSTIN first"
   },
   "mobile": {
     "setup_title": "Connect to your shop",
@@ -829,7 +836,9 @@
     "walk_in": "Walk-in customer",
     "labour": "Labour",
     "parts": "Parts",
-    "print": "Print"
+    "print": "Print",
+    "bill_title": "Bill",
+    "no_gst_note": "GST not charged – the shop is not registered under GST."
   },
   "billing": {
     "title": "Billing",
@@ -1044,7 +1053,8 @@
       "shop_address": "Shop address and phone",
       "demo_data": "Demo customers / suppliers",
       "default_passwords": "Users still on the demo password",
-      "live_since": "Live since"
+      "live_since": "Live since",
+      "gst_registration": "GST registration"
     },
     "fix": {
       "php_version": "cPanel → MultiPHP Manager: choose PHP 8.1 or newer.",
@@ -1060,11 +1070,12 @@
       "last_backup": "Back up now from the Backup tab and check the nightly cron job.",
       "cron_reminders_at": "Add the 8 AM reminders.php cron job (see DEPLOY.md).",
       "cron_backup_at": "Add the 11 PM backup.php cron job (see DEPLOY.md).",
-      "shop_gstin": "Enter the GSTIN on the Shop tab before the first real bill – bills say “Tax Invoice” and charge GST. If the shop is not GST-registered, do not bill yet: the bill format has to change first.",
+      "shop_gstin": "Enter the GSTIN on the Shop tab before the next bill – bills say “Tax Invoice” and charge GST. If the shop is not registered yet, turn off “Shop is GST-registered”.",
       "shop_address": "Enter the address and phone on the Shop tab.",
       "demo_data": "Remove the demo data with “Go live” below.",
       "default_passwords": "Those users should change their password, or reset it from Users.",
-      "live_since": "Use “Go live” below when the trial is over."
+      "live_since": "Use “Go live” below when the trial is over.",
+      "gst_registration": "After registering, enter the GSTIN and turn on “Shop is GST-registered” (Settings → Shop). Until then bills are plain bills without GST."
     },
     "golive_title": "Go live – remove trial data",
     "golive_intro": "Use this once, when the trial is over. A full backup is taken first.",
@@ -1089,7 +1100,8 @@
     "note": {
       "inside_web": "Inside a website folder (public_html) – anyone could download it",
       "not_writable": "Cannot write to it",
-      "cannot_create": "Cannot be created"
+      "cannot_create": "Cannot be created",
+      "not_registered": "Not registered – bills without GST"
     }
   }
 }

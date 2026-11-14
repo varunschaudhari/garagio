@@ -16,25 +16,41 @@ Settings → **Shop** and **Billing & GST**. Copy the details exactly as on the 
 | Shop name (English / Marathi) | Legal or trade name as registered | Every bill, estimate, WhatsApp message |
 | Address (English / Marathi) | Already filled in: *Beside Ambedkar Statue, Dharangaon - 425105* / *आंबेडकर पुतळ्याशेजारी, धरणगाव - 425105* – check it | Bills, receipts, estimates |
 | Phone | Already filled in: 8956252573 – check it | Bills, receipts, estimate page "Call me" |
-| GSTIN | 15 characters, e.g. `27ABCDE1234F1Z5` | Every tax invoice |
+| GST registered | **Off for now** – the shop is not registered yet. Bills are plain bills without GST (`BIL/26-27/00001`). See "GST registration day" below | Every bill |
+| GSTIN | Empty until registration; 15 characters, e.g. `27ABCDE1234F1Z5` | Every tax invoice |
 | State | Maharashtra (27) | Decides CGST + SGST or IGST |
 | Prices include GST | On if your selling prices are MRP-style (GST inside) | Bill maths |
 | GST % on labour / SAC | Currently 18 % and SAC 998714 – **confirm with the CA** | Labour lines |
 | Invoice prefix | Up to 4 letters; bills look like `INV/26-27/00001` | Bill numbers |
 | Invoice terms (both languages) | Your shop's terms | Bottom of every bill |
-| UPI ID | e.g. `trimurtiauto@okaxis` – adds a "scan to pay" QR to bills | Bills with a balance |
-| Thermal printer paper width | 58 mm or 80 mm – the shop bills from phones on a Bluetooth receipt printer (`PRINTER_SETUP.md`) | Receipts |
+| UPI ID | Empty for now. The shop's own ID from PhonePe / Google Pay / Paytm (profile → UPI ID). Once filled in, bills with money due show a "scan to pay" QR. Never type a guessed ID – payments would go to someone else | Bills with a balance |
+| Thermal printer paper width | **80 mm** (set) – the shop bills from phones on a Bluetooth receipt printer (`PRINTER_SETUP.md`) | Receipts |
 
 Then Settings → **System**: every line should be green or yellow. Fix every red line before billing.
 
 ---
 
+### GST registration day
+
+Until the shop is registered it must not charge GST, so the system makes plain **bills**: no GSTIN, no
+CGST / SGST, the price is the whole amount, numbered `BIL/26-27/00001` onwards. GST paid to suppliers
+cannot be claimed back yet, so it is counted in the cost of the parts.
+
+On the day the GST certificate arrives (owner, 2 minutes – web Settings → Shop, or phone More → Settings):
+
+1. Type the **GSTIN** and turn on **Shop is GST-registered**. Save. (It refuses to turn on without a GSTIN.)
+2. From the next bill on: "Tax Invoice", CGST + SGST (IGST for other states), numbered `INV/26-27/00001`.
+3. Bills made before registration keep printing as plain bills.
+4. Give the CA the date and the last `BIL/` number. Ask about the questions in section 2 below.
+5. Settings → System: the "GST registration" line turns into "Shop GSTIN" and should be green.
+
 ## 2. Questions for the CA (take this page)
 
 The system was built with the defaults below. Ask the CA to confirm or correct each one **before the first real bill**.
 
-1. **Registration type.** Is the shop a *regular* GST taxpayer? (If it is under the *composition* scheme it must
-   issue a "bill of supply" without GST – tell us before going live, the bill layout changes.)
+1. **Registration type.** The shop is registering now. *Regular* or *composition* scheme? (Composition
+   taxpayers issue a "bill of supply" without GST – then keep "GST registered" **off** and tell us; the bill
+   heading changes.)
 2. **GST rates and HSN codes of parts.** The sample parts all use 18 %:
 
    | Category | HSN codes used | Rate |

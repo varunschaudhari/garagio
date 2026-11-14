@@ -62,6 +62,7 @@ export default function InvoiceScreen() {
   const draft = i.status === 'draft';
   const final = i.status === 'final';
   const inter = Number(i.is_interstate) === 1;
+  const gstBill = Number(i.gst_registered ?? 1) === 1;
   const discKey = (it: Invoice['items'][number]) => (it.item_type === 'part' ? `part:${it.job_part_id}` : `labour:${it.job_labour_id}`);
 
   const saveDiscounts = () => {
@@ -141,9 +142,9 @@ export default function InvoiceScreen() {
         ) : null}
 
         <Card style={{ gap: space[2] }}>
-          <Row label={t('inv.taxable')} value={money(i.taxable_total)} />
+          {gstBill ? <Row label={t('inv.taxable')} value={money(i.taxable_total)} /> : null}
           {i.discount_total ? <Row label={t('inv.discount')} value={`−${money(i.discount_total)}`} /> : null}
-          {inter ? <Row label={t('inv.igst')} value={money(i.igst)} /> : (
+          {!gstBill ? <Txt size="sm" muted>{t('inv.no_gst_note')}</Txt> : inter ? <Row label={t('inv.igst')} value={money(i.igst)} /> : (
             <>
               <Row label={t('inv.cgst')} value={money(i.cgst)} />
               <Row label={t('inv.sgst')} value={money(i.sgst)} />

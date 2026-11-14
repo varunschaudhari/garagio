@@ -99,7 +99,7 @@ test('jobs (acceptance): a job cannot start before approval; no parts requests b
 
 test('jobs: mechanic adds labour from the rate list only, at the listed amount; desk can add any', function () {
     $id = $GLOBALS['T_JOB'];
-    $rate = trows("SELECT id, amount FROM labour_rates WHERE name_en = 'General servicing'")[0];
+    $rate = trows("SELECT id, amount FROM labour_rates WHERE name_en = 'General servicing (bike)'")[0];
     $j = status(200, post("/jobs/$id/labour", ['labour_rate_id' => $rate['id'], 'amount' => 9999], 'ramesh'))['item'];
     eq((float) $rate['amount'], (float) $j['labour'][0]['amount'], 'mechanic cannot change the amount');
     eq(422, post("/jobs/$id/labour", ['description' => 'Custom', 'amount' => 10], 'ramesh')['status']);
@@ -116,7 +116,7 @@ test('estimates: parts at selling price, labour editable; send gives WhatsApp li
     $e = status(200, post("/jobs/$id/estimates", ['items' => [
         ['item_type' => 'part', 'part_id' => part_id('BS-SPL'), 'qty' => 1, 'unit_price' => 1],
         ['item_type' => 'part', 'part_id' => part_id('SP-CPR7EA9'), 'qty' => 1],
-        ['item_type' => 'labour', 'labour_rate_id' => (int) tval("SELECT id FROM labour_rates WHERE name_en = 'General servicing'"), 'amount' => 300],
+        ['item_type' => 'labour', 'labour_rate_id' => (int) tval("SELECT id FROM labour_rates WHERE name_en = 'General servicing (bike)'"), 'amount' => 300],
     ]], 'desk'))['item'];
     $bs = (float) tval("SELECT selling_price FROM parts WHERE part_no = 'BS-SPL'");
     $sp = (float) tval("SELECT selling_price FROM parts WHERE part_no = 'SP-CPR7EA9'");

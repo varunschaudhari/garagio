@@ -178,3 +178,27 @@ function check_gst_rate(float $rate, string $field = 'gst_rate'): void
     }
     fail(422, 'validation_failed', 'GST rate must be one of ' . implode(', ', GST_RATES), [$field => 'invalid_choice']);
 }
+
+/* ------------------------------------------------------------------ registration (sales side) */
+
+/** Is the shop registered under GST? Until it is, bills carry no GST and are plain "Bills". */
+function gst_registered(): bool
+{
+    return setting('gst_registered', '1') === '1';
+}
+
+/**
+ * Bill maths for anything we sell (estimates, bills, job totals). An unregistered shop must not
+ * charge GST, so every rate becomes 0 and the price is the whole amount.
+ */
+function sale_bill(array $lines, bool $interstate = false, float $billDiscPct = 0.0): array
+{
+    if (!gst_registered()) {
+        foreach ($lines as &$l) {
+            $l['gst_rate'] = 0.0;
+        }
+        unset($l);
+        $interstate = false;
+    }
+    return gst_bill($lines, setting('prices_include_gst') === '1', $interstate, $billDiscPct);
+}

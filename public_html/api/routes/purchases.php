@@ -80,6 +80,10 @@ function purchase_calc(array $body, bool $forSave): array
     $bill = gst_bill($lines, false, $interstate, 0, (float) $hdr['other_charges']);
     foreach ($bill['lines'] as &$l) {
         $l['net_cost'] = net_cost($l['unit_price'], $l['disc_pct']);
+        if (!gst_registered()) {
+            // No input-tax credit without registration: the supplier's GST is part of what the part costs us.
+            $l['net_cost'] = round($l['net_cost'] * (1 + $l['gst_rate'] / 100), 4);
+        }
     }
     unset($l);
     return ['header' => $hdr, 'supplier' => $supplier, 'interstate' => $interstate] + $bill;

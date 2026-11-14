@@ -10,7 +10,7 @@ import { fieldError } from '@/i18n';
 import { space } from '@/theme';
 
 const KEYS = ['shop_name', 'shop_name_mr', 'shop_phone', 'shop_gstin', 'shop_address', 'shop_address_mr', 'approval_limit', 'upi_id'] as const;
-type Key = (typeof KEYS)[number] | 'receipt_width';
+type Key = (typeof KEYS)[number] | 'receipt_width' | 'gst_registered';
 
 /** Owner: the settings most often changed from a phone. Everything else is on the web. */
 export default function SettingsScreen() {
@@ -50,17 +50,28 @@ export default function SettingsScreen() {
               keyboardType={k === 'approval_limit' ? 'decimal-pad' : k === 'shop_phone' ? 'phone-pad' : 'default'}
               autoCapitalize={k === 'shop_gstin' ? 'characters' : 'sentences'}
               multiline={k === 'shop_address' || k === 'shop_address_mr'}
-              hint={k === 'approval_limit' ? t('settings.approval_limit_hint') : undefined}
+              placeholder={k === 'upi_id' ? t('settings.upi_placeholder') : undefined}
+              hint={k === 'approval_limit' ? t('settings.approval_limit_hint') : k === 'upi_id' ? t('settings.upi_hint') : undefined}
               error={errs[k]}
             />
           ))}
+          <Txt size="sm" weight="semibold">{t('settings.gst_registered')}</Txt>
+          <Segmented
+            options={[
+              { value: '0', label: t('common.no') },
+              { value: '1', label: t('common.yes') },
+            ]}
+            value={val('gst_registered') === '1' ? '1' : '0'}
+            onChange={(v) => setEdits((e) => ({ ...e, gst_registered: v }))}
+          />
+          <Txt size="sm" muted>{t('settings.gst_registered_hint')}</Txt>
           <Txt size="sm" weight="semibold">{t('settings.receipt_width')}</Txt>
           <Segmented
             options={[
               { value: '58', label: t('settings.receipt_58') },
               { value: '80', label: t('settings.receipt_80') },
             ]}
-            value={val('receipt_width') || '58'}
+            value={val('receipt_width') || '80'}
             onChange={(v) => setEdits((e) => ({ ...e, receipt_width: v }))}
           />
         </Card>

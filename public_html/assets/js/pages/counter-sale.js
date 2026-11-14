@@ -1,7 +1,7 @@
 import { html, setHTML, $, on, debounce } from '../dom.js';
 import { t, nm, errorText } from '../i18n.js';
 import { api } from '../api.js';
-import { hasRole } from '../store.js';
+import { hasRole, session } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty } from '../format.js';
 import { combo } from '../ui/combo.js';
@@ -88,10 +88,11 @@ export default async function counterSale(ctx) {
   }, 250);
 
   const drawTotals = (tt) => {
+    const noGst = session.settings?.gst_registered === '0';
     setHTML($('#cs-totals', ctx.el), html`
-      <dt>${t('inv.taxable')}</dt><dd class="num">${money(tt?.taxable_total)}</dd>
+      ${noGst ? '' : html`<dt>${t('inv.taxable')}</dt><dd class="num">${money(tt?.taxable_total)}</dd>`}
       ${tt?.discount_total ? html`<dt>${t('inv.discount')}</dt><dd class="num">−${money(tt.discount_total)}</dd>` : ''}
-      ${tt?.igst ? html`<dt>${t('inv.igst')}</dt><dd class="num">${money(tt.igst)}</dd>` : html`<dt>${t('inv.cgst')} + ${t('inv.sgst')}</dt><dd class="num">${money((tt?.cgst || 0) + (tt?.sgst || 0))}</dd>`}
+      ${noGst ? '' : tt?.igst ? html`<dt>${t('inv.igst')}</dt><dd class="num">${money(tt.igst)}</dd>` : html`<dt>${t('inv.cgst')} + ${t('inv.sgst')}</dt><dd class="num">${money((tt?.cgst || 0) + (tt?.sgst || 0))}</dd>`}
       <dt>${t('inv.round_off')}</dt><dd class="num">${money(tt?.round_off)}</dd>
       <dt class="strong" style="font-size:18px;color:var(--text)">${t('inv.grand_total')}</dt><dd class="num strong" style="font-size:24px">${money(tt?.grand_total)}</dd>`);
     pay.recalc();

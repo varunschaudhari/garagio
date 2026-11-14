@@ -418,6 +418,7 @@ CREATE TABLE invoices (
   cust_gstin VARCHAR(15) NULL,
   cust_state_code VARCHAR(2) NULL,
   is_interstate TINYINT(1) NOT NULL DEFAULT 0,
+  gst_registered TINYINT(1) NOT NULL DEFAULT 1,
   bill_disc_pct DECIMAL(5,2) NOT NULL DEFAULT 0,
   discount_total DECIMAL(12,2) NOT NULL DEFAULT 0,
   taxable_total DECIMAL(12,2) NOT NULL DEFAULT 0,

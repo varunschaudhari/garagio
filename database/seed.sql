@@ -19,6 +19,12 @@ INSERT INTO settings (skey, svalue, created_at, updated_at) VALUES
 ('job_prefix', 'JC-', @now, @now),
 ('estimate_prefix', 'EST-', @now, @now),
 ('invoice_prefix', 'INV', @now, @now),
+('bill_prefix', 'BIL', @now, @now),
+-- Not GST-registered yet: bills carry no GST (series BIL/..). On registration day the owner enters the
+-- GSTIN and turns on "GST registered" (Settings → Shop); tax invoices then start at INV/yy-yy/00001.
+('gst_registered', '0', @now, @now),
+('upi_id', '', @now, @now),
+('receipt_width', '80', @now, @now),
 ('prices_include_gst', '1', @now, @now),
 ('default_part_gst_rate', '18', @now, @now),
 ('labour_gst_rate', '18', @now, @now),
@@ -61,21 +67,32 @@ INSERT INTO categories (id, name_en, name_mr, active, created_at, updated_at) VA
 
 -- ------------------------------------------------------------------ labour rate list
 INSERT INTO labour_rates (name_en, name_mr, amount, active, created_at, updated_at) VALUES
-('General servicing', 'जनरल सर्व्हिसिंग', 350, 1, @now, @now),
-('Oil change', 'ऑइल बदलणे', 100, 1, @now, @now),
-('Brake adjustment', 'ब्रेक ॲडजस्टमेंट', 80, 1, @now, @now),
-('Brake shoe replacement', 'ब्रेक शू बदलणे', 150, 1, @now, @now),
+-- Starting rate card (labour only, parts extra). Owner: Settings → Labour rates to change.
+('General servicing (bike)', 'जनरल सर्व्हिसिंग (मोटरसायकल)', 350, 1, @now, @now),
+('General servicing (scooter)', 'जनरल सर्व्हिसिंग (स्कूटर)', 400, 1, @now, @now),
+('Oil change', 'ऑइल बदलणे', 80, 1, @now, @now),
+('Brake adjustment', 'ब्रेक ॲडजस्टमेंट', 50, 1, @now, @now),
+('Brake shoe replacement', 'ब्रेक शू बदलणे', 120, 1, @now, @now),
+('Disc pad replacement', 'डिस्क पॅड बदलणे', 120, 1, @now, @now),
 ('Clutch plate replacement', 'क्लच प्लेट बदलणे', 400, 1, @now, @now),
-('Cable replacement', 'केबल बदलणे', 100, 1, @now, @now),
+('Cable replacement', 'केबल बदलणे', 80, 1, @now, @now),
 ('Chain sprocket kit fitting', 'चेन स्प्रॉकेट किट बसवणे', 250, 1, @now, @now),
-('Puncture repair', 'पंक्चर काढणे', 80, 1, @now, @now),
-('Tyre fitting', 'टायर बसवणे', 100, 1, @now, @now),
+('Chain cleaning and lubrication', 'चेन साफ करून ऑइलिंग', 80, 1, @now, @now),
+('Puncture repair (tube)', 'पंक्चर काढणे (ट्यूब)', 60, 1, @now, @now),
+('Puncture repair (tubeless)', 'पंक्चर काढणे (ट्यूबलेस)', 100, 1, @now, @now),
+('Tyre / tube fitting', 'टायर / ट्यूब बसवणे', 100, 1, @now, @now),
 ('Carburettor cleaning', 'कार्बोरेटर साफ करणे', 200, 1, @now, @now),
+('Spark plug cleaning / fitting', 'स्पार्क प्लग साफ करणे / बसवणे', 30, 1, @now, @now),
 ('Battery fitting', 'बॅटरी बसवणे', 50, 1, @now, @now),
+('Battery charging', 'बॅटरी चार्जिंग', 100, 1, @now, @now),
+('Bulb / indicator fitting', 'बल्ब / इंडिकेटर बसवणे', 30, 1, @now, @now),
 ('Electrical repair', 'इलेक्ट्रिकल दुरुस्ती', 200, 1, @now, @now),
+('Self-start repair', 'सेल्फ स्टार्ट दुरुस्ती', 250, 1, @now, @now),
+('Front fork oil seal replacement', 'फ्रंट फोर्क ऑइल सील बदलणे', 300, 1, @now, @now),
 ('Wheel bearing replacement', 'व्हील बेअरिंग बदलणे', 150, 1, @now, @now),
+('Silencer cleaning', 'सायलेन्सर साफ करणे', 150, 1, @now, @now),
 ('Engine overhaul', 'इंजिन ओव्हरहॉल', 2500, 1, @now, @now),
-('Washing', 'वॉशिंग', 100, 1, @now, @now);
+('Washing', 'वॉशिंग', 80, 1, @now, @now);
 
 -- ------------------------------------------------------------------ parts
 -- selling_price = MRP incl. GST; last_purchase_price = supplier price ex-GST before discount.

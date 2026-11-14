@@ -11,6 +11,8 @@ $shopName = $lang === 'mr' && $s['shop_name_mr'] ? $s['shop_name_mr'] : $s['shop
 $shopAddr = $lang === 'mr' && $s['shop_address_mr'] ? $s['shop_address_mr'] : $s['shop_address'];
 $terms = $lang === 'mr' && $s['invoice_terms_mr'] ? $s['invoice_terms_mr'] : $s['invoice_terms_en'];
 $inter = (int) $inv['is_interstate'] === 1;
+// Bills made before GST registration stay plain bills (no GSTIN, no tax lines) even when reprinted later.
+$reg = (int) ($inv['gst_registered'] ?? 1) === 1;
 $shopState = $s['shop_state_code'];
 $custState = $inv['cust_state_code'] ?: $shopState;
 $name = $inv['customer_name'] ?: ($inv['cust_name'] ?: tr('inv.walk_in', $lang));
@@ -58,9 +60,9 @@ $font = $paper === 80 ? 13 : 11;
   <div class="c big"><?= e($shopName) ?></div>
   <?php if ($shopAddr): ?><div class="c sm"><?= nl2br(e($shopAddr)) ?></div><?php endif; ?>
   <?php if ($s['shop_phone']): ?><div class="c sm"><?= e($L('phone')) ?>: <?= e($s['shop_phone']) ?></div><?php endif; ?>
-  <?php if ($s['shop_gstin']): ?><div class="c sm b">GSTIN: <?= e($s['shop_gstin']) ?></div><?php endif; ?>
+  <?php if ($reg && $s['shop_gstin']): ?><div class="c sm b">GSTIN: <?= e($s['shop_gstin']) ?></div><?php endif; ?>
   <div class="hr2"></div>
-  <div class="c b"><?= e($L('tax_invoice')) ?></div>
+  <div class="c b"><?= e($L($reg ? 'tax_invoice' : 'bill_title')) ?></div>
   <?php if ($inv['status'] === 'draft'): ?><div class="stamp"><?= e($L('draft')) ?></div><?php endif; ?>
   <?php if ($inv['status'] === 'cancelled'): ?><div class="stamp"><?= e($L('cancelled')) ?></div><?php endif; ?>
   <div class="row"><span><?= e($L('invoice_no')) ?></span><span class="b"><?= e($inv['invoice_no'] ?: '—') ?></span></div>
@@ -81,18 +83,20 @@ $font = $paper === 80 ? 13 : 11;
         <span><?= e(fmt_qty((float) $it['qty'])) ?> × <?= $num($it['unit_price']) ?><?= (float) $it['disc_pct'] ? ' −' . e(fmt_qty((float) $it['disc_pct'])) . '%' : '' ?></span>
         <span><?= $num($it['line_total']) ?></span>
       </div>
-      <div class="sm"><?= $it['hsn'] ? e($L('hsn')) . ' ' . e($it['hsn']) . ' · ' : '' ?>GST <?= e(fmt_qty((float) $it['gst_rate'])) ?>%</div>
+      <?php if ($reg): ?><div class="sm"><?= $it['hsn'] ? e($L('hsn')) . ' ' . e($it['hsn']) . ' · ' : '' ?>GST <?= e(fmt_qty((float) $it['gst_rate'])) ?>%</div><?php endif; ?>
     </div>
   <?php endforeach; ?>
 
   <div class="hr"></div>
   <?php if ((float) $inv['discount_total']): ?><div class="row"><span><?= e($L('discount')) ?></span><span>−<?= $num($inv['discount_total']) ?></span></div><?php endif; ?>
+  <?php if ($reg): ?>
   <div class="row"><span><?= e($L('taxable')) ?></span><span><?= $num($inv['taxable_total']) ?></span></div>
   <?php if ($inter): ?>
     <div class="row"><span><?= e($L('igst')) ?></span><span><?= $num($inv['igst']) ?></span></div>
   <?php else: ?>
     <div class="row"><span><?= e($L('cgst')) ?></span><span><?= $num($inv['cgst']) ?></span></div>
     <div class="row"><span><?= e($L('sgst')) ?></span><span><?= $num($inv['sgst']) ?></span></div>
+  <?php endif; ?>
   <?php endif; ?>
   <?php if ((float) $inv['round_off']): ?><div class="row"><span><?= e($L('round_off')) ?></span><span><?= $num($inv['round_off']) ?></span></div><?php endif; ?>
   <div class="hr2"></div>
@@ -103,7 +107,9 @@ $font = $paper === 80 ? 13 : 11;
   <?php endif; ?>
   <div class="sm"><?= e($lang === 'mr' ? amount_words_mr((float) $inv['grand_total']) : amount_words_en((float) $inv['grand_total'])) ?></div>
 
-  <?php if (count($byRate) > 1 || $inter): ?>
+  <?php if (!$reg): ?><div class="sm" style="margin-top:3px"><?= e($L('no_gst_note')) ?></div><?php endif; ?>
+
+  <?php if ($reg && (count($byRate) > 1 || $inter)): ?>
     <div class="hr"></div>
     <div class="sm b"><?= e($L('tax_summary')) ?></div>
     <?php foreach ($byRate as $r): ?>

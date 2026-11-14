@@ -52,7 +52,9 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Line discounts go through `clean_discounts()`; unused customer money is applied with `apply_customer_advance()`.
 - Return payloads through `strip_cost()` wherever cost fields (COST_FIELDS) may appear.
 - `audit()` for discounts, invoice cancels, stock adjustments, credit changes, user changes.
-- GST maths only in `lib/gst.php` (`gst_line`, `gst_bill`); never on clients.
+- GST maths only in `lib/gst.php` (`gst_line`, `gst_bill`); never on clients. Anything we *sell* goes through
+  `sale_bill()`, which drops GST while setting `gst_registered` is 0 (shop not registered yet; bills `BIL/…`,
+  `invoices.gst_registered` keeps each bill's mode). Purchases use `gst_bill` directly.
 - Numbers: `next_job_no()`, `next_estimate_no()`, `next_invoice_no($date)` (locked counter rows).
 
 ## Mobile conventions (`mobile/`)

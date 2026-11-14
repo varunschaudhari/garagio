@@ -8,6 +8,8 @@ $s = settings_all();
 $shopEn = $s['shop_name'];
 $shopMr = $s['shop_name_mr'] ?: '';
 $inter = (int) $inv['is_interstate'] === 1;
+// Bills made before GST registration stay plain bills (no GSTIN, no tax columns) even when reprinted later.
+$reg = (int) ($inv['gst_registered'] ?? 1) === 1;
 $shopState = $s['shop_state_code'];
 $custState = $inv['cust_state_code'] ?: $shopState;
 $name = $inv['customer_name'] ?: ($inv['cust_name'] ?: tr('inv.walk_in', $lang));
@@ -75,11 +77,11 @@ $desc = static function (array $it) use ($lang): string {
       <?php if ($shopMr): ?><div class="mr"><?= e($shopMr) ?></div><?php endif; ?>
       <div><?= nl2br(e($s['shop_address'])) ?></div>
       <?php if ($s['shop_address_mr']): ?><div class="alt"><?= nl2br(e($s['shop_address_mr'])) ?></div><?php endif; ?>
-      <div><?= $s['shop_phone'] ? e($s['shop_phone']) . ' · ' : '' ?><?= $s['shop_email'] ? e($s['shop_email']) : '' ?></div>
-      <div><strong>GSTIN:</strong> <?= e($s['shop_gstin'] ?: '—') ?> · <?= e($s['shop_state_name']) ?> (<?= e($shopState) ?>)</div>
+      <div><?= e(implode(' · ', array_filter([$s['shop_phone'], $s['shop_email']]))) ?></div>
+      <?php if ($reg): ?><div><strong>GSTIN:</strong> <?= e($s['shop_gstin'] ?: '—') ?> · <?= e($s['shop_state_name']) ?> (<?= e($shopState) ?>)</div><?php endif; ?>
     </div>
     <div class="title">
-      <h2><?= e($L('tax_invoice')) ?></h2>
+      <h2><?= e($L($reg ? 'tax_invoice' : 'bill_title')) ?></h2>
       <div><?= e($L('invoice_no')) ?>: <strong><?= e($inv['invoice_no'] ?: '—') ?></strong></div>
       <div><?= e($L('date')) ?>: <?= e(fmt_date($inv['invoice_date'] ?: $inv['created_at'])) ?></div>
       <?php if ($inv['job_no']): ?><div><?= e($L('job_no')) ?>: <?= e($inv['job_no']) ?></div><?php endif; ?>
@@ -105,22 +107,24 @@ $desc = static function (array $it) use ($lang): string {
 
   <table>
     <thead><tr>
-      <th><?= e($L('sr')) ?></th><th><?= e($L('description')) ?></th><th><?= e($L('hsn')) ?></th>
+      <th><?= e($L('sr')) ?></th><th><?= e($L('description')) ?></th><?php if ($reg): ?><th><?= e($L('hsn')) ?></th><?php endif; ?>
       <th class="n"><?= e($L('qty')) ?></th><th class="n"><?= e($L('rate')) ?></th><th class="n"><?= e($L('disc')) ?></th>
-      <th class="n"><?= e($L('taxable')) ?></th><th class="n"><?= e($L('gst')) ?></th><th class="n"><?= e($L('gst_amt')) ?></th><th class="n"><?= e($L('amount')) ?></th>
+      <?php if ($reg): ?><th class="n"><?= e($L('taxable')) ?></th><th class="n"><?= e($L('gst')) ?></th><th class="n"><?= e($L('gst_amt')) ?></th><?php endif; ?><th class="n"><?= e($L('amount')) ?></th>
     </tr></thead>
     <tbody>
     <?php foreach ($inv['items'] as $i => $it): ?>
       <tr>
         <td><?= $i + 1 ?></td>
         <td><?= $desc($it) ?></td>
-        <td><?= e($it['hsn'] ?? '') ?></td>
+        <?php if ($reg): ?><td><?= e($it['hsn'] ?? '') ?></td><?php endif; ?>
         <td class="n"><?= e(fmt_qty((float) $it['qty'])) ?></td>
         <td class="n"><?= $num($it['unit_price']) ?></td>
         <td class="n"><?= (float) $it['disc_pct'] ? e(fmt_qty((float) $it['disc_pct'])) : '' ?><?= (float) $it['disc_amount'] && !(float) $it['disc_pct'] ? $num($it['disc_amount']) : '' ?></td>
+        <?php if ($reg): ?>
         <td class="n"><?= $num($it['taxable']) ?></td>
         <td class="n"><?= e(fmt_qty((float) $it['gst_rate'])) ?>%</td>
         <td class="n"><?= $num($it['tax_amount']) ?></td>
+        <?php endif; ?>
         <td class="n"><?= $num($it['line_total']) ?></td>
       </tr>
     <?php endforeach; ?>
@@ -129,6 +133,7 @@ $desc = static function (array $it) use ($lang): string {
 
   <div class="totals">
     <div>
+      <?php if ($reg): ?>
       <table>
         <thead><tr><th><?= e($L('gst')) ?></th><th class="n"><?= e($L('taxable')) ?></th>
           <?php if ($inter): ?><th class="n"><?= e($L('igst')) ?></th><?php else: ?><th class="n"><?= e($L('cgst')) ?></th><th class="n"><?= e($L('sgst')) ?></th><?php endif; ?>
@@ -141,6 +146,9 @@ $desc = static function (array $it) use ($lang): string {
         <?php endforeach; ?>
         </tbody>
       </table>
+      <?php else: ?>
+      <p><?= e($L('no_gst_note')) ?></p>
+      <?php endif; ?>
       <div class="words">
         <strong><?= e($L('in_words')) ?>:</strong>
         <div><?= e(amount_words_en((float) $inv['grand_total'])) ?></div>
@@ -148,11 +156,11 @@ $desc = static function (array $it) use ($lang): string {
       </div>
     </div>
     <table>
-      <tr><td><?= e($L('taxable')) ?></td><td class="n"><?= $num($inv['taxable_total']) ?></td></tr>
+      <?php if ($reg): ?><tr><td><?= e($L('taxable')) ?></td><td class="n"><?= $num($inv['taxable_total']) ?></td></tr><?php endif; ?>
       <?php if ((float) $inv['discount_total']): ?><tr><td><?= e($L('discount')) ?></td><td class="n">−<?= $num($inv['discount_total']) ?></td></tr><?php endif; ?>
-      <?php if ($inter): ?>
+      <?php if ($reg && $inter): ?>
         <tr><td><?= e($L('igst')) ?></td><td class="n"><?= $num($inv['igst']) ?></td></tr>
-      <?php else: ?>
+      <?php elseif ($reg): ?>
         <tr><td><?= e($L('cgst')) ?></td><td class="n"><?= $num($inv['cgst']) ?></td></tr>
         <tr><td><?= e($L('sgst')) ?></td><td class="n"><?= $num($inv['sgst']) ?></td></tr>
       <?php endif; ?>
