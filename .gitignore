@@ -26,3 +26,6 @@ Thumbs.db
 
 # Expo generated
 mobile/expo-env.d.ts
+
+# Release packages (tools/make-release.mjs)
+dist/

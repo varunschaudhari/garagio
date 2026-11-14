@@ -33,6 +33,8 @@ The seed adds the shop settings (Trimurti Auto), demo staff, storage locations, 
 
 1. cPanel → **File Manager** → open `public_html`.
 2. Upload the **contents** of this repository's `public_html/` folder (not the folder itself) – easiest as a zip, then *Extract*.
+   On the development PC, `node tools/make-release.mjs` builds `dist/garage-manager-<date>-<commit>-site.zip`
+   (contents of `public_html`, hidden `.htaccess` files included) plus the database and docs zips.
 3. In `public_html/api/` copy `config.sample.php` to **`config.php`** and edit it:
    - `db` → host `localhost`, the database name, user and password from step 1.
    - `jwt_secret` → a long random string (64+ characters). Changing it later logs everyone out.
@@ -95,7 +97,7 @@ cd mobile
 npm install
 npx eas-cli login            # your Expo account
 npx eas-cli init             # once: links the project (adds extra.eas.projectId)
-npx eas-cli build -p android --profile preview
+npx eas-cli build -p android --profile preview   # same as: npm run build:apk
 ```
 
 Download the APK from the link EAS prints and share it with staff (WhatsApp / USB). On first launch the app

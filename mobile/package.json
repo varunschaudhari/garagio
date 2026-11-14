@@ -8,7 +8,9 @@
     "android": "expo start --android",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "sync-i18n": "node scripts/sync-i18n.mjs"
+    "sync-i18n": "node scripts/sync-i18n.mjs",
+    "build:apk": "npx eas-cli build -p android --profile preview",
+    "build:apk:release": "npx eas-cli build -p android --profile production"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
