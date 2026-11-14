@@ -307,7 +307,10 @@
     "backup_none": "No backup yet. The nightly cron makes one; you can also back up now.",
     "backup_list": "Backups (newest first)",
     "backup_warning": "The backup folder is inside a website folder. Set backup_dir to /home/<cpanel-user>/backups in config.php.",
-    "system": "System"
+    "system": "System",
+    "receipt_width": "Thermal printer paper width",
+    "receipt_58": "58 mm (2 inch)",
+    "receipt_80": "80 mm (3 inch)"
   },
   "users": {
     "title": "Users",
@@ -894,7 +897,10 @@
     "advance": "Kept as advance: {{amount}}",
     "totals": "Totals",
     "refresh_lines": "Refresh from job",
-    "today_sales": "Today's sales"
+    "today_sales": "Today's sales",
+    "print_receipt": "Print receipt",
+    "share_pdf": "Share PDF",
+    "print_a4": "A4 bill / PDF"
   },
   "reminders": {
     "title": "Reminders",

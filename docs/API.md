@@ -86,6 +86,7 @@ Roles: **O** owner · **I** inventory manager · **D** front desk · **M** mecha
 | `POST /invoices/{id}/payments` | O D | |
 | `POST /invoices/{id}/cancel` | O | `{reason}` – stock back, job reopens |
 | `GET /invoices/{id}/html?lang=` | O D | bilingual A4 tax invoice |
+| `GET /invoices/{id}/receipt?lang=&width=58\|80` | O D | thermal receipt in one language; width defaults to the `receipt_width` setting |
 | `POST /invoices/{id}/whatsapp` | O D | |
 
 ## Owner tools

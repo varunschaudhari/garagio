@@ -34,7 +34,7 @@ const pack = (suffix, ...treeish) => {
 console.log(`Release ${base}`);
 pack('site', 'HEAD:public_html');
 pack('database', 'HEAD:database');
-pack('docs', 'HEAD:docs', 'DEPLOY.md', 'GO_LIVE.md', 'USER_GUIDE_MR.md', 'MOBILE_TEST_CHECKLIST.md', 'API.md');
+pack('docs', 'HEAD:docs', 'DEPLOY.md', 'GO_LIVE.md', 'USER_GUIDE_MR.md', 'MOBILE_TEST_CHECKLIST.md', 'PRINTER_SETUP.md', 'API.md');
 
 const migrations = git('ls-tree', '--name-only', 'HEAD', 'database/migrations/').split('\n').filter((f) => f.endsWith('.sql'));
 console.log(`\nNext (see docs/DEPLOY.md):

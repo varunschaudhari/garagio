@@ -90,7 +90,7 @@ export default async function invoicePage(ctx) {
             ${i.customer_id ? html`<a href="#/customers/${i.customer_id}">${i.customer_name}</a>` : i.cust_name || t('billing.walk_in')}
             ${i.invoice_date ? ' · ' + date(i.invoice_date) : ''}</div>
         </div>
-        ${final || draft ? html`<button class="btn btn-secondary" data-act="print">${icon('printer')}${t('billing.print')}</button>` : ''}
+        ${final || draft ? html`<button class="btn btn-secondary" data-act="receipt">${icon('printer')}${t('billing.print_receipt')}</button><button class="btn btn-secondary" data-act="print">${icon('file-text')}${t('billing.print_a4')}</button>` : ''}
         ${final && (i.customer_phone || i.cust_phone) ? html`<button class="btn btn-secondary" data-act="wa">${icon('message-circle')}${t('billing.whatsapp')}</button>` : ''}
         ${final && i.balance > 0 ? html`<button class="btn btn-primary" data-act="pay">${icon('hand-coins')}${t('billing.record_payment')}</button>` : ''}
         ${final && i.job_card_id && i.job_status === 'ready' ? html`<button class="btn btn-primary" data-act="deliver">${icon('bike')}${t('billing.deliver')}</button>` : ''}
@@ -172,6 +172,7 @@ export default async function invoicePage(ctx) {
     });
   });
   on(ctx.el, 'click', '[data-act="print"]', () => openApiHtml(`/invoices/${id}/html`).catch(toastError));
+  on(ctx.el, 'click', '[data-act="receipt"]', () => openApiHtml(`/invoices/${id}/receipt`).catch(toastError));
   on(ctx.el, 'click', '[data-act="wa"]', () => openWhatsAppFor(async () => (await api.post(`/invoices/${id}/whatsapp`)).url));
   on(ctx.el, 'click', '[data-act="pay"]', async () => {
     const res = await openDrawer({

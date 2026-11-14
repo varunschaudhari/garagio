@@ -1,12 +1,12 @@
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Trash2 } from 'lucide-react-native';
+import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Printer, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { useBillingMutation, useInvoice } from '@/api/queries';
-import { BillChip, emptyPayments, PaymentEntry, paymentsBody, shareInvoicePdf, type Payments } from '@/components/bills';
+import { BillChip, emptyPayments, PaymentEntry, paymentsBody, printReceipt, shareInvoicePdf, type Payments } from '@/components/bills';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
@@ -180,7 +180,8 @@ export default function InvoiceScreen() {
           </Card>
         ) : null}
 
-        {final || draft ? <Button title={t('billing.print')} icon={FileText} variant="secondary" onPress={() => shareInvoicePdf(i, lang)} needsOnline /> : null}
+        {final || draft ? <Button title={t('billing.print_receipt')} icon={Printer} variant={final ? 'primary' : 'secondary'} onPress={() => printReceipt(i, lang)} needsOnline /> : null}
+        {final || draft ? <Button title={t('billing.share_pdf')} icon={FileText} variant="secondary" onPress={() => shareInvoicePdf(i, lang)} needsOnline /> : null}
         {final && (i.customer_phone || i.cust_phone) ? <Button title={t('billing.whatsapp')} icon={MessageCircle} variant="secondary" onPress={whatsapp} needsOnline /> : null}
         {final && i.balance > 0 ? <Button title={t('billing.record_payment')} icon={HandCoins} onPress={() => { setText(String(i.balance)); setSheet('pay'); }} needsOnline /> : null}
         {final && i.job_card_id && i.job_status === 'ready' ? (

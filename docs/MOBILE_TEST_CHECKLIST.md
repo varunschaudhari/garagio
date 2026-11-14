@@ -110,7 +110,8 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Front desk sees "Only the owner can give a discount"; owner can set line and bill discounts on the draft (Apply).
 - [ ] Payment boxes (cash / UPI / card / bank) show the remaining credit; "Paid in full" fills cash.
 - [ ] Finalise with no payment for a non-trusted or walk-in customer → refused with a clear message; for a trusted customer within limit → saved as unpaid.
-- [ ] Final bill: "Print / PDF" opens the share sheet with a PDF; sharing to WhatsApp attaches the PDF (Marathi + English bill).
+- [ ] Final bill: "Print receipt" opens the Android print screen; the thermal printer prints a 58 / 80 mm receipt in the customer's language (`docs/PRINTER_SETUP.md`).
+- [ ] "Share PDF" opens the share sheet with the A4 PDF; sharing to WhatsApp attaches it (Marathi + English bill).
 - [ ] "Send on WhatsApp" opens a chat with the bill message; "Record payment" reduces the balance; "Deliver bike" closes the job.
 - [ ] Owner: Money tab shows today's sales and customer dues; "Cancel bill" asks for a reason; a counter-sale cancel puts stock back.
 - [ ] Counter sale: add parts by search or QR, choose a customer or walk-in, pay, finalise → bill opens.
@@ -135,6 +136,6 @@ Run on every new APK, installed from the EAS link, against the **HTTPS test site
 - [ ] Log in as each role (owner, inventory, front desk, mechanic) – the right tabs appear.
 - [ ] Scan a printed part label; camera and torch work.
 - [ ] Mechanic requests a part → inventory phone gets a **push notification** (needs FCM set up) and the bell count.
-- [ ] Front desk finalises a counter sale → "Print / PDF" shares a PDF to WhatsApp with Marathi text intact.
+- [ ] Front desk finalises a counter sale → "Print receipt" prints on the Bluetooth printer; "Share PDF" sends the A4 bill on WhatsApp with Marathi text intact.
 - [ ] Airplane mode → offline banner; back online → lists refresh.
 - [ ] Settings → App → raise "Minimum app version" above this APK → the update screen appears with the APK link. Set it back.

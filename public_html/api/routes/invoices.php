@@ -606,6 +606,18 @@ route('GET', '/invoices/{id}/html', function ($p) {
     return html_response((string) ob_get_clean());
 }, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
 
+/* The same bill as a thermal receipt (58 / 80 mm) for phone printing; ?width= overrides the setting. */
+route('GET', '/invoices/{id}/receipt', function ($p) {
+    $inv = invoice_row((int) $p['id']);
+    $lang = in_array(qp('lang'), ['mr', 'en'], true) ? qp('lang') : ($inv['customer_language'] ?: 'mr');
+    $paper = (int) (in_array(qp('width'), ['58', '80'], true) ? qp('width') : setting('receipt_width', '58'));
+    $paper = $paper === 80 ? 80 : 58;
+    $byRate = invoice_tax_summary($inv['items']);
+    ob_start();
+    include API_DIR . '/templates/receipt.php';
+    return html_response((string) ob_get_clean());
+}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+
 route('POST', '/invoices/{id}/whatsapp', function ($p) {
     $inv = invoice_row((int) $p['id']);
     $phone = $inv['customer_phone'] ?: $inv['cust_phone'];

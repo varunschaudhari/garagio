@@ -134,6 +134,19 @@ export function paymentsBody(p: Payments) {
 }
 
 /** Render the bilingual tax invoice to a PDF and open the share sheet (WhatsApp, etc.). */
+/**
+ * Print the bill as a thermal receipt (58 / 80 mm, see Settings) through the Android print dialog.
+ * The Bluetooth printer appears there once its print service app is installed (docs/PRINTER_SETUP.md).
+ */
+export async function printReceipt(inv: Pick<Invoice, 'id'>, lang?: string) {
+  try {
+    const htmlText = await api.get<string>(`/invoices/${inv.id}/receipt`, { lang });
+    await Print.printAsync({ html: htmlText });
+  } catch (e) {
+    toastError(e);
+  }
+}
+
 export async function shareInvoicePdf(inv: Pick<Invoice, 'id' | 'invoice_no'>, lang?: string) {
   try {
     const htmlText = await api.get<string>(`/invoices/${inv.id}/html`, { lang });

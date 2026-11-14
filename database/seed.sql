@@ -10,8 +10,8 @@ SET @now = NOW();
 INSERT INTO settings (skey, svalue, created_at, updated_at) VALUES
 ('shop_name', 'Trimurti Auto', @now, @now),
 ('shop_name_mr', 'त्रिमूर्ती ऑटो', @now, @now),
-('shop_address', 'Shop address, City, Maharashtra - PIN', @now, @now),
-('shop_address_mr', '', @now, @now),
+('shop_address', 'Beside Ambedkar Statue, Dharangaon - 425105', @now, @now),
+('shop_address_mr', 'आंबेडकर पुतळ्याशेजारी, धरणगाव - 425105', @now, @now),
 ('shop_phone', '', @now, @now),
 ('shop_gstin', '', @now, @now),
 ('shop_state_code', '27', @now, @now),

@@ -55,6 +55,7 @@ const SETTING_DEFAULTS = [
     'upi_id' => '',
     'min_app_version' => '1.0.0',
     'latest_app_url' => '',
+    'receipt_width' => '58',
     // Written by the system, not editable in Settings:
     'live_since' => '',
     'cron_reminders_at' => '',
@@ -89,6 +90,7 @@ const SETTING_RULES = [
     'upi_id' => 'str|max:60',
     'min_app_version' => 'str|max:12',
     'latest_app_url' => 'str|max:255',
+    'receipt_width' => 'enum:58,80',
 ];
 
 function settings_all(bool $refresh = false): array

@@ -5,12 +5,12 @@ import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { api, ApiError } from '@/api/client';
 import { useSettings, useWorkMutation } from '@/api/queries';
 import { toast, toastError } from '@/components/toast';
-import { Banner, Button, Card, Field, Loading, OfflineBanner } from '@/components/ui';
+import { Banner, Button, Card, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { fieldError } from '@/i18n';
 import { space } from '@/theme';
 
-const KEYS = ['shop_name', 'shop_name_mr', 'shop_phone', 'shop_gstin', 'shop_address', 'approval_limit', 'upi_id'] as const;
-type Key = (typeof KEYS)[number];
+const KEYS = ['shop_name', 'shop_name_mr', 'shop_phone', 'shop_gstin', 'shop_address', 'shop_address_mr', 'approval_limit', 'upi_id'] as const;
+type Key = (typeof KEYS)[number] | 'receipt_width';
 
 /** Owner: the settings most often changed from a phone. Everything else is on the web. */
 export default function SettingsScreen() {
@@ -49,11 +49,20 @@ export default function SettingsScreen() {
               onChangeText={(v) => setEdits((e) => ({ ...e, [k]: v }))}
               keyboardType={k === 'approval_limit' ? 'decimal-pad' : k === 'shop_phone' ? 'phone-pad' : 'default'}
               autoCapitalize={k === 'shop_gstin' ? 'characters' : 'sentences'}
-              multiline={k === 'shop_address'}
+              multiline={k === 'shop_address' || k === 'shop_address_mr'}
               hint={k === 'approval_limit' ? t('settings.approval_limit_hint') : undefined}
               error={errs[k]}
             />
           ))}
+          <Txt size="sm" weight="semibold">{t('settings.receipt_width')}</Txt>
+          <Segmented
+            options={[
+              { value: '58', label: t('settings.receipt_58') },
+              { value: '80', label: t('settings.receipt_80') },
+            ]}
+            value={val('receipt_width') || '58'}
+            onChange={(v) => setEdits((e) => ({ ...e, receipt_width: v }))}
+          />
         </Card>
         <Banner tone="warning" text={t('settings.ca_note')} />
         <Button title={t('common.save_changes')} icon={Save} onPress={submit} disabled={!Object.keys(edits).length} loading={save.isPending} needsOnline />

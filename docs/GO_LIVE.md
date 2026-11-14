@@ -14,7 +14,7 @@ Settings → **Shop** and **Billing & GST**. Copy the details exactly as on the 
 | Setting | What to enter | Prints on |
 |---|---|---|
 | Shop name (English / Marathi) | Legal or trade name as registered | Every bill, estimate, WhatsApp message |
-| Address (English / Marathi) | Full address with PIN code | Bills, estimates |
+| Address (English / Marathi) | Already filled in: *Beside Ambedkar Statue, Dharangaon - 425105* / *आंबेडकर पुतळ्याशेजारी, धरणगाव - 425105* – check it | Bills, receipts, estimates |
 | Phone | Counter number customers call | Bills, estimate page "Call me" |
 | GSTIN | 15 characters, e.g. `27ABCDE1234F1Z5` | Every tax invoice |
 | State | Maharashtra (27) | Decides CGST + SGST or IGST |
@@ -23,6 +23,7 @@ Settings → **Shop** and **Billing & GST**. Copy the details exactly as on the 
 | Invoice prefix | Up to 4 letters; bills look like `INV/26-27/00001` | Bill numbers |
 | Invoice terms (both languages) | Your shop's terms | Bottom of every bill |
 | UPI ID | e.g. `trimurtiauto@okaxis` – adds a "scan to pay" QR to bills | Bills with a balance |
+| Thermal printer paper width | 58 mm or 80 mm – the shop bills from phones on a Bluetooth receipt printer (`PRINTER_SETUP.md`) | Receipts |
 
 Then Settings → **System**: every line should be green or yellow. Fix every red line before billing.
 
@@ -117,7 +118,8 @@ Then:
    job card → estimate on WhatsApp → customer approves on the link → mechanic starts work → parts request →
    inventory issues (and one ₹1,000+ part needing approval) → mark ready → bill → payment → deliver.
    Also one counter sale, one purchase bill and one supplier payment.
-2. Look at the printed / PDF bill together with the CA's answers from section 2.
+2. Print a **receipt** on the thermal printer (set up with `PRINTER_SETUP.md`) and look at it together with
+   the CA's answers from section 2. Also send one **Share PDF** bill on WhatsApp.
 3. Owner: Settings → **System → Go live**.
    - Parts: **Keep parts and today's stock** (if the stock count in section 4 is done), otherwise *set all stock to 0*
      and count again.
@@ -136,7 +138,7 @@ until the end of the week. Each evening the owner spends 10 minutes on the check
 |---|---|---|
 | 1 | Front desk opens **every** job card in the app (and writes the paper slip as usual) | Jobs in the app = paper slips today |
 | 2 | Mechanics **request parts in the app**; inventory issues only from the queue | No part left the store without an issue in the app |
-| 3 | **All bills from the app** (paper bill book copied from the app bill) | Dashboard "Today's sales" by cash / UPI = cash drawer + UPI app |
+| 3 | **All bills from the app**, receipt printed for every customer (paper bill book copied from the app bill) | Dashboard "Today's sales" by cash / UPI = cash drawer + UPI app |
 | 4 | **Purchase bills** entered the day they arrive; supplier payments recorded | Supplier balances look right |
 | 5 | **Stock count** of one location | Differences are small and explained |
 | 6 | **Reports**: sales, dues, GST summary for the week | Totals match the paper bill book |

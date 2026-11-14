@@ -59,6 +59,7 @@ export default async function settingsPage(ctx) {
         ${field({ name: 'labour_gst_rate', label: t('settings.labour_gst_rate'), type: 'number', value: s.labour_gst_rate })}
         ${field({ name: 'labour_sac', label: t('settings.labour_sac'), value: s.labour_sac })}
         ${field({ name: 'upi_id', label: t('settings.upi_id'), value: s.upi_id, placeholder: 'shopname@upi' })}
+        ${field({ name: 'receipt_width', label: t('settings.receipt_width'), type: 'select', value: s.receipt_width || '58', options: [{ value: '58', label: t('settings.receipt_58') }, { value: '80', label: t('settings.receipt_80') }] })}
         ${field({ name: 'invoice_terms_en', label: t('settings.invoice_terms_en'), type: 'textarea', value: s.invoice_terms_en, span2: true })}
         ${field({ name: 'invoice_terms_mr', label: t('settings.invoice_terms_mr'), type: 'textarea', value: s.invoice_terms_mr, span2: true })}
       `, t('settings.ca_note')));

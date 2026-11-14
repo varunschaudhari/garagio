@@ -307,7 +307,10 @@
     "backup_none": "अजून बॅकअप नाही. रात्रीचा क्रॉन बॅकअप घेतो; तुम्ही आत्ताही घेऊ शकता.",
     "backup_list": "बॅकअप (नवीन आधी)",
     "backup_warning": "बॅकअप फोल्डर वेबसाइटच्या आत आहे. config.php मध्ये तो public_html बाहेर ठेवा.",
-    "system": "सिस्टम"
+    "system": "सिस्टम",
+    "receipt_width": "थर्मल प्रिंटर कागदाची रुंदी",
+    "receipt_58": "58 mm (2 इंच)",
+    "receipt_80": "80 mm (3 इंच)"
   },
   "users": {
     "title": "वापरकर्ते",
@@ -894,7 +897,10 @@
     "advance": "ॲडव्हान्स म्हणून ठेवले: {{amount}}",
     "totals": "एकूण",
     "refresh_lines": "जॉबमधून अपडेट करा",
-    "today_sales": "आजची विक्री"
+    "today_sales": "आजची विक्री",
+    "print_receipt": "पावती प्रिंट करा",
+    "share_pdf": "PDF पाठवा",
+    "print_a4": "A4 बिल / PDF"
   },
   "reminders": {
     "title": "आठवणी",

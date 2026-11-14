@@ -85,6 +85,26 @@ test('security: CSV cells that look like formulas are neutralised', function () 
     eq('Rahul', csv_safe('Rahul'));
 });
 
+test('billing: thermal receipt for phone printing (58 mm default, 80 mm, customer language)', function () {
+    $inv = trows("SELECT id, invoice_no, grand_total FROM invoices WHERE status = 'final' ORDER BY id DESC LIMIT 1")[0];
+    $r = get("/invoices/{$inv['id']}/receipt?lang=en", 'desk');
+    eq(200, $r['status']);
+    ok(str_starts_with($r['type'], 'text/html'), 'html');
+    ok(str_contains($r['body'], $inv['invoice_no']), 'invoice number');
+    ok(str_contains($r['body'], 'width: 48mm'), '58 mm paper by default');
+    ok(str_contains($r['body'], 'Dharangaon'), 'shop address');
+    ok(str_contains($r['body'], number_format((float) $inv['grand_total'], 2, '.', ',')), 'grand total');
+    ok(str_contains($r['body'], 'HSN'), 'HSN per line');
+    ok(!str_contains($r['body'], 'unit_cost') && !str_contains($r['body'], '#4B5563'), 'no cost, no grey ink');
+    ok(str_contains(get("/invoices/{$inv['id']}/receipt?width=80", 'desk')['body'], 'width: 72mm'), '80 mm on request');
+    status(200, put('/settings', ['receipt_width' => '80'], 'admin'));
+    ok(str_contains(get("/invoices/{$inv['id']}/receipt", 'desk')['body'], 'width: 72mm'), '80 mm from settings');
+    eq(422, put('/settings', ['receipt_width' => '100'], 'admin')['status']);
+    status(200, put('/settings', ['receipt_width' => '58'], 'admin'));
+    ok(str_contains(get("/invoices/{$inv['id']}/receipt?lang=mr", 'desk')['body'], 'धरणगाव'), 'Marathi address');
+    eq(403, get("/invoices/{$inv['id']}/receipt", 'ramesh')['status']);
+});
+
 test('backups: a folder below public_html (subdomain in public_html/<sub>) is not "outside the web"', function () {
     $base = sys_get_temp_dir() . '/garagio-webcheck-' . bin2hex(random_bytes(3));
     foreach (['public_html/backups', 'home/backups', 'www/x/backups'] as $d) {
