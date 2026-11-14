@@ -97,3 +97,5 @@ Roles: **O** owner · **I** inventory manager · **D** front desk · **M** mecha
 | `GET /reports/{sales,purchases,stock,profit,dues,payables,gst,mechanics}` | O (I: stock, purchases, payables) | `from, to, format=csv` |
 | `GET /messages/due` · `POST /messages/log` | O D | service + payment reminders with wa.me links |
 | `GET /backups` · `POST /backups` · `GET /backups/latest` | O | gzipped SQL dumps |
+| `GET /admin/health` | O | server, config, cron and data checks: `{status, checks:[{key, status: ok / warn / fail, value}]}` |
+| `GET /admin/go-live` · `POST /admin/go-live` | O | counts of trial data; reset `{confirm: "RESET", password, parts: keep / zero / delete, contacts: demo / all / keep}` – backup first, audited |

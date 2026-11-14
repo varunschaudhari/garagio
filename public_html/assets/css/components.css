@@ -493,3 +493,16 @@ a.list-item:hover { background: var(--surface-hover); }
 .purchase-grid td[data-out] { padding-top: 14px; white-space: nowrap; }
 .cell-invalid .input, .cell-invalid .select { border-color: var(--danger); background: var(--danger-soft); }
 @media (max-width: 767px) { .hide-sm { display: none !important; } }
+
+/* Settings → System */
+.health-icon { display: inline-flex; flex: none; }
+.health-ok .health-icon { color: var(--success-text); }
+.health-warn .health-icon { color: var(--warning-text); }
+.health-fail .health-icon { color: var(--danger-text); }
+.danger-zone { border-color: var(--danger); }
+.choices { border: 0; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.choices legend { font-weight: 600; margin-bottom: var(--s2); padding: 0; }
+.choice { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3); min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius-input); cursor: pointer; }
+.choice input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--primary); flex: none; }
+.choice:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.choice:has(input:focus-visible) { box-shadow: var(--focus); }

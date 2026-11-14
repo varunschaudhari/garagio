@@ -71,7 +71,11 @@ Both scripts refuse to run from a browser.
 4. **Settings → Billing & GST**: check “prices include GST”, labour GST rate and SAC, invoice terms, UPI ID (adds a pay-by-QR on bills).
 5. **Settings → Workflow**: approval limit (₹1,000), reminder periods.
 6. **Users**: change the demo staff names or deactivate them and add your real staff (everyone must set their own password at first login).
-7. Remove or edit the “(Demo)” suppliers and customers when you are ready.
+7. **Settings → System** shows a check list (PHP, HTTPS, secret, backup folder, cron jobs, GSTIN, demo data).
+   Fix every red line before you start; yellow lines are reminders.
+8. When the trial is over, **Settings → System → Go live** removes all trial jobs, bills, purchases and
+   payments (a backup is taken first), the “(Demo)” customers and suppliers, and restarts the numbering at 1.
+   See `docs/GO_LIVE.md`.
 
 > Ask your CA to confirm the HSN codes and GST rates on your parts before you start billing.
 

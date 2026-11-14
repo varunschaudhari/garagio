@@ -8,8 +8,9 @@ import { field, readForm, showFieldErrors, busy, clearErrors } from '../ui/form.
 import { dataTable } from '../ui/table.js';
 import { openDrawer } from '../ui/drawer.js';
 import { toast, toastError } from '../ui/toast.js';
+import { drawSystem } from './settings-system.js';
 
-const TABS = ['shop', 'billing', 'numbering', 'workflow', 'labour_rates', 'locations', 'categories', 'app', 'backup'];
+const TABS = ['shop', 'billing', 'numbering', 'workflow', 'labour_rates', 'locations', 'categories', 'app', 'backup', 'system'];
 
 export default async function settingsPage(ctx) {
   ctx.setTitle(t('settings.title'));
@@ -92,6 +93,8 @@ export default async function settingsPage(ctx) {
         ${b.items.length ? html`<div class="list">${b.items.map((f) => html`<div class="list-item"><span class="kpi-icon">${icon('file-text', 16)}</span><div style="flex:1"><div class="strong">${f.name}</div><div class="small muted">${f.created_at} · ${Math.round(f.size / 1024)} KB</div></div></div>`)}</div>`
           : html`<div class="card-body muted">${t('settings.backup_none')}</div>`}
       </div>`);
+    } else if (tab === 'system') {
+      await drawSystem(body, ctx, () => tab === 'system');
     } else {
       await drawMaster(tab);
     }
@@ -146,6 +149,7 @@ export default async function settingsPage(ctx) {
     tab = b.dataset.tab;
     ctx.el.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
     body.onclick = null;
+    body.onsubmit = null;
     draw();
   });
 

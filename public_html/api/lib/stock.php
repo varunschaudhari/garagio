@@ -37,7 +37,7 @@ function stock_move(
     if ($qty == 0.0) {
         fail(422, 'zero_qty', 'Quantity must not be zero');
     }
-    $part = row('SELECT id, part_no, name_en, current_stock, avg_cost FROM parts WHERE id = ? FOR UPDATE', [$partId]);
+    $part = row('SELECT id, part_no, name_en, current_stock, avg_cost, last_purchase_price, last_purchase_disc_pct FROM parts WHERE id = ? FOR UPDATE', [$partId]);
     if (!$part) {
         not_found('Part');
     }
@@ -55,6 +55,11 @@ function stock_move(
         $cost = max(0.0, $unitCost);
         $avg = $cur <= 0 ? $cost : (($cur * $avg) + ($qty * $cost)) / ($cur + $qty);
     } else {
+        if ($qty > 0 && $avg <= 0) {
+            // Uncosted stock found in a count / adjustment on a part that never had a cost:
+            // value it at the last purchase price rather than zero.
+            $avg = net_cost((float) $part['last_purchase_price'], (float) $part['last_purchase_disc_pct']);
+        }
         $cost = $avg;
     }
 

@@ -55,6 +55,10 @@ const SETTING_DEFAULTS = [
     'upi_id' => '',
     'min_app_version' => '1.0.0',
     'latest_app_url' => '',
+    // Written by the system, not editable in Settings:
+    'live_since' => '',
+    'cron_reminders_at' => '',
+    'cron_backup_at' => '',
 ];
 
 /** Validation rules for PUT /settings (owner). */

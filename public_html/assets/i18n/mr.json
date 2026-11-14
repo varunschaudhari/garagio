@@ -306,7 +306,8 @@
     "backup_done": "बॅकअप सेव्ह झाला",
     "backup_none": "अजून बॅकअप नाही. रात्रीचा क्रॉन बॅकअप घेतो; तुम्ही आत्ताही घेऊ शकता.",
     "backup_list": "बॅकअप (नवीन आधी)",
-    "backup_warning": "बॅकअप फोल्डर वेबसाइटच्या आत आहे. config.php मध्ये तो public_html बाहेर ठेवा."
+    "backup_warning": "बॅकअप फोल्डर वेबसाइटच्या आत आहे. config.php मध्ये तो public_html बाहेर ठेवा.",
+    "system": "सिस्टम"
   },
   "users": {
     "title": "वापरकर्ते",
@@ -394,7 +395,8 @@
     "invoice_not_final": "आधी बिल अंतिम करा.",
     "overpaid": "पेमेंट बाकीपेक्षा जास्त आहे.",
     "no_phone": "या बिलावर फोन नंबर नाही.",
-    "invoice_no_too_long": "बिल नंबर खूप मोठा आहे; सेटिंग्जमध्ये प्रिफिक्स लहान करा."
+    "invoice_no_too_long": "बिल नंबर खूप मोठा आहे; सेटिंग्जमध्ये प्रिफिक्स लहान करा.",
+    "backup_failed": "बॅकअप घेता आला नाही, त्यामुळे काहीही काढले नाही. config.php मधील बॅकअप फोल्डर तपासा."
   },
   "fields": {
     "required": "आवश्यक",
@@ -1008,5 +1010,73 @@
       "paid_daily": "दिले",
       "paid_advance": "उचल"
     }
+  },
+  "system": {
+    "check_title": "सिस्टम तपासणी",
+    "check_again": "पुन्हा तपासा",
+    "status_ok": "सर्व ठीक",
+    "status_warn": "लक्ष द्या",
+    "status_fail": "अडचण",
+    "server_time": "सर्व्हरची वेळ {{time}}",
+    "check": {
+      "php_version": "PHP आवृत्ती",
+      "php_extensions": "PHP एक्स्टेन्शन्स",
+      "db_version": "डेटाबेस",
+      "db_schema": "डेटाबेस टेबल्स",
+      "app_url_https": "साइटचा पत्ता HTTPS आहे",
+      "jwt_secret": "लॉग इन सिक्रेट (jwt_secret)",
+      "debug_off": "डीबग मोड बंद",
+      "cors": "इतर साइटवरून प्रवेश",
+      "storage_writable": "storage फोल्डरमध्ये लिहिता येते",
+      "backup_dir": "बॅकअप फोल्डर",
+      "last_backup": "शेवटचा बॅकअप",
+      "cron_reminders_at": "आठवणी cron शेवटचा कधी चालला",
+      "cron_backup_at": "बॅकअप cron शेवटचा कधी चालला",
+      "shop_gstin": "दुकानाचा GSTIN",
+      "shop_address": "दुकानाचा पत्ता आणि फोन",
+      "demo_data": "डेमो ग्राहक / सप्लायर",
+      "default_passwords": "डेमो पासवर्डवर असलेले वापरकर्ते",
+      "live_since": "प्रत्यक्ष वापर सुरू"
+    },
+    "fix": {
+      "php_version": "cPanel → MultiPHP Manager मध्ये PHP 8.1 किंवा नवीन आवृत्ती निवडा.",
+      "php_extensions": "cPanel → Select PHP Version → Extensions मध्ये ही एक्स्टेन्शन्स सुरू करा.",
+      "db_version": "",
+      "db_schema": "database/migrations मधील फाइल्स phpMyAdmin मध्ये क्रमाने import करा.",
+      "app_url_https": "config.php मध्ये app_url https://… ठेवा आणि AutoSSL चालवा.",
+      "jwt_secret": "config.php मध्ये किमान 32 अक्षरांचा यादृच्छिक jwt_secret ठेवा.",
+      "debug_off": "config.php मध्ये 'debug' => false ठेवा.",
+      "cors": "config.php मधील cors_origins मधून '*' काढा.",
+      "storage_writable": "api/storage फोल्डरला 755 परवानगी द्या.",
+      "backup_dir": "config.php मध्ये backup_dir public_html च्या बाहेरचा, लिहिता येणारा फोल्डर ठेवा.",
+      "last_backup": "बॅकअप टॅबमधून आता बॅकअप घ्या आणि रात्रीचा cron तपासा.",
+      "cron_reminders_at": "सकाळी 8 चा reminders.php cron लावा (DEPLOY.md पहा).",
+      "cron_backup_at": "रात्री 11 चा backup.php cron लावा (DEPLOY.md पहा).",
+      "shop_gstin": "दुकान टॅबमध्ये GSTIN टाका – तो प्रत्येक बिलावर छापला जातो.",
+      "shop_address": "दुकान टॅबमध्ये पत्ता आणि फोन टाका.",
+      "demo_data": "खालील “प्रत्यक्ष वापर सुरू करा” वापरून डेमो माहिती काढा.",
+      "default_passwords": "त्या वापरकर्त्यांनी पासवर्ड बदलावा, किंवा वापरकर्ते मधून नवीन पासवर्ड द्या.",
+      "live_since": "ट्रायल संपल्यावर खालील “प्रत्यक्ष वापर सुरू करा” वापरा."
+    },
+    "golive_title": "प्रत्यक्ष वापर सुरू करा – ट्रायलची माहिती काढा",
+    "golive_intro": "ट्रायल संपल्यावर एकदाच वापरा. आधी पूर्ण बॅकअप आपोआप घेतला जातो.",
+    "golive_live_since": "{{date}} पासून प्रत्यक्ष वापर",
+    "golive_removes": "काढले जाईल",
+    "golive_counts": "{{jobs}} जॉब · {{invoices}} बिले · {{purchases}} खरेदी · {{payments}} पेमेंट · {{photos}} फोटो · {{movements}} स्टॉक नोंदी, तसेच सूचना आणि मेसेज इतिहास. जॉब, अंदाजपत्रक आणि बिल नंबर पुन्हा 1 पासून सुरू होतील.",
+    "golive_keeps": "राहील: सेटिंग्ज, वापरकर्ते, मजुरी दर, जागा, कॅटेगरी आणि ऑडिट नोंदी.",
+    "golive_parts": "पार्ट्स",
+    "golive_parts_keep": "पार्ट्स आणि आजचा स्टॉक ठेवा (सुरुवातीचा स्टॉक म्हणून नोंदवला जाईल)",
+    "golive_parts_zero": "पार्ट्सची यादी ठेवा, सर्व स्टॉक 0 करा (नंतर स्टॉक मोजणी करा)",
+    "golive_parts_delete": "सर्व पार्ट्स काढा (नंतर स्वतःची यादी import करा)",
+    "golive_contacts": "ग्राहक आणि सप्लायर",
+    "golive_contacts_demo": "फक्त डेमो काढा ({{c}} ग्राहक, {{s}} सप्लायर)",
+    "golive_contacts_all": "सर्व काढा ({{c}} ग्राहक, {{s}} सप्लायर)",
+    "golive_contacts_keep": "सर्व ठेवा",
+    "golive_confirm_label": "खात्रीसाठी RESET टाइप करा",
+    "golive_password": "तुमचा पासवर्ड",
+    "golive_button": "ट्रायलची माहिती काढा",
+    "golive_sure_title": "आता ट्रायलची माहिती काढायची?",
+    "golive_sure": "हे ॲपमधून परत आणता येणार नाही – फक्त phpMyAdmin मध्ये बॅकअप restore करून.",
+    "golive_done": "ट्रायलची माहिती काढली. बॅकअप: {{file}}"
   }
 }

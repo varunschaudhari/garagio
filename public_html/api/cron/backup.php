@@ -12,4 +12,5 @@ if (PHP_SAPI !== 'cli') {
 }
 require dirname(__DIR__) . '/lib/bootstrap.php';
 $file = backup_database();
+save_setting('cron_backup_at', now());
 echo now() . ' backup: ' . $file . ' (' . filesize($file) . " bytes)\n";

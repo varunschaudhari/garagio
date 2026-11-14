@@ -21,4 +21,5 @@ if ($s + $p > 0) {
     notify_users(user_ids_with_role(ROLE_OWNER, ROLE_DESK), 'reminders_due', 'notify.reminders_title', 'notify.reminders_body', ['service' => $s, 'payment' => $p], '#/reminders');
     flush_pushes();
 }
+save_setting('cron_reminders_at', now());
 echo now() . " reminders: service=$s payment=$p\n";
