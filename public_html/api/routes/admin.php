@@ -165,7 +165,8 @@ route('GET', '/admin/health', function () {
         $add($k, $at && (time() - strtotime($at)) < 36 * 3600 ? 'ok' : 'warn', $at);
     }
 
-    $add('shop_gstin', setting('shop_gstin') ? 'ok' : 'warn', setting('shop_gstin') ?: null);
+    // Bills say "Tax Invoice" and charge GST, so billing without a GSTIN is a real problem, not a reminder.
+    $add('shop_gstin', setting('shop_gstin') ? 'ok' : 'fail', setting('shop_gstin') ?: null);
     $add('shop_address', setting('shop_address') && setting('shop_phone') ? 'ok' : 'warn');
     $demo = (int) val('SELECT COUNT(*) FROM customers WHERE ' . DEMO_NAME_SQL) + (int) val('SELECT COUNT(*) FROM suppliers WHERE ' . DEMO_NAME_SQL);
     $add('demo_data', $demo ? 'warn' : 'ok', $demo ?: null);

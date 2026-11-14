@@ -13,6 +13,8 @@ test('admin: health check is owner-only and reports schema, secret and https', f
     eq('ok', $by['storage_writable']['status']);
     eq('warn', $by['app_url_https']['status'], 'test server is plain http');
     eq('warn', $by['demo_data']['status'], 'seeded demo contacts are still there');
+    eq('fail', $by['shop_gstin']['status'], 'no GSTIN yet: billing would print "Tax Invoice" without one');
+    eq('fail', $h['status']);
     ok(in_array($h['status'], ['ok', 'warn', 'fail'], true));
 });
 

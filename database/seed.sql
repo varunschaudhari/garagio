@@ -12,7 +12,7 @@ INSERT INTO settings (skey, svalue, created_at, updated_at) VALUES
 ('shop_name_mr', 'त्रिमूर्ती ऑटो', @now, @now),
 ('shop_address', 'Beside Ambedkar Statue, Dharangaon - 425105', @now, @now),
 ('shop_address_mr', 'आंबेडकर पुतळ्याशेजारी, धरणगाव - 425105', @now, @now),
-('shop_phone', '', @now, @now),
+('shop_phone', '8956252573', @now, @now),
 ('shop_gstin', '', @now, @now),
 ('shop_state_code', '27', @now, @now),
 ('shop_state_name', 'Maharashtra', @now, @now),

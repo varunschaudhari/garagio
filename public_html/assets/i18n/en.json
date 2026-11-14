@@ -1060,7 +1060,7 @@
       "last_backup": "Back up now from the Backup tab and check the nightly cron job.",
       "cron_reminders_at": "Add the 8 AM reminders.php cron job (see DEPLOY.md).",
       "cron_backup_at": "Add the 11 PM backup.php cron job (see DEPLOY.md).",
-      "shop_gstin": "Enter the GSTIN on the Shop tab – it is printed on every bill.",
+      "shop_gstin": "Enter the GSTIN on the Shop tab before the first real bill – bills say “Tax Invoice” and charge GST. If the shop is not GST-registered, do not bill yet: the bill format has to change first.",
       "shop_address": "Enter the address and phone on the Shop tab.",
       "demo_data": "Remove the demo data with “Go live” below.",
       "default_passwords": "Those users should change their password, or reset it from Users.",

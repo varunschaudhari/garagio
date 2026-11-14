@@ -17,7 +17,7 @@ return [
     'jwt_secret' => 'CHANGE_ME_TO_A_LONG_RANDOM_STRING_OF_64_CHARACTERS_OR_MORE_0000',
 
     // Public address of the site, used in WhatsApp estimate links. No trailing slash.
-    'app_url' => 'https://your-domain.in',
+    'app_url' => 'https://trimurti.foreverstory.in',
 
     // Where nightly database backups are written. Keep it OUTSIDE public_html.
     // On cPanel always write the full path: /home/<cpanel-user>/backups

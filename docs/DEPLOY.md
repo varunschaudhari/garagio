@@ -6,29 +6,29 @@ Allow about 30 minutes. Screenshots are marked **[screenshot]** – add your hos
 ## What you need
 
 - A cPanel account with **PHP 8.1 or newer** and **MySQL 8 / MariaDB 10.6+**.
-- Your shop domain pointed at the account (e.g. `trimurtiauto.in`), **or a subdomain** of it (below).
+- Your shop domain pointed at the account (e.g. `foreverstory.in`), **or a subdomain** of it (below).
 - The project files (this repository).
 
 ## Main domain or subdomain?
 
-A subdomain such as `garage.trimurtiauto.in` works exactly like the main domain – the app has no fixed
+A subdomain such as `trimurti.foreverstory.in` works exactly like the main domain – the app has no fixed
 paths – and leaves the main domain free for a shop website. A second subdomain with its **own database**
-(e.g. `test.trimurtiauto.in`) is a good place for the trial and for testing new APKs.
+(e.g. `trimurti-test.foreverstory.in`) is a good place for the trial and for testing new APKs.
 
 For a subdomain, change these steps:
 
-1. cPanel → **Domains** (older cPanel: **Subdomains**) → create `garage.trimurtiauto.in`. Note its
-   **document root** – newer cPanel uses `/home/<cpaneluser>/garage.trimurtiauto.in`, older cPanel
+1. cPanel → **Domains** (older cPanel: **Subdomains**) → create `trimurti.foreverstory.in`. Note its
+   **document root** – newer cPanel uses `/home/<cpaneluser>/trimurti.foreverstory.in`, older cPanel
    `/home/<cpaneluser>/public_html/garage`. Wherever this guide says `public_html`, use that folder.
-2. In `config.php` (step 3): `app_url` → `https://garage.trimurtiauto.in`, and **always** write
+2. In `config.php` (step 3): `app_url` → `https://trimurti.foreverstory.in`, and **always** write
    `backup_dir` as a full path: `/home/<cpaneluser>/backups`. With the older layout the default would put
    backups inside the main site's `public_html`, where they could be downloaded (Settings → System shows it red).
 3. HTTPS (step 4): AutoSSL covers the subdomain once its DNS points at the server. If the domain's DNS is
    managed outside cPanel, add an **A record** `garage` → the server's IP first. MultiPHP Manager is per
    domain – set the subdomain to PHP 8.1+ as well.
 4. Cron jobs (step 5) use the subdomain's folder, e.g.
-   `/usr/local/bin/ea-php81 /home/<cpaneluser>/garage.trimurtiauto.in/api/cron/backup.php`.
-5. The Android app's server address is `https://garage.trimurtiauto.in`.
+   `/usr/local/bin/ea-php81 /home/<cpaneluser>/trimurti.foreverstory.in/api/cron/backup.php`.
+5. The Android app's server address is `https://trimurti.foreverstory.in`.
 
 ## 1. Create the database
 
@@ -59,7 +59,7 @@ The seed adds the shop settings (Trimurti Auto), demo staff, storage locations, 
 3. In `public_html/api/` copy `config.sample.php` to **`config.php`** and edit it:
    - `db` → host `localhost`, the database name, user and password from step 1.
    - `jwt_secret` → a long random string (64+ characters). Changing it later logs everyone out.
-   - `app_url` → `https://your-domain.in` (used in the WhatsApp estimate links).
+   - `app_url` → `https://trimurti.foreverstory.in` (used in the WhatsApp estimate links).
    - `backup_dir` → leave the default (`/home/<cpaneluser>/backups`, outside `public_html`).
 4. Make sure `public_html/api/storage/` is writable (permission 755 is usually enough). Photos and error logs go there.
 
@@ -88,7 +88,7 @@ Both scripts refuse to run from a browser.
 
 ## 6. First login
 
-1. Open `https://your-domain.in`.
+1. Open `https://trimurti.foreverstory.in`.
 2. Log in as **admin / garage123** → you are asked to set a new password.
 3. **Settings → Shop**: shop name, address, phone, **GSTIN**, state.
 4. **Settings → Billing & GST**: check “prices include GST”, labour GST rate and SAC, invoice terms, UPI ID (adds a pay-by-QR on bills).
@@ -105,7 +105,7 @@ Both scripts refuse to run from a browser.
 ## 7. Check that it works
 
 - Open a job card, prepare an estimate, **Send on WhatsApp** → open the link on a phone → the bilingual
-  estimate page loads at `https://your-domain.in/e/...` and **Approve** works.
+  estimate page loads at `https://trimurti.foreverstory.in/e/...` and **Approve** works.
 - Make a counter sale and **Print / PDF** the bill.
 - **Settings → Backup → Back up now**, then **Download latest backup**.
 
@@ -122,7 +122,7 @@ npx eas-cli build -p android --profile preview   # same as: npm run build:apk
 ```
 
 Download the APK from the link EAS prints and share it with staff (WhatsApp / USB). On first launch the app
-asks for the server address – enter `https://your-domain.in` – and the language.
+asks for the server address – enter `https://trimurti.foreverstory.in` – and the language.
 
 **Push notifications** (optional – the in-app bell works without them): create a Firebase project, add an
 Android app with package `in.trimurtiauto.garage`, then `npx eas-cli credentials` → *Android* → *Push
