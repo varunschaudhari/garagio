@@ -52,6 +52,10 @@ The seed adds the shop settings (Trimurti Auto), demo staff, storage locations, 
 
 ## 3. Upload the files
 
+> **cPanel has Git™ Version Control?** Skip the uploads: create only `api/config.php` by hand (point 3
+> below, inside the site folder – make the `api` folder first), then follow § 9 steps 1–3. The first
+> *Deploy HEAD Commit* copies every file, and every later update comes from GitHub.
+
 1. cPanel → **File Manager** → open `public_html`.
 2. Upload the **contents** of this repository's `public_html/` folder (not the folder itself) – easiest as a zip, then *Extract*.
    On the development PC, `node tools/make-release.mjs` builds `dist/garage-manager-<date>-<commit>-site.zip`
