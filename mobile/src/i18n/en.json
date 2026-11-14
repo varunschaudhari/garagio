@@ -306,7 +306,7 @@
     "backup_done": "Backup saved",
     "backup_none": "No backup yet. The nightly cron makes one; you can also back up now.",
     "backup_list": "Backups (newest first)",
-    "backup_warning": "The backup folder is inside the website. Move it outside public_html in config.php.",
+    "backup_warning": "The backup folder is inside a website folder. Set backup_dir to /home/<cpanel-user>/backups in config.php.",
     "system": "System"
   },
   "users": {
@@ -1050,7 +1050,7 @@
       "debug_off": "Set 'debug' => false in config.php.",
       "cors": "Remove '*' from cors_origins in config.php.",
       "storage_writable": "Give the api/storage folder permission 755.",
-      "backup_dir": "Point backup_dir in config.php to a writable folder outside public_html.",
+      "backup_dir": "In config.php set backup_dir to /home/<cpanel-user>/backups (outside public_html).",
       "last_backup": "Back up now from the Backup tab and check the nightly cron job.",
       "cron_reminders_at": "Add the 8 AM reminders.php cron job (see DEPLOY.md).",
       "cron_backup_at": "Add the 11 PM backup.php cron job (see DEPLOY.md).",
@@ -1081,7 +1081,7 @@
     "golive_sure": "This cannot be undone in the app – only by restoring the backup in phpMyAdmin.",
     "golive_done": "Trial data removed. Backup: {{file}}",
     "note": {
-      "inside_web": "Inside public_html",
+      "inside_web": "Inside a website folder (public_html) – anyone could download it",
       "not_writable": "Cannot write to it",
       "cannot_create": "Cannot be created"
     }

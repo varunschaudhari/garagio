@@ -85,6 +85,20 @@ test('security: CSV cells that look like formulas are neutralised', function () 
     eq('Rahul', csv_safe('Rahul'));
 });
 
+test('backups: a folder below public_html (subdomain in public_html/<sub>) is not "outside the web"', function () {
+    $base = sys_get_temp_dir() . '/garagio-webcheck-' . bin2hex(random_bytes(3));
+    foreach (['public_html/backups', 'home/backups', 'www/x/backups'] as $d) {
+        @mkdir("$base/$d", 0777, true);
+    }
+    ok(!backup_dir_outside_web("$base/public_html/backups"), 'public_html/backups is web-reachable');
+    ok(!backup_dir_outside_web("$base/www/x/backups"), 'www/... is web-reachable');
+    ok(backup_dir_outside_web("$base/home/backups"), 'a plain home folder is fine');
+    ok(!backup_dir_outside_web(WEB_ROOT . '/api/storage'), 'inside this site');
+    // backup_dir() drops a deny-all .htaccess into the folder it uses.
+    ok(is_file(backup_dir() . '/.htaccess'), 'deny-all .htaccess written');
+    ok(str_contains((string) file_get_contents(backup_dir() . '/.htaccess'), 'Require all denied'));
+});
+
 test('backups: the go-live safety backup is never pruned', function () {
     $dir = sys_get_temp_dir() . '/garagio-test-backups';
     @mkdir($dir, 0777, true);

@@ -20,7 +20,9 @@ return [
     'app_url' => 'https://your-domain.in',
 
     // Where nightly database backups are written. Keep it OUTSIDE public_html.
-    // On cPanel: /home/<cpanel-user>/backups
+    // On cPanel always write the full path: /home/<cpanel-user>/backups
+    // (The fallback "one folder above the site" is inside public_html when a subdomain's
+    // document root is public_html/<sub> - Settings → System flags that.)
     'backup_dir' => dirname(__DIR__, 2) . '/backups',
 
     // Show real error messages in API responses. Keep false on the live site.

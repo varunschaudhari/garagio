@@ -6,8 +6,29 @@ Allow about 30 minutes. Screenshots are marked **[screenshot]** – add your hos
 ## What you need
 
 - A cPanel account with **PHP 8.1 or newer** and **MySQL 8 / MariaDB 10.6+**.
-- Your shop domain pointed at the account (e.g. `trimurtiauto.in`).
+- Your shop domain pointed at the account (e.g. `trimurtiauto.in`), **or a subdomain** of it (below).
 - The project files (this repository).
+
+## Main domain or subdomain?
+
+A subdomain such as `garage.trimurtiauto.in` works exactly like the main domain – the app has no fixed
+paths – and leaves the main domain free for a shop website. A second subdomain with its **own database**
+(e.g. `test.trimurtiauto.in`) is a good place for the trial and for testing new APKs.
+
+For a subdomain, change these steps:
+
+1. cPanel → **Domains** (older cPanel: **Subdomains**) → create `garage.trimurtiauto.in`. Note its
+   **document root** – newer cPanel uses `/home/<cpaneluser>/garage.trimurtiauto.in`, older cPanel
+   `/home/<cpaneluser>/public_html/garage`. Wherever this guide says `public_html`, use that folder.
+2. In `config.php` (step 3): `app_url` → `https://garage.trimurtiauto.in`, and **always** write
+   `backup_dir` as a full path: `/home/<cpaneluser>/backups`. With the older layout the default would put
+   backups inside the main site's `public_html`, where they could be downloaded (Settings → System shows it red).
+3. HTTPS (step 4): AutoSSL covers the subdomain once its DNS points at the server. If the domain's DNS is
+   managed outside cPanel, add an **A record** `garage` → the server's IP first. MultiPHP Manager is per
+   domain – set the subdomain to PHP 8.1+ as well.
+4. Cron jobs (step 5) use the subdomain's folder, e.g.
+   `/usr/local/bin/ea-php81 /home/<cpaneluser>/garage.trimurtiauto.in/api/cron/backup.php`.
+5. The Android app's server address is `https://garage.trimurtiauto.in`.
 
 ## 1. Create the database
 

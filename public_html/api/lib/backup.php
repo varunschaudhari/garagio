@@ -12,16 +12,28 @@ const BACKUP_PATTERN = '/^garage-(golive-)?\d{8}-\d{6}\.sql\.gz$/';
 /** Backups taken before a go-live reset are kept for good (never pruned). */
 const BACKUP_KEEP_FOREVER = 'golive';
 
+/** Folder names that hosts serve to the web; a backup must never sit below one of them. */
+const WEB_FOLDER_NAMES = ['public_html', 'www', 'htdocs', 'httpdocs', 'wwwroot', 'html'];
+
 function backup_dir(): string
 {
     $dir = rtrim((string) config('backup_dir', dirname(WEB_ROOT) . '/backups'), '/\\');
     if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) {
         throw new RuntimeException("Cannot create backup folder $dir");
     }
+    // Defence in depth: if the folder ever ends up inside a website (e.g. a subdomain installed in
+    // public_html/garage puts the default "../backups" in public_html), Apache still refuses to serve it.
+    if (!is_file("$dir/.htaccess") && is_writable($dir)) {
+        @file_put_contents("$dir/.htaccess", "Require all denied\n<IfModule !mod_authz_core.c>\n  Deny from all\n</IfModule>\n");
+        @file_put_contents("$dir/index.html", '');
+    }
     return $dir;
 }
 
-/** Is the backup folder outside the website (public_html)? */
+/**
+ * Is the backup folder outside every website folder? False when it is inside this site, or below a
+ * folder the host serves (public_html, www, …) - which covers a subdomain installed in public_html/<sub>.
+ */
 function backup_dir_outside_web(string $dir): bool
 {
     $real = realpath($dir);
@@ -31,7 +43,11 @@ function backup_dir_outside_web(string $dir): bool
     }
     $norm = static fn (string $p) => rtrim(str_replace('\\', '/', $p), '/') . '/';
     $cmp = PHP_OS_FAMILY === 'Windows' ? 'strtolower' : static fn ($x) => $x;
-    return !str_starts_with($cmp($norm($real)), $cmp($norm($web)));
+    if (str_starts_with($cmp($norm($real)), $cmp($norm($web)))) {
+        return false;
+    }
+    $segments = array_map($cmp, explode('/', trim($norm($real), '/')));
+    return !array_intersect($segments, WEB_FOLDER_NAMES);
 }
 
 /** Dump every table (structure + data) and return the file path. $tag 'golive' keeps the file forever. */
