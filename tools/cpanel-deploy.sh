@@ -42,7 +42,21 @@ GM_CONFIG="$DEPLOY_PATH/api/config.php" "$PHP_BIN" "$REPO/public_html/api/cron/b
 # 2. Copy the site: exactly the committed files of public_html (git archive), never anything untracked or
 #    git-ignored in this checkout. Files that exist only on the server (config.php, photos, logs, backups)
 #    are left alone because nothing is deleted.
+#    cPanel's MultiPHP Manager writes the site's PHP version into .htaccess between "# php -- BEGIN/END
+#    cPanel-generated handler" lines. Our .htaccess replaces the file, so that block is carried over -
+#    without it the site would silently fall back to another PHP version.
+HT="$DEPLOY_PATH/.htaccess"
+BEGIN_MARK='^# php -- BEGIN cPanel-generated handler'
+END_MARK='^# php -- END cPanel-generated handler'
+PHP_HANDLER=""
+if [ -f "$HT" ]; then
+  PHP_HANDLER="$(sed -n "/$BEGIN_MARK/,/$END_MARK/p" "$HT")"
+fi
 git archive --format=tar HEAD:public_html | tar -x -C "$DEPLOY_PATH"
+if [ -n "$PHP_HANDLER" ] && ! grep -q "$BEGIN_MARK" "$HT"; then
+  { printf '%s\n\n' "$PHP_HANDLER"; cat "$HT"; } > "$HT.deploy-tmp" && mv "$HT.deploy-tmp" "$HT"
+  log "kept cPanel's PHP version block in .htaccess"
+fi
 
 # 3. Database changes that came with this commit.
 "$PHP_BIN" "$DEPLOY_PATH/api/cron/migrate.php"
