@@ -18,10 +18,19 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') deploy: $*"; }
 if [ ! -f "$REPO/.deploy.env" ]; then
   log "missing $REPO/.deploy.env - see docs/DEPLOY.md (Automatic deploys)"; exit 1
 fi
-# shellcheck disable=SC1091
-. "$REPO/.deploy.env"
-: "${DEPLOY_PATH:?set DEPLOY_PATH in .deploy.env}"
-PHP_BIN="${PHP_BIN:-php}"
+# Read KEY=VALUE lines without executing the file. Tolerates Windows line endings (cPanel's File Manager
+# editor saves CRLF), blank lines, comments, spaces and quotes around values.
+DEPLOY_PATH=""
+PHP_BIN="php"
+while IFS='=' read -r key value || [ -n "$key" ]; do
+  key="$(printf '%s' "$key" | tr -d '\r[:space:]')"
+  value="$(printf '%s' "${value:-}" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/")"
+  case "$key" in
+    DEPLOY_PATH) DEPLOY_PATH="$value" ;;
+    PHP_BIN) [ -n "$value" ] && PHP_BIN="$value" ;;
+  esac
+done < "$REPO/.deploy.env"
+[ -n "$DEPLOY_PATH" ] || { log "set DEPLOY_PATH in .deploy.env"; exit 1; }
 DEPLOY_PATH="${DEPLOY_PATH%/}"
 
 if [ -z "$DEPLOY_PATH" ] || [ "$DEPLOY_PATH" = "$HOME" ] || [ "$DEPLOY_PATH" = "/" ]; then
