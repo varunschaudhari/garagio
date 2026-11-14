@@ -25,7 +25,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - `public_html/assets/` - `css/` tokens/base/components/print, `js/` app, router, api, i18n, `ui/` components, `pages/`; `i18n/en.json` + `mr.json` shared with mobile.
 - `mobile/` - Expo SDK 58 app (Expo Router, TypeScript strict).
 - `tests/run.php` + `tests/cases/*.php` - API tests; `tests/e2e/` - Playwright.
-- `tools/` - dev router for `php -S`, DB reset, icon generator.
+- `tools/` - dev router for `php -S`, DB reset, icon generator, i18n check, LAN server, release zips.
+- `.github/workflows/ci.yml` - API tests (PHP 8.1 + 8.3), Playwright, mobile checks. Branch `feature/garage-manager-v1`.
 
 ## Commands (Windows dev machine)
 - PHP is XAMPP: `C:\xampp\php\php.exe` (not on PATH). XAMPP's MariaDB 10.4 is NOT used.
@@ -35,6 +36,9 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - API tests: `php tests/run.php [filter]` (rebuilds garage_test, starts its own server on :8099).
 - E2E: `cd tests/e2e && PHP_BIN=C:/xampp/php/php.exe npx playwright test` (garage_e2e, port 8098).
   Playwright must be ≥1.65 - 1.49 hangs on Node 24.
+- Phone on Wi-Fi: `powershell -ExecutionPolicy Bypass -File tools/serve-lan.ps1` (prints the address; sets GM_APP_URL).
+- Translations: `node tools/check-i18n.mjs` (same keys/placeholders en+mr, mobile copies synced) - CI runs it.
+- Release: `node tools/make-release.mjs` → `dist/` site / database / docs zips from HEAD.
 - Icons: add the name to `tools/build-icons.mjs`, run it against `lucide-static/icons`.
 
 ## API conventions
@@ -43,7 +47,9 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Validate every input with `clean($in, ['field' => 'type|req|max:N|min:N|def:V'], $partial)`.
   Use `def:0` for NOT NULL numeric columns (forms send empty strings → null otherwise).
 - Errors: `fail(status, 'snake_code', 'message', $fields)`. Clients translate `errors.<code>`.
-- Money/stock changes inside `tx()`. Stock only via `stock_move()` (writes the ledger row + balance_after).
+- Money/stock changes inside `tx()`. Stock only via `stock_move()` (writes the ledger row + balance_after);
+  the go-live ledger wipe is `stock_restart_ledger()`, also in `lib/stock.php`.
+- Line discounts go through `clean_discounts()`; unused customer money is applied with `apply_customer_advance()`.
 - Return payloads through `strip_cost()` wherever cost fields (COST_FIELDS) may appear.
 - `audit()` for discounts, invoice cancels, stock adjustments, credit changes, user changes.
 - GST maths only in `lib/gst.php` (`gst_line`, `gst_bill`); never on clients.
