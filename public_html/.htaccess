@@ -1,0 +1,35 @@
+# Garage Manager - site root
+
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # HTTPS only
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Public estimate approval links: /e/<token> → API
+  RewriteRule ^e/([A-Za-z0-9_-]+)(/approve|/call)?/?$ api/index.php?r=/e/$1$2 [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "same-origin"
+  # App code: always revalidate so a new upload takes effect at once
+  <FilesMatch "\.(html|js|css|json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  # Fonts and vendored libraries: cache for a month
+  <FilesMatch "\.(woff2|svg|png|ico)$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType font/woff2 .woff2
+  AddType application/manifest+json .webmanifest
+</IfModule>

@@ -1,0 +1,143 @@
+/* Design tokens - shared with mobile/src/theme/tokens.ts. Change both together. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20B9, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  src: url("../fonts/noto-sans-devanagari-devanagari-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF, U+11B00-11B09;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #F7F8FA;
+  --surface: #FFFFFF;
+  --surface-2: #F3F4F6;
+  --surface-hover: #F9FAFB;
+  --border: #E5E7EB;
+  --border-strong: #D1D5DB;
+  --text: #111827;
+  --text-muted: #6B7280;
+
+  --primary: #F97316;
+  --primary-hover: #EA580C;
+  /* Dark ink on orange: white on #F97316 is 2.8:1 and fails WCAG AA; #111827 is 7.3:1. */
+  --primary-ink: #111827;
+  --primary-soft: #FFF1E6;
+  --primary-text: #C2410C; /* orange used as text on light surfaces (5.2:1) */
+
+  --success: #16A34A;
+  --success-soft: #DCFCE7;
+  --success-text: #166534;
+  --warning: #D97706;
+  --warning-soft: #FEF3C7;
+  --warning-text: #92400E;
+  --danger: #DC2626;
+  --danger-soft: #FEE2E2;
+  --danger-text: #991B1B;
+  --info: #2563EB;
+  --info-soft: #DBEAFE;
+  --info-text: #1E40AF;
+  --neutral-soft: #F3F4F6;
+  --neutral-text: #374151;
+
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.05);
+  --shadow-pop: 0 8px 32px rgba(16, 24, 40, 0.16);
+  --overlay: rgba(17, 24, 39, 0.45);
+  --focus: 0 0 0 3px rgba(249, 115, 22, 0.45);
+  /* Chart mark colour: validated (dataviz validator) for lightness band + 3:1 contrast on both surfaces. */
+  --chart-1: #EA580C;
+  --chart-grid: #EEF0F3;
+
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-chip: 999px;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px;
+
+  --font: "Inter", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-12: 0.75rem; --fs-14: 0.875rem; --fs-16: 1rem; --fs-20: 1.25rem; --fs-24: 1.5rem; --fs-32: 2rem;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur: 180ms;
+  --touch: 44px;
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 68px;
+  --topbar-h: 60px;
+  --bottombar-h: 64px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0F1115;
+  --surface: #171A21;
+  --surface-2: #1F232C;
+  --surface-hover: #1C2029;
+  --border: #2A2F3A;
+  --border-strong: #3A4150;
+  --text: #F3F4F6;
+  --text-muted: #9CA3AF;
+  --primary: #FB923C;
+  --primary-hover: #FDBA74;
+  --primary-ink: #111827;
+  --primary-soft: rgba(251, 146, 60, 0.14);
+  --primary-text: #FDBA74;
+  --success: #4ADE80; --success-soft: rgba(74, 222, 128, 0.14); --success-text: #86EFAC;
+  --warning: #FBBF24; --warning-soft: rgba(251, 191, 36, 0.14); --warning-text: #FCD34D;
+  --danger: #F87171; --danger-soft: rgba(248, 113, 113, 0.14); --danger-text: #FCA5A5;
+  --info: #60A5FA; --info-soft: rgba(96, 165, 250, 0.14); --info-text: #93C5FD;
+  --neutral-soft: rgba(156, 163, 175, 0.14); --neutral-text: #D1D5DB;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --focus: 0 0 0 3px rgba(251, 146, 60, 0.5);
+  --chart-1: #EA580C;
+  --chart-grid: #262B35;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0F1115;
+    --surface: #171A21;
+    --surface-2: #1F232C;
+    --surface-hover: #1C2029;
+    --border: #2A2F3A;
+    --border-strong: #3A4150;
+    --text: #F3F4F6;
+    --text-muted: #9CA3AF;
+    --primary: #FB923C;
+    --primary-hover: #FDBA74;
+    --primary-ink: #111827;
+    --primary-soft: rgba(251, 146, 60, 0.14);
+    --primary-text: #FDBA74;
+    --success: #4ADE80; --success-soft: rgba(74, 222, 128, 0.14); --success-text: #86EFAC;
+    --warning: #FBBF24; --warning-soft: rgba(251, 191, 36, 0.14); --warning-text: #FCD34D;
+    --danger: #F87171; --danger-soft: rgba(248, 113, 113, 0.14); --danger-text: #FCA5A5;
+    --info: #60A5FA; --info-soft: rgba(96, 165, 250, 0.14); --info-text: #93C5FD;
+    --neutral-soft: rgba(156, 163, 175, 0.14); --neutral-text: #D1D5DB;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
+    --overlay: rgba(0, 0, 0, 0.6);
+    --focus: 0 0 0 3px rgba(251, 146, 60, 0.5);
+  --chart-1: #EA580C;
+  --chart-grid: #262B35;
+  }
+}

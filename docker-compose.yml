@@ -1,0 +1,20 @@
+# Local MySQL for development and tests (the live site uses cPanel MySQL).
+#   docker compose up -d
+# Dev database: garage_dev   Test database: garage_test (recreated by tests/run.php)
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: garagio-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: devroot
+      MYSQL_DATABASE: garage_dev
+      TZ: Asia/Kolkata
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "3307:3306"
+    volumes:
+      - garagio-mysql:/var/lib/mysql
+
+volumes:
+  garagio-mysql:

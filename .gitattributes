@@ -1,0 +1,9 @@
+# Keep LF everywhere (PHP, .htaccess, cron scripts run on Linux hosts; git archive uses these rules too).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.ttf binary
+*.gz binary
+*.zip binary

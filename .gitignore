@@ -1,0 +1,28 @@
+# Secrets / local config
+public_html/api/config.php
+
+# Runtime data
+public_html/api/storage/photos/*
+public_html/api/storage/logs/*
+public_html/api/storage/tmp/*
+!public_html/api/storage/**/.gitkeep
+backups/
+
+# Node / Expo
+node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/android/
+mobile/ios/
+mobile/*.apk
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Expo generated
+mobile/expo-env.d.ts

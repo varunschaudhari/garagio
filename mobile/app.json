@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Trimurti Garage",
+    "slug": "garage-manager",
+    "version": "1.0.0",
+    "scheme": "garagemanager",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#F7F8FA",
+    "platforms": ["android"],
+    "android": {
+      "package": "in.trimurtiauto.garage",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F97316"
+      },
+      "permissions": ["android.permission.CAMERA", "android.permission.VIBRATE"],
+      "softwareKeyboardLayoutMode": "pan",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#F7F8FA",
+          "dark": { "backgroundColor": "#0F1115" }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "The camera is used to scan part and rack QR codes.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F97316"
+        }
+      ]
+    ],
+    "extra": {
+      "defaultServer": "https://"
+    }
+  }
+}

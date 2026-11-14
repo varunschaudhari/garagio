@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="mr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F97316">
+  <title>Trimurti Auto · Garage Manager</title>
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/print.css">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash.
+    try {
+      var th = localStorage.getItem('gm.theme');
+      if (th === 'light' || th === 'dark') document.documentElement.dataset.theme = th;
+      var lg = localStorage.getItem('gm.lang');
+      if (lg === 'en' || lg === 'mr') document.documentElement.lang = lg;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div class="auth-wrap"><div class="skeleton" style="width:220px;height:16px"></div></div>
+  </div>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  <noscript>Please enable JavaScript to use Garage Manager.</noscript>
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>

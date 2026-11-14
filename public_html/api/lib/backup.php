@@ -1,0 +1,80 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Database backup in pure PHP (shared hosts often disable exec(), so no mysqldump).
+ * Writes a gzipped .sql file to config('backup_dir') - keep that folder outside public_html - and
+ * keeps the newest BACKUP_KEEP files.
+ */
+
+const BACKUP_KEEP = 14;
+const BACKUP_PATTERN = '/^garage-\d{8}-\d{6}\.sql\.gz$/';
+
+function backup_dir(): string
+{
+    $dir = rtrim((string) config('backup_dir', dirname(WEB_ROOT) . '/backups'), '/\\');
+    if (!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) {
+        throw new RuntimeException("Cannot create backup folder $dir");
+    }
+    return $dir;
+}
+
+/** Dump every table (structure + data) and return the file path. */
+function backup_database(): string
+{
+    $dir = backup_dir();
+    $file = $dir . '/garage-' . date('Ymd-His') . '.sql.gz';
+    $gz = gzopen($file, 'wb6');
+    if (!$gz) {
+        throw new RuntimeException("Cannot write $file");
+    }
+    $pdo = db();
+    gzwrite($gz, "-- Garage Manager backup " . now() . "\nSET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS = 0;\n\n");
+    foreach ($pdo->query('SHOW FULL TABLES WHERE Table_type = "BASE TABLE"')->fetchAll(PDO::FETCH_NUM) as [$table]) {
+        $create = $pdo->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_NUM)[1];
+        gzwrite($gz, "DROP TABLE IF EXISTS `$table`;\n$create;\n\n");
+        $st = $pdo->query("SELECT * FROM `$table`", PDO::FETCH_ASSOC);
+        $batch = [];
+        foreach ($st as $row) {
+            $vals = array_map(static fn ($v) => $v === null ? 'NULL' : (is_int($v) || is_float($v) ? (string) $v : $pdo->quote((string) $v)), array_values($row));
+            $batch[] = '(' . implode(',', $vals) . ')';
+            if (count($batch) >= 200) {
+                gzwrite($gz, "INSERT INTO `$table` VALUES\n" . implode(",\n", $batch) . ";\n");
+                $batch = [];
+            }
+        }
+        if ($batch) {
+            gzwrite($gz, "INSERT INTO `$table` VALUES\n" . implode(",\n", $batch) . ";\n");
+        }
+        gzwrite($gz, "\n");
+    }
+    gzwrite($gz, "SET FOREIGN_KEY_CHECKS = 1;\n");
+    gzclose($gz);
+    prune_backups($dir);
+    return $file;
+}
+
+/** Remove our own old backup files beyond the newest BACKUP_KEEP. */
+function prune_backups(string $dir): void
+{
+    $files = list_backups();
+    foreach (array_slice($files, BACKUP_KEEP) as $f) {
+        if (preg_match(BACKUP_PATTERN, $f['name'])) {
+            @unlink($dir . '/' . $f['name']);
+        }
+    }
+}
+
+/** Newest first. */
+function list_backups(): array
+{
+    $dir = backup_dir();
+    $out = [];
+    foreach (scandir($dir) ?: [] as $name) {
+        if (preg_match(BACKUP_PATTERN, $name)) {
+            $out[] = ['name' => $name, 'size' => filesize("$dir/$name"), 'created_at' => date('Y-m-d H:i:s', filemtime("$dir/$name"))];
+        }
+    }
+    usort($out, static fn ($a, $b) => strcmp($b['name'], $a['name']));
+    return $out;
+}

@@ -1,0 +1,121 @@
+# Android app – manual test checklist
+
+Run on a low-end Android phone (2–3 GB RAM, 360 px wide) before each release. Tick every box in **both
+Marathi and English** unless the line says otherwise. Automated checks (`npm run typecheck`,
+`npm run lint`, `npx expo export --platform android`) must pass first.
+
+## How to test against a local server
+
+1. On the PC: `docker compose up -d`, `php tools/reset-dev-db.php`, then start the server on the LAN:
+   `php -S 0.0.0.0:8080 -t public_html tools/dev-router.php`
+2. Phone and PC on the same Wi-Fi. In `mobile/`: `npx expo start`, open in Expo Go (or a development build).
+3. First launch → server address `http://<PC-LAN-IP>:8080`.
+   (A real APK must use the HTTPS shop domain; Android blocks plain HTTP in release builds.)
+
+## Phase 1 – foundation and inventory
+
+### First launch and login
+- [ ] First launch shows server address + language; a wrong address shows "not a Garage Manager server".
+- [ ] Language choice changes the setup and login screens immediately.
+- [ ] Login with a seeded user (`garage123`) forces a new password; back button does not skip it.
+- [ ] Wrong password shows a clear error; 5 wrong tries → "try again after 10 minutes".
+- [ ] After login the language follows the user's saved language.
+- [ ] Killing and reopening the app keeps you logged in (token in secure storage).
+- [ ] Raising "Minimum app version" in web Settings above the app version shows the update screen.
+
+### Tabs by role
+- [ ] Owner: Home · Stock · More.  Inventory manager: Home · Stock · Me.
+- [ ] Front desk: Home · Stock · Me.  Mechanic: Stock · Me.
+
+### Stock lookup
+- [ ] Search finds parts by English name, Marathi name, part no. and rack.
+- [ ] Low-stock chip filters; low parts show the red "Low" chip.
+- [ ] Pull to refresh works on every list.
+- [ ] Part detail shows stock, location, rack, MRP, GST, HSN and the ledger.
+- [ ] Mechanic and front desk never see average cost or purchase price.
+- [ ] Owner / inventory manager see the cost tile and the "Adjust stock" button; others do not.
+- [ ] Adjust stock with −2 and a reason → success toast + haptic; ledger shows "Adjustment"; going below zero is refused.
+
+### QR scanning
+- [ ] Print labels from the web (Parts → QR labels). Scanning a part label opens that part.
+- [ ] Scanning a rack label opens the parts on that rack.
+- [ ] Unknown code shows "No part with code …" and the scanner keeps running.
+- [ ] Torch button works; camera permission prompt appears once and "Allow camera" works if denied.
+
+### Stock count
+- [ ] Location tabs list parts grouped by rack, in rack order.
+- [ ] Entering a different count highlights the row; footer shows "N parts differ".
+- [ ] Leaving the screen and coming back keeps entered counts.
+- [ ] Scan button (header) jumps to the scanned rack or part.
+- [ ] Post count → confirm → toast "Stock count posted"; web ledger shows "Stock count" rows.
+
+### Offline
+- [ ] Turn on airplane mode: orange offline banner appears, cached lists still show, save buttons are disabled.
+- [ ] Turn it off: banner disappears and lists refresh.
+
+### Look and feel
+- [ ] Dark mode (system setting) is readable on every screen.
+- [ ] Buttons are easy to hit with a thumb; no text is cut off in Marathi.
+- [ ] Logout asks for confirmation and returns to login.
+
+## Phase 2 – suppliers and purchases
+
+- [ ] Inventory manager has a Purchases tab; the owner reaches Purchases, Suppliers and Reorder from More.
+- [ ] New purchase bill: pick a supplier from the search sheet; supplier balance shows under the name.
+- [ ] Add parts from the search sheet and by scanning a QR label; price and discount fill from the last purchase.
+- [ ] Changing qty, price, discount or GST updates the line total and bill totals (from the server).
+- [ ] An other-state supplier (e.g. Deccan Lubricants) shows the IGST note and an IGST line.
+- [ ] Saving with a bill number already used for that supplier shows the error under "Bill no.".
+- [ ] After saving, the bill opens; stock of each part went up (check the part ledger: "Purchase").
+- [ ] Credit bill shows "Due"; "Record payment" pre-fills the due amount; a part payment reduces it.
+- [ ] Supplier screen: balance, ledger (newest first), call button, record payment, new bill for this supplier.
+- [ ] Reorder list: groups by supplier; editing an order quantity changes the shared message.
+- [ ] "Share on WhatsApp" opens WhatsApp to the supplier's number with the order text; without a phone number the system share sheet opens.
+
+## Phase 3 – jobs, estimates, parts requests
+
+Tabs: owner Home · Approvals · Jobs · More; inventory Queue · Approvals · Stock · Purchases · Me;
+front desk Jobs · New job · Customers · Stock · Me; mechanic My jobs · Requests · Stock · Me.
+
+- [ ] Front desk: New job → type a phone or bike number → pick the bike (or create customer + bike) → complaint chips, mechanic, promised time → job opens.
+- [ ] Prepare estimate (labour from the rate list, parts from search) → "Send on WhatsApp" opens WhatsApp to the customer with the link.
+- [ ] Customer opens the link on their phone (no login): bilingual page, Approve → job shows Approved. "Call me" notifies desk and owner.
+- [ ] "Approved on call" with a note also approves.
+- [ ] Mechanic: "Start work" is refused before approval; after approval it works.
+- [ ] Mechanic: Request parts → search / scan QR / free-text part, stepper, "Needs approval" chip on lines ≥ ₹1,000 → Send.
+- [ ] Inventory: Queue tab shows the request (oldest first) with location, rack and stock; badge count on the tab.
+- [ ] A ₹1,450 tyre waits in Approvals; the ₹150 spark plug can be issued at once.
+- [ ] Issue with partial quantity keeps the line open; "Not available" asks for a remark; free-text lines need "Link to part".
+- [ ] Issuing more than stock shows "Not enough stock".
+- [ ] Mechanic gets a notification (bell count within 20 s; push if EAS project id is set) when parts are issued or not available.
+- [ ] Job screen: labour from rate list, inspection notes save, camera photo (max 4, long-press to delete), parts used, return to stock (inventory / owner).
+- [ ] "Mark ready" notifies desk and owner; desk can send "bike ready" on WhatsApp.
+- [ ] Tapping a notification opens the right screen.
+- [ ] Customers tab: search by name / phone / bike, customer screen with bikes and job history, call and WhatsApp buttons.
+
+Push notifications need an EAS project: run `npx eas-cli init` in `mobile/` (adds `extra.eas.projectId`),
+upload FCM credentials with `npx eas-cli credentials`, then build. Without it, the in-app bell still works.
+
+## Phase 4 – billing and payments
+
+Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Approvals · Jobs · Money · More.
+
+- [ ] Job screen → "Create bill" opens a draft with issued parts + labour (labour approved on the estimate is already there).
+- [ ] Front desk sees "Only the owner can give a discount"; owner can set line and bill discounts on the draft (Apply).
+- [ ] Payment boxes (cash / UPI / card / bank) show the remaining credit; "Paid in full" fills cash.
+- [ ] Finalise with no payment for a non-trusted or walk-in customer → refused with a clear message; for a trusted customer within limit → saved as unpaid.
+- [ ] Final bill: "Print / PDF" opens the share sheet with a PDF; sharing to WhatsApp attaches the PDF (Marathi + English bill).
+- [ ] "Send on WhatsApp" opens a chat with the bill message; "Record payment" reduces the balance; "Deliver bike" closes the job.
+- [ ] Owner: Money tab shows today's sales and customer dues; "Cancel bill" asks for a reason; a counter-sale cancel puts stock back.
+- [ ] Counter sale: add parts by search or QR, choose a customer or walk-in, pay, finalise → bill opens.
+- [ ] Customer screen: ledger (newest first) and "Record payment" (pays oldest bills first).
+
+## Phase 5 – owner tools
+
+- [ ] Owner Home shows today's sales, credit today, customer dues and supplier payables.
+- [ ] More → Mechanic summary: today / yesterday; jobs billed with labour and parts; "Pay" records daily pay or an advance.
+- [ ] More → Reports: profit (with the formula), GST summary for this / last month, dues, payables, stock.
+- [ ] Inventory manager reaches Reports from the Purchases tab and sees only stock and payables.
+- [ ] Reminders (owner More, front desk Customers tab): "Send" opens WhatsApp with the reminder; the customer then leaves the list.
+- [ ] More → Users: deactivate a user (they are logged out at once); reset a password (they must change it at login).
+- [ ] More → Settings: change the approval limit; a new parts request uses the new limit.

@@ -1,0 +1,12 @@
+/* Print: hide app chrome, print the page content in black on white. */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  :root { --bg: #fff; --surface: #fff; --surface-2: #f3f4f6; --text: #000; --text-muted: #444; --border: #ccc; }
+  body { background: #fff; color: #000; }
+  .sidebar, .topbar, .bottombar, .toasts, .no-print, .toolbar, .pager, .page-head .btn { display: none !important; }
+  .app, .app.collapsed { display: block; }
+  .content { padding: 0; max-width: none; }
+  .card { box-shadow: none; border-color: #ccc; break-inside: avoid; }
+  .table th { position: static; }
+  a { color: #000; }
+}

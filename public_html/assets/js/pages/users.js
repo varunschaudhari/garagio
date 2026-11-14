@@ -1,0 +1,78 @@
+import { html, setHTML, on } from '../dom.js';
+import { t, getLang } from '../i18n.js';
+import { api } from '../api.js';
+import { session } from '../store.js';
+import { icon } from '../ui/icons.js';
+import { datetime, initials } from '../format.js';
+import { dataTable, skeletonRows } from '../ui/table.js';
+import { field } from '../ui/form.js';
+import { openDrawer } from '../ui/drawer.js';
+import { toast } from '../ui/toast.js';
+
+const ROLES = ['owner', 'inventory', 'front_desk', 'mechanic'];
+
+export default async function usersPage(ctx) {
+  ctx.setTitle(t('users.title'));
+  setHTML(ctx.el, html`
+    <div class="page-head"><h1>${t('users.title')}</h1><button class="btn btn-primary" data-new>${icon('plus')}${t('users.new')}</button></div>
+    <div class="card" id="users-list">${skeletonRows()}</div>`);
+  let users = [];
+
+  const load = async () => {
+    users = (await api.get('/users')).items;
+    if (!ctx.alive()) return;
+    setHTML(ctx.el.querySelector('#users-list'), dataTable({
+      columns: [
+        { key: 'name', label: t('common.name'), primary: true, render: (u) => html`<div class="row"><span class="avatar">${initials(u.name)}</span><div><div class="t-title">${u.name}${u.id === session.user.id ? html` <span class="chip primary plain">${t('users.you')}</span>` : ''}</div><div class="t-sub">@${u.username}${u.phone ? ' · ' + u.phone : ''}</div></div></div>` },
+        { key: 'role', label: t('users.role'), render: (u) => t('roles.' + u.role) },
+        { key: 'language', label: t('common.language'), render: (u) => (u.language === 'mr' ? 'मराठी' : 'English') },
+        { key: 'last_login', label: t('users.last_login'), render: (u) => (u.last_login_at ? datetime(u.last_login_at) : t('users.never')) },
+        { key: 'active', label: t('common.status'), render: (u) => html`<span class="chip ${u.active ? 'success' : ''}">${t(u.active ? 'common.active' : 'common.inactive')}</span>` },
+        { key: 'actions', label: '', render: (u) => html`<button class="btn btn-ghost btn-sm" data-edit="${u.id}">${icon('pencil', 16)}${t('common.edit')}</button>` },
+      ],
+      rows: users,
+    }));
+  };
+
+  const roleOptions = ROLES.map((r) => ({ value: r, label: t('roles.' + r) }));
+  const langOptions = [{ value: 'mr', label: 'मराठी' }, { value: 'en', label: 'English' }];
+
+  on(ctx.el, 'click', '[data-new]', async () => {
+    const saved = await openDrawer({
+      title: t('users.new'),
+      body: html`<div class="stack">
+        ${field({ name: 'name', label: t('common.name'), required: true })}
+        ${field({ name: 'username', label: t('users.username'), required: true, hint: t('fields.invalid_username') })}
+        ${field({ name: 'phone', label: t('common.phone'), type: 'tel', inputmode: 'tel' })}
+        ${field({ name: 'role', label: t('users.role'), type: 'select', value: 'mechanic', options: roleOptions, required: true })}
+        ${field({ name: 'language', label: t('common.language'), type: 'select', value: getLang(), options: langOptions })}
+        ${field({ name: 'password', label: t('users.temp_password'), required: true, hint: t('users.temp_password_hint') })}
+      </div>`,
+      onSubmit: (d) => api.post('/users', d),
+    });
+    if (saved) { toast(t('common.created')); load(); }
+  });
+
+  on(ctx.el, 'click', '[data-edit]', async (e, b) => {
+    const u = users.find((x) => x.id === Number(b.dataset.edit));
+    const self = u.id === session.user.id;
+    const saved = await openDrawer({
+      title: t('users.edit') + ' · ' + u.name,
+      body: html`<div class="stack">
+        ${field({ name: 'name', label: t('common.name'), value: u.name, required: true })}
+        ${field({ name: 'phone', label: t('common.phone'), value: u.phone, type: 'tel', inputmode: 'tel' })}
+        ${field({ name: 'role', label: t('users.role'), type: 'select', value: u.role, options: roleOptions, disabled: self })}
+        ${field({ name: 'language', label: t('common.language'), type: 'select', value: u.language, options: langOptions })}
+        ${self ? '' : field({ name: 'active', label: t('common.active'), type: 'switch', value: u.active })}
+        ${field({ name: 'reset_password', label: t('users.reset_password'), hint: t('users.reset_password_hint') })}
+      </div>`,
+      onSubmit: (d) => {
+        if (!d.reset_password) delete d.reset_password;
+        return api.put('/users/' + u.id, d);
+      },
+    });
+    if (saved) { toast(t('common.saved')); load(); }
+  });
+
+  await load();
+}
