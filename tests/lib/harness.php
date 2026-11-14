@@ -5,6 +5,9 @@ declare(strict_types=1);
  * Tiny test harness: test registry, assertions, HTTP client, DB reset, server start/stop.
  */
 
+// Same clock as the API (lib/bootstrap.php), so date('Y-m-d') in tests matches the server's "today".
+date_default_timezone_set('Asia/Kolkata');
+
 const DEMO_PASSWORD = 'garage123';
 const NEW_PASSWORD = 'Trimurti@2026';
 
