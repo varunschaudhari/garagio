@@ -39,6 +39,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Phone on Wi-Fi: `powershell -ExecutionPolicy Bypass -File tools/serve-lan.ps1` (prints the address; sets GM_APP_URL).
 - Translations: `node tools/check-i18n.mjs` (same keys/placeholders en+mr, mobile copies synced) - CI runs it.
 - Release: `node tools/make-release.mjs` → `dist/` site / database / docs zips from HEAD.
+- APK without Expo account: `node tools/build-apk-local.mjs` (prebuild + Gradle in C:gmbmobile, CMake 3.31 for long
+  paths, key in ~/.garagio/ - never commit it). Files on this laptop get the Windows Hidden flag; the script clears it.
 - Deploy: `.github/workflows/deploy.yml` (CI green on main → test site; manual → live) → cPanel API →
   `.cpanel.yml` → `tools/cpanel-deploy.sh` (backup, git-archive copy, migrations, deploy.json). APK: `apk.yml`.
 - Schema changes after release: new `public_html/api/migrations/NNN_name.sql` + same change in `schema.sql`

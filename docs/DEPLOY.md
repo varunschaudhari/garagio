@@ -125,7 +125,13 @@ npx eas-cli init             # once: links the project (adds extra.eas.projectId
 npx eas-cli build -p android --profile preview   # same as: npm run build:apk
 ```
 
-Download the APK from the link EAS prints and share it with staff (WhatsApp / USB). On first launch the app
+Download the APK from the link EAS prints and share it with staff (WhatsApp / USB).
+
+**Without an Expo account** (Windows, Android SDK + Java installed): `node tools/build-apk-local.mjs` builds a signed APK into
+`dist/` on this computer. The first run creates the signing key in `%USERPROFILE%.garagio` – back up both files there;
+every later version must be signed with the same key. It builds in `C:gmbmobile` and uses CMake 3.31 (installed
+automatically) because the C++ parts need paths longer than Windows' old 260-character limit. Push notifications need the
+Expo project id, so APKs built this way rely on the in-app bell. On first launch the app
 asks for the server address – enter `https://trimurti.foreverstory.in` – and the language.
 
 **Push notifications** (optional – the in-app bell works without them): create a Firebase project, add an
