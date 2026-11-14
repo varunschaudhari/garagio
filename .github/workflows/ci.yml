@@ -1,9 +1,8 @@
 name: CI
 
+# Every branch push runs CI (a pull request shows the checks of its branch's last push).
 on:
   push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 concurrency:
