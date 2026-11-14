@@ -212,7 +212,8 @@ function random_token(int $bytes = 32): string
 /** Absolute base URL of the site (no trailing slash), from config or the request. */
 function app_url(): string
 {
-    $cfg = rtrim((string) config('app_url', ''), '/');
+    // GM_APP_URL: set by tools/serve-lan.ps1 so estimate links work from a phone on the same Wi-Fi.
+    $cfg = rtrim((string) (getenv('GM_APP_URL') ?: config('app_url', '')), '/');
     if ($cfg !== '') {
         return $cfg;
     }

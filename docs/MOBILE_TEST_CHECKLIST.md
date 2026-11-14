@@ -6,11 +6,17 @@ Marathi and English** unless the line says otherwise. Automated checks (`npm run
 
 ## How to test against a local server
 
-1. On the PC: `docker compose up -d`, `php tools/reset-dev-db.php`, then start the server on the LAN:
-   `php -S 0.0.0.0:8080 -t public_html tools/dev-router.php`
-2. Phone and PC on the same Wi-Fi. In `mobile/`: `npx expo start`, open in Expo Go (or a development build).
-3. First launch → server address `http://<PC-LAN-IP>:8080`.
+1. On the PC: `docker compose up -d`, then `C:\xampp\php\php.exe tools\reset-dev-db.php` (fresh demo data).
+2. Start the server on the Wi-Fi: `powershell -ExecutionPolicy Bypass -File tools\serve-lan.ps1`.
+   It prints the address to type in the phone (e.g. `http://192.168.1.20:8080`) and the firewall command
+   to run once if the phone cannot connect. WhatsApp estimate links also point at that address.
+3. Phone and PC on the same Wi-Fi. Install **Expo Go** from the Play Store. In `mobile/`: `npx expo start`,
+   scan the QR code with Expo Go. (Expo Go must support SDK 58; if the Play Store version is newer, build a
+   test APK with EAS instead – see `docs/DEPLOY.md` § 8 – and point it at the HTTPS test site.)
+4. First launch → the server address from step 2.
    (A real APK must use the HTTPS shop domain; Android blocks plain HTTP in release builds.)
+5. Note every failure with the phone model, the language, the screen and what you tapped. A screen
+   recording (Android quick settings → Screen record) is the fastest bug report.
 
 ## Phase 1 – foundation and inventory
 
@@ -119,3 +125,16 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Reminders (owner More, front desk Customers tab): "Send" opens WhatsApp with the reminder; the customer then leaves the list.
 - [ ] More → Users: deactivate a user (they are logged out at once); reset a password (they must change it at login).
 - [ ] More → Settings: change the approval limit; a new parts request uses the new limit.
+
+## Release APK – 15-minute smoke test
+
+Run on every new APK, installed from the EAS link, against the **HTTPS test site** (not the PC).
+
+- [ ] Install over the previous version keeps the login (no reinstall needed).
+- [ ] Server address `https://<test-domain>` is accepted; `http://` to a LAN address is refused in the APK.
+- [ ] Log in as each role (owner, inventory, front desk, mechanic) – the right tabs appear.
+- [ ] Scan a printed part label; camera and torch work.
+- [ ] Mechanic requests a part → inventory phone gets a **push notification** (needs FCM set up) and the bell count.
+- [ ] Front desk finalises a counter sale → "Print / PDF" shares a PDF to WhatsApp with Marathi text intact.
+- [ ] Airplane mode → offline banner; back online → lists refresh.
+- [ ] Settings → App → raise "Minimum app version" above this APK → the update screen appears with the APK link. Set it back.
