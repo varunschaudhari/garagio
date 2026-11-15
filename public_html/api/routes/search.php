@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 /*
  * Command palette search (Ctrl+K): customers, bikes, job numbers, parts and invoices.
- * Results respect roles: mechanics see parts and their own jobs only.
+ * Results follow the person's permissions: customers / bikes need "customers", bills need "make bills";
+ * mechanics see parts and their own jobs only.
  */
 route('GET', '/search', function () {
     $term = trim((string) qp('q', ''));
@@ -36,7 +37,7 @@ route('GET', '/search', function () {
         $out[] = ['type' => 'job', 'id' => $r['id'], 'title' => $r['job_no'] . ' · ' . $r['reg_no'], 'sub' => $r['name'], 'status' => $r['status'], 'link' => '#/jobs/' . $r['id']];
     }
 
-    if (in_array($role, [ROLE_OWNER, ROLE_DESK], true)) {
+    if (can('customers')) {
         foreach (rows(
             'SELECT id, name, phone FROM customers WHERE name LIKE ? OR phone LIKE ? OR alt_phone LIKE ? ORDER BY name LIMIT 6',
             [$like, $like, $like]
@@ -50,6 +51,8 @@ route('GET', '/search', function () {
         ) as $r) {
             $out[] = ['type' => 'vehicle', 'id' => $r['id'], 'title' => $r['reg_no'], 'sub' => trim($r['make'] . ' ' . $r['model']) . ' · ' . $r['name'], 'link' => '#/customers/' . $r['customer_id']];
         }
+    }
+    if (can('make_bills')) {
         foreach (rows(
             "SELECT id, invoice_no, cust_name, grand_total, status FROM invoices
              WHERE invoice_no LIKE ? OR cust_name LIKE ? OR cust_phone LIKE ? ORDER BY id DESC LIMIT 6",

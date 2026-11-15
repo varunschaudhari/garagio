@@ -65,6 +65,11 @@ if (!fs.existsSync(keyProps)) {
   console.log(`\n  !!! New signing key: ${keystore}\n  !!! Password file:   ${keyProps}\n  !!! Copy both to a safe place (Google Drive / pen drive). Without them, future updates cannot install over this APK.\n`);
 }
 
+// Version and commit are read now: the APK is built from the files as they are at this moment.
+const version = JSON.parse(fs.readFileSync(path.join(source, 'app.json'), 'utf8')).expo.version;
+const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const dirty = execFileSync('git', ['status', '--porcelain', '--', 'mobile', 'public_html/assets/i18n'], { cwd: root, encoding: 'utf8' }).trim() ? '-dirty' : '';
+
 // ---------------------------------------------------------------- where to build
 let mobile = source;
 if (win) {
@@ -140,9 +145,7 @@ if (b.status !== 0) die('Gradle build failed (see the output above)');
 
 const apk = path.join(android, 'app', 'build', 'outputs', 'apk', 'release', 'app-release.apk');
 if (!fs.existsSync(apk)) die(`APK not found at ${apk}`);
-const version = JSON.parse(fs.readFileSync(path.join(source, 'app.json'), 'utf8')).expo.version;
-const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
-const out = path.join(root, 'dist', `trimurti-garage-${version}-${sha}.apk`);
+const out = path.join(root, 'dist', `trimurti-garage-${version}-${sha}${dirty}.apk`);
 fs.copyFileSync(apk, out);
 console.log(`\n✔ APK ready: ${out} (${(fs.statSync(out).size / 1048576).toFixed(1)} MB)`);

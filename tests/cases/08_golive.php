@@ -73,6 +73,22 @@ test('permissions: role defaults; the owner ticks / unticks per person and it ap
     eq(403, put("/users/$desk", ['permissions' => ['see_money' => true]], 'desk')['status']);
 });
 
+test('search (Ctrl+K) follows the ticks: customers need "customers", bills need "make bills"', function () {
+    $types = static fn (string $q, string $as) => array_unique(array_column(status(200, get('/search?q=' . rawurlencode($q), $as))['items'], 'type'));
+    ok(in_array('customer', $types('Rahul', 'desk'), true), 'front desk finds customers');
+    ok(in_array('invoice', $types('INV', 'desk'), true), 'front desk finds bills');
+    $desk = uid_of('desk');
+    status(200, put("/users/$desk", ['permissions' => ['customers' => false, 'make_bills' => false]], 'admin'));
+    ok(!in_array('customer', $types('Rahul', 'desk'), true) && !in_array('vehicle', $types('MH12', 'desk'), true), 'no customers / bikes without the tick');
+    ok(!in_array('invoice', $types('INV', 'desk'), true), 'no bills without the tick');
+    status(200, put("/users/$desk", ['permissions' => ['customers' => true, 'make_bills' => true]], 'admin'));
+    ok(!in_array('customer', $types('Rahul', 'ramesh'), true), 'mechanic: no customers by default');
+    $m = uid_of('ramesh');
+    status(200, put("/users/$m", ['permissions' => ['customers' => true]], 'admin'));
+    ok(in_array('customer', $types('Rahul', 'ramesh'), true), 'mechanic given the tick finds customers');
+    status(200, put("/users/$m", ['permissions' => ['customers' => false]], 'admin'));
+});
+
 test('notifications follow the ticks: parts requests reach whoever may issue parts', function () {
     $stock = uid_of('stock');
     $desk = uid_of('desk');
