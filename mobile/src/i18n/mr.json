@@ -166,7 +166,15 @@
     "customer_dues": "ग्राहक बाकी",
     "supplier_payables": "सप्लायर देणे",
     "sales_30d": "विक्री – मागील 30 दिवस",
-    "todays_jobs": "आजचे जॉब"
+    "todays_jobs": "आजचे जॉब",
+    "sales_bills_today": "आजची विक्री बिले",
+    "sales_month": "या महिन्याची विक्री",
+    "purchases_today": "आजची खरेदी",
+    "purchases_month": "या महिन्याची खरेदी",
+    "bills_count": "{{n}} बिले",
+    "latest_sales": "अलीकडील विक्री बिले",
+    "latest_purchases": "अलीकडील खरेदी बिले",
+    "no_bills": "अजून बिल नाही"
   },
   "parts": {
     "title": "पार्ट्स",

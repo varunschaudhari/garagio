@@ -38,8 +38,45 @@ route('GET', '/dashboard', function () {
     );
     $out['approvals_waiting'] = (int) val("SELECT COUNT(*) FROM part_request_items i JOIN part_requests r ON r.id = i.request_id WHERE r.status = 'open' AND i.status = 'needs_approval'");
 
-    return $out + dashboard_money($role);
+    return $out + dashboard_money($role) + dashboard_bills($role);
 });
+
+/** Bill counts / totals (today, this month) and the latest bills: sales for the owner, purchases for owner + inventory. */
+function dashboard_bills(string $role): array
+{
+    $today = today();
+    $month = date('Y-m-01');
+    $sum = static function (string $sql, array $p): array {
+        $r = row($sql, $p);
+        return ['count' => (int) ($r['n'] ?? 0), 'total' => r2((float) ($r['t'] ?? 0))];
+    };
+    $out = [];
+    if ($role === ROLE_OWNER) {
+        $sales = "SELECT COUNT(*) AS n, COALESCE(SUM(grand_total), 0) AS t FROM invoices WHERE status = 'final' AND invoice_date ";
+        $out['sales'] = [
+            'today' => $sum($sales . '= ?', [$today]),
+            'month' => $sum($sales . '>= ?', [$month]),
+            'latest' => rows(
+                "SELECT i.id, i.invoice_no, i.invoice_date, i.inv_type, i.grand_total, i.balance, i.pay_status, COALESCE(c.name, i.cust_name) AS customer_name, v.reg_no
+                 FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN job_cards j ON j.id = i.job_card_id LEFT JOIN vehicles v ON v.id = j.vehicle_id
+                 WHERE i.status = 'final' ORDER BY i.finalized_at DESC, i.id DESC LIMIT 8"
+            ),
+        ];
+    }
+    if (in_array($role, [ROLE_OWNER, ROLE_INVENTORY], true)) {
+        $purch = 'SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS t FROM purchases WHERE bill_date ';
+        $out['purchases'] = [
+            'today' => $sum($purch . '= ?', [$today]),
+            'month' => $sum($purch . '>= ?', [$month]),
+            'latest' => rows(
+                'SELECT p.id, p.bill_no, p.bill_date, p.total, p.payment_mode, s.name AS supplier_name,
+                        p.total - COALESCE((SELECT SUM(sp.amount) FROM supplier_payments sp WHERE sp.purchase_id = p.id), 0) AS due
+                 FROM purchases p JOIN suppliers s ON s.id = p.supplier_id ORDER BY p.bill_date DESC, p.id DESC LIMIT 8'
+            ),
+        ];
+    }
+    return $out;
+}
 
 /** Owner-only money figures: today's sales by payment mode, dues, payables, 30-day sales. */
 function dashboard_money(string $role): array

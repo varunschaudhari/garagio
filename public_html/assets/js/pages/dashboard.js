@@ -87,6 +87,33 @@ export default async function dashboard(ctx) {
     kpi({ label: t('dashboard.supplier_payables'), value: rupees(m.supplier_payables), ic: 'truck', tone: 'info', href: '#/reports?tab=payables' }),
   ] : [];
 
+  // Sale and purchase bills: counts and totals (sales: owner; purchases: owner + inventory manager).
+  const bills = d.sales || d.purchases;
+  const billCards = [];
+  if (d.sales) {
+    billCards.push(kpi({ label: t('dashboard.sales_bills_today'), value: rupees(d.sales.today.total), sub: t('dashboard.bills_count', { n: d.sales.today.count }), ic: 'receipt', tone: 'success', href: '#/invoices?from=' + todayISO() }));
+    billCards.push(kpi({ label: t('dashboard.sales_month'), value: rupees(d.sales.month.total), sub: t('dashboard.bills_count', { n: d.sales.month.count }), ic: 'calendar', tone: 'success', href: '#/invoices' }));
+  }
+  if (d.purchases) {
+    billCards.push(kpi({ label: t('dashboard.purchases_today'), value: rupees(d.purchases.today.total), sub: t('dashboard.bills_count', { n: d.purchases.today.count }), ic: 'truck', tone: 'info', href: '#/purchases' }));
+    billCards.push(kpi({ label: t('dashboard.purchases_month'), value: rupees(d.purchases.month.total), sub: t('dashboard.bills_count', { n: d.purchases.month.count }), ic: 'calendar', tone: 'info', href: '#/purchases' }));
+  }
+  const saleRow = (b) => html`
+    <a class="list-item" href="#/invoices/${b.id}">
+      <div style="flex:1;min-width:0"><div class="strong ellipsis">${b.invoice_no} · ${b.customer_name || t('inv.walk_in')}</div><div class="small muted">${date(b.invoice_date)}${b.reg_no ? ' · ' + b.reg_no : ''}</div></div>
+      <div class="num"><div class="strong">${money(b.grand_total)}</div>${Number(b.balance) > 0 ? html`<span class="chip warning">${t('billing.due')} ${money(b.balance)}</span>` : html`<span class="chip success">${t('billing.paid')}</span>`}</div>
+    </a>`;
+  const purchaseRow = (p) => html`
+    <a class="list-item" href="#/purchases/${p.id}">
+      <div style="flex:1;min-width:0"><div class="strong ellipsis">${p.bill_no} · ${p.supplier_name}</div><div class="small muted">${date(p.bill_date)}</div></div>
+      <div class="num"><div class="strong">${money(p.total)}</div>${Number(p.due) > 0.004 ? html`<span class="chip warning">${t('billing.due')} ${money(p.due)}</span>` : html`<span class="chip success">${t('billing.paid')}</span>`}</div>
+    </a>`;
+  const billList = (title, href, items, row) => html`
+    <div class="card">
+      <div class="card-head"><h3>${title}</h3><a class="btn btn-ghost btn-sm" href="${href}">${t('dashboard.view_all')}${icon('chevron-right', 16)}</a></div>
+      ${items.length ? html`<div class="list">${items.map(row)}</div>` : html`<div class="card-body muted">${t('dashboard.no_bills')}</div>`}
+    </div>`;
+
   const cards = [];
   if (BUILT_PHASE >= 3) {
     cards.push(kpi({ label: t('dashboard.jobs_in_shop'), value: inShop, sub: d.delivered_today ? `${t('dashboard.delivered_today')}: ${d.delivered_today}` : '', ic: 'bike', href: '#/jobs' }));
@@ -104,6 +131,7 @@ export default async function dashboard(ctx) {
     </div>
     <div class="stack-lg">
       ${moneyCards.length ? html`<div class="kpis">${moneyCards}</div>` : ''}
+      ${billCards.length ? html`<div class="kpis">${billCards}</div>` : ''}
       <div class="kpis">${cards}</div>
       ${m ? html`
         <section class="card" aria-labelledby="h-sales">
@@ -115,6 +143,10 @@ export default async function dashboard(ctx) {
             </details>
           </div>
         </section>` : ''}
+      ${bills ? html`<div class="grid-2" style="align-items:start">
+        ${d.sales ? billList(t('dashboard.latest_sales'), '#/invoices', d.sales.latest, saleRow) : ''}
+        ${d.purchases ? billList(t('dashboard.latest_purchases'), '#/purchases', d.purchases.latest, purchaseRow) : ''}
+      </div>` : ''}
       <div class="grid-2" style="align-items:start">
         <div class="card">
           <div class="card-head"><h3>${t('dashboard.low_stock_list')}</h3><a class="btn btn-ghost btn-sm" href="#/parts?low=1">${t('dashboard.view_all')}${icon('chevron-right', 16)}</a></div>

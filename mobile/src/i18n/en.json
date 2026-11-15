@@ -166,7 +166,15 @@
     "customer_dues": "Customer dues",
     "supplier_payables": "Supplier payables",
     "sales_30d": "Sales – last 30 days",
-    "todays_jobs": "Today's jobs"
+    "todays_jobs": "Today's jobs",
+    "sales_bills_today": "Sale bills today",
+    "sales_month": "Sales this month",
+    "purchases_today": "Purchases today",
+    "purchases_month": "Purchases this month",
+    "bills_count": "{{n}} bills",
+    "latest_sales": "Latest sale bills",
+    "latest_purchases": "Latest purchase bills",
+    "no_bills": "No bills yet"
   },
   "parts": {
     "title": "Parts",

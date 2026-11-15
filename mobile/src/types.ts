@@ -96,6 +96,13 @@ export interface Dashboard {
   open_requests: number;
   approvals_waiting: number;
   money?: { sales_today: number; by_mode: Record<string, number>; credit_today: number; customer_dues: number; supplier_payables: number; sales_30d: { date: string; total: number }[] };
+  sales?: { today: BillSum; month: BillSum; latest: { id: number; invoice_no: string; invoice_date: string; grand_total: number; balance: number; customer_name: string | null; reg_no: string | null }[] };
+  purchases?: { today: BillSum; month: BillSum; latest: { id: number; bill_no: string; bill_date: string; total: number; due: number; supplier_name: string }[] };
+}
+
+export interface BillSum {
+  count: number;
+  total: number;
 }
 
 export type PayMode = 'cash' | 'upi' | 'bank' | 'card' | 'credit';

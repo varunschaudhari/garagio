@@ -18,6 +18,20 @@ test('admin: health check is owner-only and reports schema, secret and https', f
     ok(in_array($h['status'], ['ok', 'warn', 'fail'], true));
 });
 
+test('dashboard: sale + purchase bill totals and latest bills, by role', function () {
+    $o = status(200, get('/dashboard', 'admin'));
+    $sales = trows("SELECT COUNT(*) AS n, COALESCE(SUM(grand_total), 0) AS t FROM invoices WHERE status = 'final' AND invoice_date >= ?", [date('Y-m-01')])[0];
+    eq((int) $sales['n'], $o['sales']['month']['count']);
+    eq(round((float) $sales['t'], 2), $o['sales']['month']['total']);
+    ok(count($o['sales']['latest']) > 0 && count($o['sales']['latest']) <= 8, 'latest sale bills');
+    ok(isset($o['purchases']['latest'][0]['due'], $o['purchases']['latest'][0]['supplier_name']), 'latest purchase bills with due');
+    eq((int) tval('SELECT COUNT(*) FROM purchases WHERE bill_date = ?', [today()]), $o['purchases']['today']['count']);
+    $i = status(200, get('/dashboard', 'stock'));
+    ok(isset($i['purchases']) && !isset($i['sales']), 'inventory manager: purchases only');
+    $dk = status(200, get('/dashboard', 'desk'));
+    ok(!isset($dk['purchases']) && !isset($dk['sales']), 'front desk: neither');
+});
+
 /** A fresh job for a new customer + bike (front desk). */
 function flow_job(string $tag): array
 {
