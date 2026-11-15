@@ -36,6 +36,7 @@ export const NAV = [
   { section: 'admin' },
   { key: 'settings', href: '#/settings', ic: 'settings', roles: [OWNER], phase: 1 },
   { key: 'users', href: '#/users', ic: 'user-cog', roles: [OWNER], phase: 1 },
+  { key: 'audit', href: '#/audit', ic: 'shield-check', roles: [OWNER], phase: 1 },
 ];
 
 /** Bottom bar on phones: up to five items per role. */

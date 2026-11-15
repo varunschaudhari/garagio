@@ -29,6 +29,7 @@ route('/purchases/new', () => import('./pages/purchase-new.js'), { perm: 'purcha
 route('/purchases/:id', () => import('./pages/purchase.js'), { perm: 'purchases' });
 route('/settings', () => import('./pages/settings.js'), { roles: ['owner'] });
 route('/users', () => import('./pages/users.js'), { roles: ['owner'] });
+route('/audit', () => import('./pages/audit.js'), { roles: ['owner'] });
 route('/jobs', () => import('./pages/jobs.js'), { roles: ['owner', 'front_desk', 'mechanic'] });
 route('/jobs/new', () => import('./pages/job-new.js'), { perm: 'jobs' });
 route('/jobs/:id', () => import('./pages/job.js'), { roles: ALL });

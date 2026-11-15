@@ -73,6 +73,22 @@ test('permissions: role defaults; the owner ticks / unticks per person and it ap
     eq(403, put("/users/$desk", ['permissions' => ['see_money' => true]], 'desk')['status']);
 });
 
+test('activity log: owner sees who did what; filters by kind, action and person', function () {
+    eq(403, get('/audit', 'desk')['status']);
+    $imp = status(200, get('/audit', 'admin'));
+    ok($imp['total'] > 0, 'something recorded');
+    ok(!in_array('job', array_column($imp['items'], 'entity'), true), 'important = no job steps');
+    ok(in_array('user_update', $imp['actions'], true) && count($imp['users']) > 0, 'filter lists');
+    $all = status(200, get('/audit?kind=all', 'admin'));
+    ok($all['total'] > $imp['total'], 'everything includes job steps');
+    $cancels = status(200, get('/audit?action=invoice_cancel', 'admin'));
+    ok($cancels['total'] > 0 && count(array_unique(array_column($cancels['items'], 'action'))) === 1, 'action filter');
+    $mine = status(200, get('/audit?user_id=' . uid_of('admin') . '&action=user_update', 'admin'));
+    $perm = array_values(array_filter($mine['items'], static fn ($i) => isset($i['after']['perms'])))[0] ?? null;
+    ok($perm !== null && is_array($perm['before']['perms']), 'permission changes are recorded with before / after');
+    eq(2, count(status(200, get('/audit?per_page=2', 'admin'))['items']), 'paging');
+});
+
 test('search (Ctrl+K) follows the ticks: customers need "customers", bills need "make bills"', function () {
     $types = static fn (string $q, string $as) => array_unique(array_column(status(200, get('/search?q=' . rawurlencode($q), $as))['items'], 'type'));
     ok(in_array('customer', $types('Rahul', 'desk'), true), 'front desk finds customers');

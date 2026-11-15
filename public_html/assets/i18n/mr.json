@@ -111,7 +111,8 @@
     "me": "मी",
     "queue": "रांग",
     "stock": "स्टॉक",
-    "reminders": "आठवणी"
+    "reminders": "आठवणी",
+    "audit": "घडामोडी नोंद"
   },
   "roles": {
     "owner": "मालक",
@@ -1156,6 +1157,38 @@
       "not_registered": "नोंदणी नाही – GST शिवाय बिले",
       "manual_upload": "हाताने अपलोड केलेले",
       "scan_off": "सेट केलेले नाही (ऐच्छिक)"
+    }
+  },
+  "audit": {
+    "title": "घडामोडी नोंद",
+    "important": "महत्त्वाचे",
+    "everything": "सर्व (जॉबच्या पायऱ्यांसह)",
+    "any_action": "सर्व क्रिया",
+    "any_user": "सर्व जण",
+    "when": "केव्हा",
+    "who": "कोणी",
+    "what": "काय",
+    "none": "या निवडीसाठी काही नोंद नाही.",
+    "more": "आणखी दाखवा",
+    "system": "सिस्टम",
+    "actions": {
+      "invoice_discount": "बिलावर सूट",
+      "invoice_cancel": "बिल रद्द",
+      "stock_adjust": "स्टॉक दुरुस्ती",
+      "stock_count": "स्टॉक मोजणी नोंदवली",
+      "price_change": "विक्री किंमत बदलली",
+      "parts_import": "पार्ट्स import केले",
+      "credit_change": "उधारी / विश्वासू बदल",
+      "customer_opening_balance": "ग्राहकाची सुरुवातीची बाकी",
+      "supplier_opening_balance": "सप्लायरची सुरुवातीची बाकी",
+      "user_create": "वापरकर्ता जोडला",
+      "user_update": "वापरकर्ता बदलला (भूमिका, परवानगी, सक्रिय, पासवर्ड)",
+      "password_change": "पासवर्ड बदलला",
+      "settings_update": "सेटिंग्ज बदलल्या",
+      "labour_rate_change": "मजुरी दर बदलला",
+      "mechanic_payment_delete": "मेकॅनिक पेमेंट काढले",
+      "backup": "बॅकअप घेतला",
+      "go_live_reset": "ट्रायलची माहिती काढली (प्रत्यक्ष वापर)"
     }
   }
 }

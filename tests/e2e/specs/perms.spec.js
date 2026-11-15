@@ -29,3 +29,13 @@ test('owner unticks a permission on Users; that person loses the menu and the pa
   const res = await request.put(`/api/users/${stock.id}`, { headers: { Authorization: `Bearer ${auth.token}` }, data: { permissions: { purchases: true } } });
   expect(res.ok()).toBeTruthy();
 });
+
+test('activity log shows the permission change, with the tick that changed', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('/#/audit');
+  await expect(page.getByRole('heading', { name: 'Activity log' })).toBeVisible();
+  const entry = page.locator('.list-item', { hasText: 'User changed' }).first();
+  await expect(entry).toContainText('Purchase bills, suppliers and supplier payments');
+  await page.getByRole('button', { name: 'Everything (with job steps)' }).click();
+  await expect(page.locator('.list-item').first()).toBeVisible();
+});

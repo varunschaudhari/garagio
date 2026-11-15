@@ -1,5 +1,5 @@
 import { router, type Href } from 'expo-router';
-import { ChartColumn, ChevronRight, HandCoins, Inbox, ListChecks, MessageCircle, Package, Plus, Receipt, ScanLine, Settings, ShoppingCart, Store, Truck, User as UserIcon, UserCog, Users } from 'lucide-react-native';
+import { ChartColumn, ChevronRight, HandCoins, Inbox, ListChecks, MessageCircle, Package, Plus, Receipt, ScanLine, Settings, ShoppingCart, Store, Truck, User as UserIcon, UserCog, Users, ShieldCheck } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,6 +52,7 @@ export default function More() {
         </Card>
         <Card padded={false}>
           <Row icon={UserCog} label={t('users.title')} href="/users" />
+          <Row icon={ShieldCheck} label={t('audit.title')} href="/audit" />
           <Row icon={Settings} label={t('settings.title')} href="/settings" />
           <Row icon={UserIcon} label={t('nav.profile')} href="/me" />
         </Card>
