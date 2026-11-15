@@ -39,7 +39,7 @@ function timelineLabel(ev) {
   const base = t('jobs.events.' + ev.action);
   if (ev.action === 'job_status') return `${base}: ${t('status.' + d.from)} → ${t('status.' + d.to)}${d.note ? ' · ' + d.note : ''}`;
   if (ev.action === 'estimate_sent' || ev.action === 'estimate_created') return `${base} ${d.est_no || 'v' + (d.version || '')} · ${money(d.total)}`;
-  if (ev.action === 'estimate_approved') return `${base} ${d.est_no} · ${t(d.via === 'call' ? 'estimates.via_call' : 'estimates.via_link')}`;
+  if (ev.action === 'estimate_approved') return `${base} ${d.est_no} · ${t(d.via === 'call' ? 'estimates.via_call' : d.via === 'desk' ? 'estimates.via_desk' : 'estimates.via_link')}`;
   if (ev.action === 'parts_issued') return `${base}: ${d.part} × ${qty(d.qty)}`;
   if (ev.action === 'parts_unavailable') return `${base}: ${d.part}${d.remark ? ' · ' + d.remark : ''}`;
   if (ev.action === 'job_part_return') return `${base} × ${qty(d.qty)}`;
@@ -84,7 +84,7 @@ export default async function jobPage(ctx) {
     const est = (e) => html`
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div><strong>${e.est_no}</strong> <span class="muted">v${e.version}</span> ${statusChip(e.status)}
-          ${e.approved_at ? html`<span class="small muted">${datetime(e.approved_at)} · ${t(e.approved_via === 'call' ? 'estimates.via_call' : 'estimates.via_link')}</span>` : e.sent_at ? html`<span class="small muted">${t('estimates.sent')} ${datetime(e.sent_at)}</span>` : ''}</div>
+          ${e.approved_at ? html`<span class="small muted">${datetime(e.approved_at)} · ${t(e.approved_via === 'call' ? 'estimates.via_call' : e.approved_via === 'desk' ? 'estimates.via_desk' : 'estimates.via_link')}</span>` : e.sent_at ? html`<span class="small muted">${t('estimates.sent')} ${datetime(e.sent_at)}</span>` : ''}</div>
         <strong style="font-size:18px">${money(e.grand_total)}</strong>
       </div>`;
 
@@ -100,6 +100,7 @@ export default async function jobPage(ctx) {
             ${j.promised_at ? html` · ${icon('clock', 13)} ${datetime(j.promised_at)}` : ''}</div>
         </div>
         <div class="row-wrap">
+          ${canEdit && j.can_approve ? html`<button class="btn btn-primary" data-act="approve">${icon('circle-check')}${t('jobs.approve')}</button>` : ''}
           ${statusButtons.map((s) => {
             const b = STATUS_BTN[s];
             const label = s === 'in_progress' && j.status === 'ready' ? 'jobs.back_in_progress' : b.label;
@@ -107,7 +108,7 @@ export default async function jobPage(ctx) {
           })}
           ${j.status === 'ready' && canEdit ? html`<button class="btn btn-secondary" data-act="ready-wa">${icon('message-circle')}${t('jobs.ready_whatsapp')}</button>` : ''}
           ${canEdit && j.invoice ? html`<a class="btn btn-secondary" href="#/invoices/${j.invoice.id}">${icon('receipt')}${j.invoice.invoice_no || t('billing.draft')}</a>` : ''}
-          ${canEdit && !j.invoice && ['in_progress', 'waiting_parts', 'ready'].includes(j.status) ? html`<button class="btn btn-secondary" data-act="bill">${icon('receipt')}${t('billing.create_bill')}</button>` : ''}
+          ${canEdit && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? html`<button class="btn btn-secondary" data-act="bill">${icon('receipt')}${t('billing.create_bill')}</button>` : ''}
         </div>
       </div>
 
@@ -141,10 +142,10 @@ export default async function jobPage(ctx) {
               ${j.parts.map((p) => {
                 const left = Number(p.qty) - Number(p.returned_qty);
                 return html`<tr>
-                  <td class="primary-cell" data-label="${t('parts.part')}"><div class="t-title">${nm(p)}</div><div class="t-sub">${p.part_no} · ${datetime(p.issued_at)} · ${p.issued_by_name || ''}</div></td>
+                  <td class="primary-cell" data-label="${t('parts.part')}"><div class="t-title">${nm(p)}</div><div class="t-sub">${p.part_no}${Number(p.issued) ? html` · ${datetime(p.issued_at)} · ${p.issued_by_name || ''}` : ''}</div>${Number(p.issued) ? '' : html`<span class="chip info" style="margin-top:4px">${t('jobs.part_planned')}</span>`}</td>
                   <td class="num" data-label="${t('common.qty')}">${qty(left)} ${p.unit}${Number(p.returned_qty) ? html`<div class="t-sub">${qty(p.returned_qty)} ${t('jobs.returned')}</div>` : ''}</td>
                   <td class="num" data-label="${t('common.amount')}">${money(left * p.unit_price)}</td>
-                  <td class="actions">${canStock && left > 0 && !j.invoice ? html`<button class="btn btn-ghost btn-sm" data-return="${p.id}">${icon('undo-2', 16)}${t('jobs.return')}</button>` : ''}</td>
+                  <td class="actions">${Number(p.issued) && canStock && left > 0 && !j.invoice ? html`<button class="btn btn-ghost btn-sm" data-return="${p.id}">${icon('undo-2', 16)}${t('jobs.return')}</button>` : ''}${!Number(p.issued) && canEdit && j.invoice?.status !== 'final' ? html`<button class="btn btn-ghost btn-sm" data-unplan="${p.id}">${icon('x', 16)}${t('jobs.remove_part')}</button>` : ''}</td>
                 </tr>`;
               })}</tbody></table></div>` : ''}
             ${j.requests.length ? html`<div class="card-body stack" style="border-top:1px solid var(--border)">
@@ -252,6 +253,22 @@ export default async function jobPage(ctx) {
     if (note === null) return;
     await act(() => api.post(`/estimates/${b.dataset.call}/approve-call`, { note }));
     toast(t('status.approved'));
+  });
+  on(ctx.el, 'click', '[data-act="approve"]', async (e, b) => {
+    const est = job.estimates[0] && ['draft', 'sent'].includes(job.estimates[0].status) ? job.estimates[0] : null;
+    const ok = await confirmDialog({
+      title: t('jobs.approve'),
+      message: est ? t('jobs.approve_confirm_est', { no: est.est_no, total: money(est.grand_total) }) : t('jobs.approve_confirm'),
+      confirmLabel: t('jobs.approve'),
+    });
+    if (!ok) return;
+    await busy(b, () => act(() => api.post(`/jobs/${id}/approve`)));
+    toast(t('jobs.approved_ok'));
+  });
+  on(ctx.el, 'click', '[data-unplan]', async (e, b) => {
+    const p = job.parts.find((x) => x.id === Number(b.dataset.unplan));
+    if (!(await confirmDialog({ title: t('jobs.remove_part'), message: t('jobs.remove_part_confirm', { part: nm(p) }), danger: true, confirmLabel: t('jobs.remove_part') }))) return;
+    await act(() => api.del(`/jobs/${id}/parts/${p.id}`));
   });
   on(ctx.el, 'click', '[data-act="bill"]', async (e, b) => {
     await busy(b, async () => {

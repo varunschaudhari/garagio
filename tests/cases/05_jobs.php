@@ -192,7 +192,10 @@ test('requests (acceptance): ₹1,450 tyre waits for approval, ₹150 spark plug
     eq('closed', $done['status'], 'request closes when every line is done');
 
     $job = status(200, get("/jobs/$id", 'ramesh'))['item'];
-    eq(2, count($job['parts']), 'issued parts land on the job');
+    $issuedParts = array_values(array_filter($job['parts'], static fn ($p) => (int) $p['issued'] === 1));
+    eq(2, count($issuedParts), 'issued parts land on the job');
+    $planned = array_values(array_filter($job['parts'], static fn ($p) => (int) $p['issued'] === 0));
+    eq(['BS-SPL'], array_column($planned, 'part_no'), 'the approved estimate part not issued yet stays planned; the issued plug used up its planned line');
     ok(!array_key_exists('unit_cost', $job['parts'][0]), 'mechanic never sees cost');
     ok((int) tval("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'parts_issued'", [uid_of('ramesh')]) >= 2, 'mechanic notified');
     usleep(300000);

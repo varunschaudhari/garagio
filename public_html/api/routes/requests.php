@@ -293,12 +293,13 @@ function issue_line(array $req, int $itemId, ?float $qty): array
     }
     $part = row('SELECT id, selling_price FROM parts WHERE id = ?', [$it['part_id']]);
     $mv = stock_move((int) $it['part_id'], -$qty, 'job_issue', 'job', (int) $req['job_card_id'], null, 'Request #' . $req['id']);
+    $agreed = consume_planned_part((int) $req['job_card_id'], (int) $it['part_id'], $qty);
     insert('job_parts', [
         'job_card_id' => $req['job_card_id'],
         'part_id' => $it['part_id'],
         'qty' => $qty,
         'returned_qty' => 0,
-        'unit_price' => $part['selling_price'],
+        'unit_price' => $agreed ?? $part['selling_price'],
         'unit_cost' => $mv['unit_cost'],
         'request_item_id' => $it['id'],
         'issued_by' => uid(),

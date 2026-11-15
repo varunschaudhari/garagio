@@ -18,6 +18,93 @@ test('admin: health check is owner-only and reports schema, secret and https', f
     ok(in_array($h['status'], ['ok', 'warn', 'fail'], true));
 });
 
+/** A fresh job for a new customer + bike (front desk). */
+function flow_job(string $tag): array
+{
+    return status(200, post('/jobs', [
+        'customer' => ['name' => "Flow $tag", 'phone' => '97000' . substr('00000' . crc32($tag) % 100000, -5)],
+        'vehicle' => ['reg_no' => 'MH19FL' . substr('0000' . crc32($tag) % 10000, -4)],
+    ], 'desk'))['item'];
+}
+
+test('job flow: Approve without an estimate; the bill can be made right away; Deliver only after the bill', function () {
+    $j = flow_job('a');
+    eq(true, $j['can_approve']);
+    eq(403, post("/jobs/{$j['id']}/approve", [], 'ramesh')['status'], 'mechanics cannot approve');
+    eq('job_not_billable', post('/invoices', ['job_card_id' => $j['id']], 'desk')['json']['code'], 'not before approval');
+    $j = status(200, post("/jobs/{$j['id']}/approve", [], 'desk'))['item'];
+    eq('approved', $j['status']);
+    eq(false, $j['can_approve']);
+    ok(!in_array('delivered', $j['allowed_status'], true) && in_array('ready', $j['allowed_status'], true), 'no Deliver before the bill');
+    eq('already_approved', post("/jobs/{$j['id']}/approve", [], 'desk')['json']['code']);
+    status(200, post("/jobs/{$j['id']}/labour", ['description' => 'Service', 'amount' => 300], 'desk'));
+    $inv = status(200, post('/invoices', ['job_card_id' => $j['id']], 'desk'))['item'];
+    status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk'));
+    $j = status(200, get("/jobs/{$j['id']}", 'desk'))['item'];
+    ok(in_array('delivered', $j['allowed_status'], true), 'Deliver offered once billed');
+    eq('delivered', status(200, post("/jobs/{$j['id']}/status", ['status' => 'delivered'], 'desk'))['item']['status']);
+});
+
+test('job flow (acceptance): approved estimate parts + labour go on the bill; stock leaves at finalise', function () {
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock >= 5 AND active = 1 ORDER BY id LIMIT 1');
+    $before = (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]);
+    $j = flow_job('b');
+    $e = status(200, post("/jobs/{$j['id']}/estimates", ['items' => [
+        ['item_type' => 'part', 'part_id' => $pid, 'qty' => 2],
+        ['item_type' => 'labour', 'description' => 'Fitting', 'amount' => 150],
+        ['item_type' => 'part', 'description' => 'Local sticker', 'unit_price' => 40],
+    ]], 'desk'))['item'];
+    $j = status(200, post("/jobs/{$j['id']}/approve", ['note' => 'Customer agreed at counter'], 'desk'))['item'];
+    eq('approved', $j['status']);
+    eq('approved', $j['estimates'][0]['status']);
+    eq('desk', $j['estimates'][0]['approved_via']);
+    eq(1, count($j['parts']), 'catalogue part planned (free-text line is not a stock part)');
+    eq(0, (int) $j['parts'][0]['issued']);
+    eq(2.0, (float) $j['parts'][0]['qty']);
+    eq(1, count($j['labour']));
+    eq($before, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]), 'stock untouched until billing');
+
+    $inv = status(200, post('/invoices', ['job_card_id' => $j['id']], 'desk'))['item'];
+    eq(2, count($inv['items']), 'part + labour on the draft');
+    $fin = status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk'))['item'];
+    eq($before - 2, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]), 'stock leaves when the bill is final');
+    eq(1, (int) tval('SELECT issued FROM job_parts WHERE job_card_id = ? AND part_id = ?', [$j['id'], $pid]));
+    ok((float) tval("SELECT unit_cost FROM invoice_items WHERE invoice_id = ? AND item_type = 'part'", [$inv['id']]) > 0, 'cost recorded for profit');
+    eq('Bill ' . $fin['invoice_no'], tval("SELECT note FROM stock_movements WHERE part_id = ? ORDER BY id DESC LIMIT 1", [$pid]));
+});
+
+test('job flow: short stock stops the bill; planned parts can be removed; a revised estimate replaces the plan', function () {
+    $low = status(200, post('/parts', ['part_no' => 'FLOW-1', 'name_en' => 'Flow part', 'selling_price' => 100, 'opening_stock' => 1, 'opening_cost' => 50], 'admin'))['item'];
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock >= 5 AND active = 1 ORDER BY id LIMIT 1');
+    $j = flow_job('c');
+    status(200, post("/jobs/{$j['id']}/estimates", ['items' => [['item_type' => 'part', 'part_id' => $low['id'], 'qty' => 2], ['item_type' => 'part', 'part_id' => $pid, 'qty' => 1]]], 'desk'));
+    $j = status(200, post("/jobs/{$j['id']}/approve", [], 'desk'))['item'];
+    eq(2, count($j['parts']));
+
+    // Revised estimate: 3 of the stock part, nothing else → the plan follows the newest approval.
+    status(200, post("/jobs/{$j['id']}/estimates", ['items' => [['item_type' => 'part', 'part_id' => $low['id'], 'qty' => 2], ['item_type' => 'part', 'part_id' => $pid, 'qty' => 3]]], 'desk'));
+    eq(true, status(200, get("/jobs/{$j['id']}", 'desk'))['item']['can_approve'], 'a pending revision can be approved');
+    $j = status(200, post("/jobs/{$j['id']}/approve", [], 'desk'))['item'];
+    $byPart = array_column($j['parts'], 'qty', 'part_id');
+    eq(3.0, (float) $byPart[$pid]);
+
+    $inv = status(200, post('/invoices', ['job_card_id' => $j['id']], 'desk'))['item'];
+    $r = post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk');
+    eq('insufficient_stock', $r['json']['code'], 'only 1 in stock, 2 on the bill');
+    eq('draft', status(200, get("/invoices/{$inv['id']}", 'desk'))['item']['status']);
+    eq(1.0, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$low['id']]), 'nothing moved');
+
+    $lowLine = array_values(array_filter($j['parts'], static fn ($p) => (int) $p['part_id'] === (int) $low['id']))[0];
+    eq(403, del("/jobs/{$j['id']}/parts/{$lowLine['id']}", 'ramesh')['status']);
+    $j = status(200, del("/jobs/{$j['id']}/parts/{$lowLine['id']}", 'desk'))['item'];
+    eq([$pid], array_map('intval', array_column($j['parts'], 'part_id')), 'removed from the job');
+    $inv = status(200, put("/invoices/{$inv['id']}", [], 'desk'))['item'];
+    $fin = status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk'))['item'];
+    eq('final', $fin['status']);
+    $issuedLine = array_values(array_filter(status(200, get("/jobs/{$j['id']}", 'desk'))['item']['parts'], static fn ($p) => (int) $p['issued'] === 1))[0];
+    eq('job_closed', del("/jobs/{$j['id']}/parts/{$issuedLine['id']}", 'desk')['json']['code'], 'nothing changes on a billed job');
+});
+
 /** Upload a tiny image to the job card reader (the canned Gemini answer is tests/fixtures/gemini-jobcard.json). */
 function scan_card(string $as, bool $withPhoto = true): array
 {

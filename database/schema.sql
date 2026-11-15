@@ -347,6 +347,7 @@ CREATE TABLE job_parts (
   part_id INT NOT NULL,
   qty DECIMAL(10,2) NOT NULL,
   returned_qty DECIMAL(10,2) NOT NULL DEFAULT 0,
+  issued TINYINT(1) NOT NULL DEFAULT 1,
   unit_price DECIMAL(12,2) NOT NULL,
   unit_cost DECIMAL(12,4) NOT NULL DEFAULT 0,
   request_item_id INT NULL,
@@ -583,7 +584,7 @@ CREATE TABLE schema_migrations (
   name VARCHAR(190) NOT NULL PRIMARY KEY,
   applied_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
--- INSERT INTO schema_migrations (name, applied_at) VALUES ('001_example.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('001_planned_job_parts.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

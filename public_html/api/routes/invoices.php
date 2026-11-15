@@ -362,8 +362,8 @@ route('POST', '/invoices', function () {
                 fail(409, 'already_billed', 'This job already has a final bill');
             }
         }
-        if (!in_array($job['status'], ['in_progress', 'waiting_parts', 'ready'], true)) {
-            fail(409, 'job_not_billable', 'Bill the job once work has started');
+        if (!in_array($job['status'], JOB_BILLABLE, true)) {
+            fail(409, 'job_not_billable', 'Approve the job before making the bill');
         }
         $money = job_money($job);
         if ($money['revision_pending']) {
@@ -529,6 +529,14 @@ route('POST', '/invoices/{id}/finalize', function ($p) {
         ];
         update_row('invoices', $id, $data);
 
+        // Job bill: planned (estimate) parts leave stock now; parts the store issued already did.
+        if ($inv['inv_type'] === 'job') {
+            foreach (rows('SELECT ii.id AS item_id, jp.id, jp.part_id, ii.qty FROM invoice_items ii JOIN job_parts jp ON jp.id = ii.job_part_id WHERE ii.invoice_id = ? AND jp.issued = 0', [$id]) as $pl) {
+                $mv = stock_move((int) $pl['part_id'], -(float) $pl['qty'], 'job_issue', 'job', (int) $inv['job_card_id'], null, 'Bill ' . $data['invoice_no']);
+                q('UPDATE job_parts SET issued = 1, unit_cost = ?, issued_by = ?, issued_at = ?, updated_at = ? WHERE id = ?', [$mv['unit_cost'], uid(), now(), now(), $pl['id']]);
+                q('UPDATE invoice_items SET unit_cost = ? WHERE id = ?', [$mv['unit_cost'], $pl['item_id']]);
+            }
+        }
         // Counter sale: stock leaves now. Record the cost for the profit report.
         foreach (rows('SELECT * FROM invoice_items WHERE invoice_id = ?', [$id]) as $it) {
             if ($inv['inv_type'] === 'counter' && $it['part_id']) {

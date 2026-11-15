@@ -40,7 +40,8 @@ function job_detail(int $id): array
     $j['labour'] = rows('SELECT jl.*, u.name AS user_name FROM job_labour jl LEFT JOIN users u ON u.id = jl.user_id WHERE jl.job_card_id = ? ORDER BY jl.id', [$id]);
     $j['parts'] = rows(
         'SELECT jp.*, p.part_no, p.name_en, p.name_mr, p.unit, u.name AS issued_by_name
-         FROM job_parts jp JOIN parts p ON p.id = jp.part_id LEFT JOIN users u ON u.id = jp.issued_by WHERE jp.job_card_id = ? ORDER BY jp.id',
+         FROM job_parts jp JOIN parts p ON p.id = jp.part_id LEFT JOIN users u ON u.id = jp.issued_by
+         WHERE jp.job_card_id = ? AND (jp.issued = 1 OR jp.qty > 0) ORDER BY jp.id',
         [$id]
     );
     $j['requests'] = requests_for_job($id);
@@ -57,7 +58,11 @@ function job_detail(int $id): array
         unset($ev['after_json']);
     }
     unset($ev);
-    $j['allowed_status'] = JOB_TRANSITIONS[$j['status']] ?? [];
+    // "Delivered" is offered only once the bill is final.
+    $billed = $j['invoice'] && $j['invoice']['status'] === 'final';
+    $j['allowed_status'] = array_values(array_filter(JOB_TRANSITIONS[$j['status']] ?? [], static fn ($s) => $s !== 'delivered' || $billed));
+    $j['can_approve'] = !in_array($j['status'], ['delivered', 'cancelled'], true) && !$billed
+        && (in_array($j['status'], ['pending', 'estimate_sent'], true) || $j['money']['revision_pending']);
     return strip_cost($j);
 }
 
@@ -243,14 +248,11 @@ route('POST', '/jobs/{id}/status', function ($p) {
     if (is_role(ROLE_MECHANIC) && in_array($to, ['cancelled', 'delivered'], true)) {
         fail(403, 'forbidden', 'Only the front desk or owner can do this');
     }
-    if ($to === 'in_progress' && !$j['approved_estimate_id']) {
-        fail(409, 'estimate_not_approved', 'Work cannot start before the customer approves the estimate');
-    }
     if ($to === 'cancelled') {
         if (empty($in['note'])) {
             fail(422, 'validation_failed', 'Give a reason for cancelling', ['note' => 'required']);
         }
-        $held = (float) val('SELECT COALESCE(SUM(qty - returned_qty), 0) FROM job_parts WHERE job_card_id = ?', [$j['id']]);
+        $held = (float) val('SELECT COALESCE(SUM(qty - returned_qty), 0) FROM job_parts WHERE job_card_id = ? AND issued = 1', [$j['id']]);
         if ($held > 0) {
             fail(409, 'return_parts_first', 'Return the issued parts to stock before cancelling');
         }
@@ -411,7 +413,7 @@ route('POST', '/jobs/{id}/return', function ($p) {
     }
     $in = clean(body(), ['job_part_id' => 'int|req', 'qty' => 'num|req|min:0.01|max:100000', 'reason' => 'str|max:200']);
     tx(function () use ($j, $in) {
-        $jp = row('SELECT * FROM job_parts WHERE id = ? AND job_card_id = ? FOR UPDATE', [$in['job_part_id'], $j['id']]) ?? not_found('Issued part');
+        $jp = row('SELECT * FROM job_parts WHERE id = ? AND job_card_id = ? AND issued = 1 FOR UPDATE', [$in['job_part_id'], $j['id']]) ?? not_found('Issued part');
         $left = r2((float) $jp['qty'] - (float) $jp['returned_qty']);
         if ((float) $in['qty'] > $left + 0.0001) {
             fail(409, 'return_too_much', 'Only ' . fmt_qty($left) . ' can be returned');
@@ -422,6 +424,51 @@ route('POST', '/jobs/{id}/return', function ($p) {
     });
     return ['item' => job_detail((int) $j['id'])];
 }, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+
+/* ------------------------------------------------------------------ approve at the counter */
+
+/*
+ * The customer agreed in person: approve the job. Approves the latest estimate if there is one (its parts and
+ * labour go onto the job), otherwise just marks the job approved so work and billing can start.
+ */
+route('POST', '/jobs/{id}/approve', function ($p) {
+    $j = job_row((int) $p['id']);
+    $in = clean(body(), ['note' => 'str|max:255']);
+    if (job_locked($j)) {
+        fail(409, 'job_closed', 'This job is closed or already billed');
+    }
+    $latest = row("SELECT * FROM estimates WHERE job_card_id = ? AND status IN ('draft','sent') ORDER BY id DESC LIMIT 1", [$j['id']]);
+    if (!$latest && !in_array($j['status'], ['pending', 'estimate_sent'], true)) {
+        fail(409, 'already_approved', 'This job is already approved');
+    }
+    tx(function () use ($j, $latest, $in) {
+        if ($latest) {
+            $latest['items'] = rows('SELECT * FROM estimate_items WHERE estimate_id = ? ORDER BY id', [$latest['id']]);
+            approve_estimate($latest, 'desk', $in['note'] ?? null);
+        } else {
+            update_row('job_cards', (int) $j['id'], ['status' => 'approved']);
+            job_event((int) $j['id'], 'job_status', ['from' => $j['status'], 'to' => 'approved', 'note' => $in['note'] ?? null]);
+        }
+    });
+    if ($latest) {
+        notify_estimate_approved(job_row((int) $j['id']), $latest);
+    }
+    return ['item' => job_detail((int) $j['id'])];
+}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+
+/* Take a planned (estimate) part off the job before billing, e.g. the customer changed their mind. */
+route('DELETE', '/jobs/{id}/parts/{jpid}', function ($p) {
+    $j = job_row((int) $p['id']);
+    if (job_locked($j)) {
+        fail(409, 'job_closed', 'This job is closed or already billed');
+    }
+    $jp = row('SELECT * FROM job_parts WHERE id = ? AND job_card_id = ? AND issued = 0', [(int) $p['jpid'], $j['id']]) ?? not_found('Planned part');
+    tx(function () use ($jp, $j) {
+        q('UPDATE job_parts SET qty = 0, updated_at = ? WHERE id = ?', [now(), $jp['id']]);
+        job_event((int) $j['id'], 'job_part_removed', ['part_id' => (int) $jp['part_id'], 'qty' => (float) $jp['qty']]);
+    });
+    return ['item' => job_detail((int) $j['id'])];
+}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
 
 /* ------------------------------------------------------------------ WhatsApp: bike ready */
 

@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Ban, Bike, Camera, CircleCheck, FileText, Hourglass, MessageCircle, PackageSearch, Phone, Plus, Receipt, Send, Trash2, Undo2, Wrench } from 'lucide-react-native';
+import { Ban, Bike, Camera, CircleCheck, FileText, Hourglass, MessageCircle, PackageSearch, Phone, Plus, Receipt, Send, Trash2, Undo2, Wrench, X } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,7 @@ import { api, apiUrl } from '@/api/client';
 import { useJob, useLabourRates, useWorkMutation } from '@/api/queries';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
-import { Banner, Button, Card, Divider, Field, IconButton, Loading, OfflineBanner, Txt } from '@/components/ui';
+import { Banner, Button, Card, Chip, Divider, Field, IconButton, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { StatusChip } from '@/components/work';
 import { datetime, money, qty } from '@/format';
 import { nm } from '@/i18n';
@@ -142,6 +142,21 @@ export default function JobScreen() {
         {j.money.revised_needed && !j.money.revision_pending ? <Banner tone="warning" text={t('jobs.revised_needed')} /> : null}
         {j.money.revision_pending ? <Banner text={t('jobs.revision_pending')} /> : null}
 
+        {canEdit && j.can_approve ? (
+          <Button
+            title={t('jobs.approve')}
+            icon={CircleCheck}
+            needsOnline
+            loading={act.isPending}
+            onPress={() => {
+              const est = j.estimates[0] && ['draft', 'sent'].includes(j.estimates[0].status) ? j.estimates[0] : null;
+              Alert.alert(t('jobs.approve'), est ? t('jobs.approve_confirm_est', { no: est.est_no, total: money(est.grand_total) }) : t('jobs.approve_confirm'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('jobs.approve'), onPress: () => void run({ path: `/jobs/${jobId}/approve` }, t('jobs.approved_ok')) },
+              ]);
+            }}
+          />
+        ) : null}
         {statusButtons.length ? (
           <View style={{ gap: space[2] }}>
             {statusButtons.map((s) => {
@@ -156,7 +171,7 @@ export default function JobScreen() {
         {canEdit && j.invoice ? (
           <Button title={j.invoice.invoice_no ?? t('billing.draft')} icon={Receipt} variant="secondary" onPress={() => router.push(`/invoice/${j.invoice!.id}`)} />
         ) : null}
-        {canEdit && !j.invoice && ['in_progress', 'waiting_parts', 'ready'].includes(j.status) ? (
+        {canEdit && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? (
           <Button
             title={t('billing.create_bill')}
             icon={Receipt}
@@ -236,12 +251,25 @@ export default function JobScreen() {
                       {p.part_no} · {qty(left)} {p.unit}
                       {Number(p.returned_qty) ? ` (${qty(p.returned_qty)} ${t('jobs.returned')})` : ''}
                     </Txt>
+                    {!Number(p.issued) ? <Chip label={t('jobs.part_planned')} tone="info" /> : null}
                   </View>
                   <Txt tabular weight="semibold">
                     {money(left * p.unit_price)}
                   </Txt>
-                  {canStock && left > 0 && !billed ? (
+                  {Number(p.issued) && canStock && left > 0 && !billed ? (
                     <IconButton icon={Undo2} label={t('jobs.return')} onPress={() => { setText(qty(left)); setSheet({ kind: 'return', jobPartId: p.id, left }); }} />
+                  ) : null}
+                  {!Number(p.issued) && canEdit && j.invoice?.status !== 'final' ? (
+                    <IconButton
+                      icon={X}
+                      label={t('jobs.remove_part')}
+                      onPress={() =>
+                        Alert.alert(t('jobs.remove_part'), t('jobs.remove_part_confirm', { part: nm(p) }), [
+                          { text: t('common.cancel'), style: 'cancel' },
+                          { text: t('jobs.remove_part'), style: 'destructive', onPress: () => void run({ method: 'DELETE', path: `/jobs/${jobId}/parts/${p.id}` }) },
+                        ])
+                      }
+                    />
                   ) : null}
                 </View>
               </View>

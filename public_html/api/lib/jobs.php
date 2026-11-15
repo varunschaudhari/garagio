@@ -10,9 +10,9 @@ const JOB_REQUESTABLE = ['approved', 'in_progress', 'waiting_parts'];
 const JOB_TRANSITIONS = [
     'pending' => ['cancelled'],
     'estimate_sent' => ['cancelled'],
-    'approved' => ['in_progress', 'cancelled'],
-    'in_progress' => ['waiting_parts', 'ready', 'cancelled'],
-    'waiting_parts' => ['in_progress', 'ready', 'cancelled'],
+    'approved' => ['in_progress', 'ready', 'delivered', 'cancelled'],
+    'in_progress' => ['waiting_parts', 'ready', 'delivered', 'cancelled'],
+    'waiting_parts' => ['in_progress', 'ready', 'delivered', 'cancelled'],
     'ready' => ['in_progress', 'delivered', 'cancelled'],
     'delivered' => [],
     'cancelled' => [],
@@ -68,6 +68,65 @@ function job_bill_lines(int $jobId): array
             'disc_pct' => 0, 'gst_rate' => setting_num('labour_gst_rate'), 'hsn' => setting('labour_sac', '998714'), 'description_en' => $l['description'], 'description_mr' => $l['description_mr'], 'unit_cost' => 0.0];
     }
     return $lines;
+}
+
+/** Job statuses from which the bill can be made (any time after the job is approved). */
+const JOB_BILLABLE = ['approved', 'in_progress', 'waiting_parts', 'ready'];
+
+/**
+ * Parts on the approved estimate become "planned" job parts (issued = 0): billed at the estimate price,
+ * taken out of stock when the bill is finalised. Parts the store already issued to this job count against
+ * the estimate, so nothing is billed twice. Free-text estimate parts (no catalogue part) are not copied.
+ * Inside tx().
+ */
+function sync_planned_parts(int $jobId, array $estimateItems): void
+{
+    $want = [];
+    foreach ($estimateItems as $it) {
+        if (($it['item_type'] ?? '') !== 'part' || empty($it['part_id'])) {
+            continue;
+        }
+        $pid = (int) $it['part_id'];
+        $want[$pid] = [r2(($want[$pid][0] ?? 0) + (float) $it['qty']), (float) $it['unit_price']];
+    }
+    $issued = [];
+    foreach (rows('SELECT part_id, SUM(qty - returned_qty) AS n FROM job_parts WHERE job_card_id = ? AND issued = 1 GROUP BY part_id', [$jobId]) as $r) {
+        $issued[(int) $r['part_id']] = (float) $r['n'];
+    }
+    $planned = [];
+    foreach (rows('SELECT id, part_id FROM job_parts WHERE job_card_id = ? AND issued = 0 ORDER BY id FOR UPDATE', [$jobId]) as $r) {
+        $planned[(int) $r['part_id']] ??= (int) $r['id'];
+    }
+    // Rows are zeroed rather than deleted: a draft bill may still point at them until it is rebuilt.
+    q('UPDATE job_parts SET qty = 0, updated_at = ? WHERE job_card_id = ? AND issued = 0', [now(), $jobId]);
+    foreach ($want as $pid => [$qty, $price]) {
+        $need = r2($qty - ($issued[$pid] ?? 0));
+        if ($need <= 0) {
+            continue;
+        }
+        if (isset($planned[$pid])) {
+            q('UPDATE job_parts SET qty = ?, unit_price = ?, updated_at = ? WHERE id = ?', [$need, $price, now(), $planned[$pid]]);
+        } else {
+            insert('job_parts', ['job_card_id' => $jobId, 'part_id' => $pid, 'qty' => $need, 'returned_qty' => 0, 'issued' => 0, 'unit_price' => $price, 'unit_cost' => 0]);
+        }
+    }
+}
+
+/** Issuing a part from the store uses up a planned line for it (and keeps the agreed price). Inside tx(). */
+function consume_planned_part(int $jobId, int $partId, float $qty): ?float
+{
+    $price = null;
+    $left = $qty;
+    foreach (rows('SELECT id, qty, unit_price FROM job_parts WHERE job_card_id = ? AND part_id = ? AND issued = 0 AND qty > 0 ORDER BY id FOR UPDATE', [$jobId, $partId]) as $p) {
+        if ($left <= 0) {
+            break;
+        }
+        $use = min($left, (float) $p['qty']);
+        q('UPDATE job_parts SET qty = qty - ?, updated_at = ? WHERE id = ?', [$use, now(), $p['id']]);
+        $price ??= (float) $p['unit_price'];
+        $left = r2($left - $use);
+    }
+    return $price;
 }
 
 /** Money summary for a job: what has been used so far vs the approved estimate. */

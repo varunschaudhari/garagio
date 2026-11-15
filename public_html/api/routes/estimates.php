@@ -21,7 +21,7 @@ function approve_estimate(array $e, string $via, ?string $note = null): void
         'status' => 'approved',
         'approved_via' => $via,
         'approved_at' => $now,
-        'approved_by' => $via === 'call' ? (user_or_null()['id'] ?? null) : null,
+        'approved_by' => in_array($via, ['call', 'desk'], true) ? (user_or_null()['id'] ?? null) : null,
         'note' => $note ?? $e['note'],
     ]);
     // Older sent estimates for this job are replaced by this one.
@@ -48,6 +48,8 @@ function approve_estimate(array $e, string $via, ?string $note = null): void
         ]);
         $have[] = mb_strtolower($it['description']);
     }
+    // Approved catalogue parts go onto the job as planned lines, so the bill fills itself.
+    sync_planned_parts((int) $job['id'], $e['items']);
     job_event((int) $job['id'], 'estimate_approved', ['est_no' => $e['est_no'], 'via' => $via, 'total' => (float) $e['grand_total']]);
 }
 

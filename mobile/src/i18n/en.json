@@ -397,7 +397,7 @@
     "credit_not_allowed": "Credit is only for customers the owner marked as trusted.",
     "credit_limit_exceeded": "This bill would cross the customer’s credit limit.",
     "already_billed": "This job already has a final bill.",
-    "job_not_billable": "Bill the job once work has started.",
+    "job_not_billable": "Approve the job before making the bill.",
     "revision_pending": "A revised estimate is waiting for the customer’s approval.",
     "nothing_to_bill": "Nothing to bill yet.",
     "invoice_final": "This bill is already final.",
@@ -408,7 +408,8 @@
     "backup_failed": "Could not take a backup, so nothing was removed. Check the backup folder in config.php.",
     "scan_not_configured": "Reading job cards is not set up on the server.",
     "scan_failed": "Could not read the job card. Try a clearer photo, or type the details.",
-    "scan_limit": "Too many job card scans in the last hour. Try again later."
+    "scan_limit": "Too many job card scans in the last hour. Try again later.",
+    "already_approved": "This job is already approved."
   },
   "fields": {
     "required": "Required",
@@ -699,14 +700,22 @@
       "parts_issued": "Parts issued",
       "parts_unavailable": "Part not available",
       "invoice_draft": "Bill drafted",
-      "invoice_final": "Bill finalised"
+      "invoice_final": "Bill finalised",
+      "job_part_removed": "Part removed from the job"
     },
     "scan_card": "Scan paper job card",
     "scan_reading": "Reading the job card…",
     "scan_done": "Filled in from the photo – check everything before saving.",
     "scan_check": "Look again at: {{fields}}",
     "scan_hint": "Photograph the handwritten card from straight above, whole card in view, in good light. The form fills in by itself.",
-    "scan_view": "Job card photo"
+    "scan_view": "Job card photo",
+    "approve": "Approve job",
+    "approve_confirm": "Approve this job? Work can start and the bill can be made.",
+    "approve_confirm_est": "Approve estimate {{no}} ({{total}})? Its parts and labour go onto the bill.",
+    "approved_ok": "Job approved",
+    "part_planned": "From estimate – leaves stock when billed",
+    "remove_part": "Remove",
+    "remove_part_confirm": "Remove {{part}} from this job?"
   },
   "estimates": {
     "title": "Estimate",
@@ -732,7 +741,8 @@
     "opened_whatsapp": "WhatsApp opened with the message",
     "link": "Approval link",
     "copy_link": "Copy link",
-    "copied": "Link copied"
+    "copied": "Link copied",
+    "via_desk": "approved at the counter"
   },
   "requests": {
     "title": "Parts requests",
