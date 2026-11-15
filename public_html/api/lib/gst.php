@@ -110,6 +110,47 @@ function gst_bill(array $lines, bool $inclusive, bool $interstate, float $billDi
 }
 
 /**
+ * One line of a sale return: the bill line's taxable value and tax, reversed in proportion to the quantity
+ * coming back. The last units of a line take exactly what is left, so a line returned in parts adds up.
+ * $done = sums of earlier returns of this line (qty, taxable, cgst, sgst, igst, tax_amount, line_total).
+ */
+function return_line(array $item, float $qty, array $done): array
+{
+    $sold = (float) $item['qty'];
+    $last = abs($sold - (float) ($done['qty'] ?? 0) - $qty) < 0.005;
+    $out = [];
+    foreach (['taxable', 'cgst', 'sgst', 'igst', 'tax_amount', 'line_total'] as $f) {
+        $out[$f] = $last ? r2((float) $item[$f] - (float) ($done[$f] ?? 0)) : ($sold > 0 ? r2((float) $item[$f] * $qty / $sold) : 0.0);
+    }
+    if (!$last) {
+        $out['tax_amount'] = r2($out['cgst'] + $out['sgst'] + $out['igst']);
+        $out['line_total'] = r2($out['taxable'] + $out['tax_amount']);
+    }
+    return $out;
+}
+
+/**
+ * Totals of a sale return, rounded to the rupee like a bill but never more than what is left of the bill
+ * ($room); when everything has come back the total is exactly $room.
+ */
+function return_totals(array $lines, float $room, bool $everything): array
+{
+    $t = ['taxable_total' => 0.0, 'cgst' => 0.0, 'sgst' => 0.0, 'igst' => 0.0, 'tax_total' => 0.0];
+    foreach ($lines as $l) {
+        $t['taxable_total'] += $l['taxable'];
+        $t['cgst'] += $l['cgst'];
+        $t['sgst'] += $l['sgst'];
+        $t['igst'] += $l['igst'];
+        $t['tax_total'] += $l['tax_amount'];
+    }
+    $t = array_map('r2', $t);
+    $exact = r2($t['taxable_total'] + $t['tax_total']);
+    $t['total'] = r2(max(0.0, $everything ? $room : min($room, round($exact, 0))));
+    $t['round_off'] = r2($t['total'] - $exact);
+    return $t;
+}
+
+/**
  * Split $amount over $weights proportionally, in paise, so the parts add up exactly.
  * @return float[] keyed like $weights
  */

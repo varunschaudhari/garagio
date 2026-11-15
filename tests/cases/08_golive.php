@@ -416,6 +416,117 @@ test('purchase correct: the new bill replaces the old one in one step; payments 
     eq(round($new['total'], 2), $fix['paid'], 'payments follow the bill again');
 });
 
+function ret_bill(array $body, array $payments): array
+{
+    $inv = status(200, post('/invoices', $body, 'desk'))['item'];
+    return status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => $payments], 'desk'))['item'];
+}
+
+function ret_line(array $inv, string $partNo): int
+{
+    foreach ($inv['items'] as $it) {
+        if ((int) $it['part_id'] === part_id($partNo)) {
+            return (int) $it['id'];
+        }
+    }
+    throw new RuntimeException("no line $partNo");
+}
+
+test('sale return (acceptance): part back to stock, money given back; the rest of the bill comes back faulty and stays as advance', function () {
+    status(200, post('/parts', ['part_no' => 'RET-18', 'name_en' => 'Return test', 'selling_price' => 1180, 'gst_rate' => 18, 'opening_stock' => 10, 'opening_cost' => 700], 'admin'));
+    $c = status(200, post('/customers', ['name' => 'Return Test', 'phone' => '9011100123'], 'desk'))['item'];
+    $inv = ret_bill(['customer_id' => $c['id'], 'items' => [['part_id' => part_id('RET-18'), 'qty' => 2]]], [['mode' => 'cash', 'amount' => 2360]]);
+    eq(2360.0, (float) $inv['grand_total']);
+    eq(8.0, stock_of('RET-18'));
+    $line = ret_line($inv, 'RET-18');
+    $today = date('Y-m-d');
+    $profit0 = status(200, get("/reports/profit?from=$today&to=$today", 'admin'))['summary'];
+    $gst0 = status(200, get("/reports/gst?from=$today&to=$today", 'admin'))['totals'];
+
+    $pv = status(200, post("/invoices/{$inv['id']}/returns/preview", ['items' => [['invoice_item_id' => $line, 'qty' => 1]]], 'admin'));
+    eq(1180.0, $pv['totals']['total']);
+    eq(1000.0, $pv['totals']['taxable_total']);
+    eq(90.0, $pv['totals']['cgst']);
+    eq(1180.0, $pv['max_refund'], 'paid in full: the whole return can be given back');
+    eq(0.0, $pv['must_refund']);
+    ok(!isset($pv['lines'][0]['unit_cost']), 'no cost in the preview');
+
+    eq(403, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'x'], 'desk')['status'], 'needs "cancel bills"');
+    eq(422, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]]], 'admin')['status'], 'reason required');
+    eq(422, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 3]], 'reason' => 'x'], 'admin')['status'], 'more than sold');
+    $r = post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'x', 'refund' => 2000, 'refund_mode' => 'cash'], 'admin');
+    eq('refund_too_much', $r['json']['code']);
+    eq(422, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'x', 'refund' => 100], 'admin')['status'], 'refund needs a mode');
+
+    $res = status(200, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'Did not fit', 'refund' => 1180, 'refund_mode' => 'cash'], 'admin'));
+    ok(preg_match('#^CN/\d{2}-\d{2}/00001$#', $res['item']['return_no']) === 1, 'credit note number ' . $res['item']['return_no']);
+    eq(9.0, stock_of('RET-18'), 'back in stock');
+    $m = trows("SELECT * FROM stock_movements WHERE part_id = ? ORDER BY id DESC LIMIT 1", [part_id('RET-18')])[0];
+    eq('sale_return', $m['mtype']);
+    eq(700.0, (float) $m['unit_cost'], 'comes back at the cost it left at');
+    $i = $res['invoice'];
+    eq(1180.0, (float) $i['returned_total']);
+    eq(1180.0, (float) $i['paid_total'], 'money given back no longer pays the bill');
+    eq(0.0, (float) $i['balance']);
+    eq('paid', $i['pay_status']);
+    eq(1.0, (float) $i['items'][0]['returned_qty']);
+    eq(1, count($i['returns']));
+    eq(0.0, (float) status(200, get("/customers/{$c['id']}", 'desk'))['item']['balance'], 'nothing owed either way');
+    $types = array_column(status(200, get("/customers/{$c['id']}/ledger", 'desk'))['items'], 'type');
+    ok(in_array('return', $types, true) && in_array('refund', $types, true), 'ledger shows the return and the money given back');
+    eq(409, post("/invoices/{$inv['id']}/cancel", ['reason' => 'x'], 'admin')['status'], 'a bill with returns is not cancelled');
+
+    // The last one comes back faulty: not back to stock, nothing given back → advance.
+    $res2 = status(200, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1, 'restock' => false]], 'reason' => 'Faulty', 'refund' => 0], 'admin'));
+    eq(1180.0, (float) $res2['item']['total']);
+    eq(9.0, stock_of('RET-18'), 'faulty part not back in stock');
+    eq(2360.0, (float) $res2['invoice']['returned_total']);
+    eq(0.0, (float) $res2['invoice']['balance']);
+    eq(-1180.0, (float) status(200, get("/customers/{$c['id']}", 'desk'))['item']['balance'], 'advance');
+    eq(422, post("/invoices/{$inv['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'x'], 'admin')['status'], 'nothing left to return');
+
+    // Reports: minus rows in the sales register; output GST and profit go down (cost only for the part back in stock).
+    $sales = status(200, get("/reports/sales?from=$today&to=$today", 'admin'))['rows'];
+    eq(2, count(array_filter($sales, static fn ($r) => $r['type'] === 'return' && (float) $r['total'] === -1180.0)));
+    $profit = status(200, get("/reports/profit?from=$today&to=$today", 'admin'))['summary'];
+    eq(round($profit0['sales'] - 2000, 2), $profit['sales']);
+    eq(round($profit0['parts_cost'] - 700, 2), $profit['parts_cost']);
+    $gst = status(200, get("/reports/gst?from=$today&to=$today", 'admin'))['totals'];
+    eq(round($gst0['out_cgst'] - 180, 2), $gst['out_cgst']);
+    ok(status(200, get("/returns/{$res['item']['id']}", 'desk'))['item']['return_no'] === $res['item']['return_no']);
+    $html = get("/returns/{$res['item']['id']}/receipt?lang=en", 'desk');
+    eq(200, $html['status']);
+    ok(str_contains($html['body'], 'Credit Note') && str_contains($html['body'], 'Did not fit'), 'printable credit note');
+
+    // The advance pays the next bill.
+    status(200, put("/customers/{$c['id']}/credit", ['is_trusted' => true, 'credit_limit' => 0], 'admin'));
+    $next = ret_bill(['customer_id' => $c['id'], 'items' => [['part_id' => part_id('RET-18'), 'qty' => 1]]], []);
+    eq('paid', $next['pay_status']);
+});
+
+test('sale return: a walk-in customer must get the money back; a credit bill just owes less', function () {
+    $w = ret_bill(['cust_name' => 'Walk-in Return', 'items' => [['part_id' => part_id('RET-18'), 'qty' => 1]]], [['mode' => 'upi', 'amount' => 1180]]);
+    $line = ret_line($w, 'RET-18');
+    $pv = status(200, post("/invoices/{$w['id']}/returns/preview", ['items' => [['invoice_item_id' => $line, 'qty' => 1]]], 'admin'));
+    eq(1180.0, $pv['must_refund']);
+    $r = post("/invoices/{$w['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'x'], 'admin');
+    eq('refund_required', $r['json']['code']);
+    $ok = status(200, post("/invoices/{$w['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'Changed mind', 'refund' => 1180, 'refund_mode' => 'upi'], 'admin'));
+    eq(1180.0, (float) $ok['item']['refund_amount']);
+    eq(0.0, (float) $ok['invoice']['paid_total']);
+
+    $c = status(200, post('/customers', ['name' => 'Credit Return', 'phone' => '9011100124'], 'desk'))['item'];
+    status(200, put("/customers/{$c['id']}/credit", ['is_trusted' => true, 'credit_limit' => 0], 'admin'));
+    $cr = ret_bill(['customer_id' => $c['id'], 'items' => [['part_id' => part_id('RET-18'), 'qty' => 2]]], []);
+    $line = ret_line($cr, 'RET-18');
+    $pv = status(200, post("/invoices/{$cr['id']}/returns/preview", ['items' => [['invoice_item_id' => $line, 'qty' => 1]]], 'admin'));
+    eq(0.0, $pv['max_refund'], 'nothing paid: nothing to give back');
+    $res = status(200, post("/invoices/{$cr['id']}/returns", ['items' => [['invoice_item_id' => $line, 'qty' => 1]], 'reason' => 'One extra'], 'admin'));
+    eq(1180.0, (float) $res['invoice']['balance']);
+    eq('unpaid', $res['invoice']['pay_status']);
+    eq(1180.0, (float) status(200, get("/customers/{$c['id']}", 'desk'))['item']['balance']);
+});
+
 test('billing: line discounts must be 0–100 % with known keys', function () {
     $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 2 ORDER BY id LIMIT 1');
     $items = [['part_id' => $pid, 'qty' => 1]];

@@ -78,13 +78,13 @@ export default async function customerPage(ctx) {
     if (!ctx.alive()) return;
     const box = $('#ledger-card', ctx.el);
     if (!box) return;
-    const typeLabel = { opening: 'billing.entry_opening', invoice: 'billing.entry_invoice', payment: 'billing.entry_payment' };
+    const typeLabel = { opening: 'billing.entry_opening', invoice: 'billing.entry_invoice', payment: 'billing.entry_payment', return: 'billing.entry_return', refund: 'billing.entry_refund' };
     setHTML(box, html`<div class="card-head"><h3>${t('billing.ledger')}</h3><button class="btn btn-primary btn-sm" data-act="pay">${icon('hand-coins', 16)}${t('billing.record_payment')}</button></div>
       ${dataTable({
         columns: [
           { key: 'date', label: t('common.date'), render: (e) => date(e.date) },
           { key: 'type', label: t('common.type'), primary: true, render: (e) => html`<div class="t-title">${t(typeLabel[e.type])}</div>${e.mode ? html`<div class="t-sub">${t('pay.' + e.mode)}</div>` : ''}` },
-          { key: 'ref', label: t('common.reference'), render: (e) => (e.type === 'invoice' ? html`<a href="#/invoices/${e.ref_id}">${e.ref}</a>` : e.ref || '—') },
+          { key: 'ref', label: t('common.reference'), render: (e) => (['invoice', 'return', 'refund'].includes(e.type) && e.ref_id ? html`<a href="#/invoices/${e.ref_id}">${e.ref}</a>` : e.ref || '—') },
           { key: 'debit', label: t('billing.debit'), num: true, render: (e) => (e.debit ? money(e.debit) : '') },
           { key: 'credit', label: t('billing.credit'), num: true, render: (e) => (e.credit ? money(e.credit) : '') },
           { key: 'balance', label: t('common.balance'), num: true, render: (e) => html`<span class="strong">${money(e.balance)}</span>` },

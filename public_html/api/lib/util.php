@@ -177,6 +177,14 @@ function next_invoice_no(string $date): string
     return $no;
 }
 
+/** Return (credit) note number: CN/… against a GST bill, RET/… against a plain bill; its own series per year. */
+function next_return_no(bool $gstBill): string
+{
+    $fy = fy_label(today());
+    $prefix = $gstBill ? 'CN' : 'RET';
+    return $prefix . '/' . $fy . '/' . str_pad((string) next_counter('return_' . $prefix . '_' . $fy), 5, '0', STR_PAD_LEFT);
+}
+
 /* ------------------------------------------------------------------ audit */
 
 function audit(string $action, string $entity, ?int $entityId, $before = null, $after = null): void

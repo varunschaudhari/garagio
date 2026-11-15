@@ -119,6 +119,7 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] "Share PDF" opens the share sheet with the A4 PDF; sharing to WhatsApp attaches it (Marathi + English bill).
 - [ ] "Send on WhatsApp" opens a chat with the bill message; "Record payment" reduces the balance; "Deliver bike" closes the job.
 - [ ] Owner: Money tab shows today's sales and customer dues; "Cancel bill" asks for a reason; a counter-sale cancel puts stock back.
+- [ ] "Return items" on a final bill: enter a qty, the return value and "give back" amount appear; saving prints the return note on the 80 mm printer; the line shows "1 returned"; "Cancel bill" is gone.
 - [ ] Counter sale: add parts by search or QR, choose a customer or walk-in, pay, finalise → bill opens.
 - [ ] Customer screen: ledger (newest first) and "Record payment" (pays oldest bills first).
 

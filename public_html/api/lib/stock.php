@@ -6,10 +6,10 @@ declare(strict_types=1);
  * in the same transaction, so the ledger balance always equals current_stock.
  */
 
-const MOVEMENT_TYPES = ['opening', 'purchase', 'job_issue', 'job_return', 'counter_sale', 'sale_cancel', 'adjustment', 'stock_count', 'purchase_cancel'];
+const MOVEMENT_TYPES = ['opening', 'purchase', 'job_issue', 'job_return', 'counter_sale', 'sale_cancel', 'adjustment', 'stock_count', 'purchase_cancel', 'sale_return'];
 
 /** Inbound types that bring their own unit cost and update the weighted average. */
-const COSTED_INBOUND = ['opening', 'purchase', 'job_return', 'sale_cancel'];
+const COSTED_INBOUND = ['opening', 'purchase', 'job_return', 'sale_cancel', 'sale_return'];
 
 /**
  * Post a stock movement. Must run inside tx(). Locks the part row.

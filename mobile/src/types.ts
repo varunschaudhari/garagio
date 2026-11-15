@@ -410,6 +410,18 @@ export interface InvoiceItem {
   disc_pct: number;
   gst_rate: number;
   line_total: number;
+  returned_qty?: number;
+}
+
+export interface InvoiceReturn {
+  id: number;
+  return_no: string;
+  return_date: string;
+  total: number;
+  refund_amount: number;
+  refund_mode: 'cash' | 'upi' | 'bank' | null;
+  reason: string;
+  user_name: string | null;
 }
 
 export interface Invoice extends InvoiceListItem {
@@ -431,13 +443,15 @@ export interface Invoice extends InvoiceListItem {
   igst: number;
   round_off: number;
   cancel_reason: string | null;
+  returned_total?: number;
+  returns?: InvoiceReturn[];
   items: InvoiceItem[];
   payments: { id: number; mode: PayMode; reference: string | null; received_on: string; amount: number }[];
 }
 
 export interface CustomerLedgerEntry {
   date: string;
-  type: 'opening' | 'invoice' | 'payment';
+  type: 'opening' | 'invoice' | 'payment' | 'return' | 'refund';
   ref: string | null;
   ref_id: number | null;
   debit: number;

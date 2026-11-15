@@ -26,7 +26,7 @@ function monthRange(offset) {
 function cell(key, v) {
   if (v === null || v === undefined || v === '') return '—';
   if (key === 'date' || key === 'last_bill' || key === 'last_payment') return date(v);
-  if (key === 'type') return t(v === 'job' ? 'billing.job_bill' : 'billing.counter');
+  if (key === 'type') return t(v === 'job' ? 'billing.job_bill' : v === 'return' ? 'billing.entry_return' : 'billing.counter');
   if (key === 'mode') return t('pay.' + v);
   if (key === 'rate') return qty(v) + '%';
   if (QTY_COLS.has(key)) return qty(v);

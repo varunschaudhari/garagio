@@ -19,6 +19,15 @@ function invoice_row(int $id): array
         [$id]
     ) ?? not_found('Invoice');
     $inv['items'] = rows('SELECT ii.*, p.part_no FROM invoice_items ii LEFT JOIN parts p ON p.id = ii.part_id WHERE ii.invoice_id = ? ORDER BY ii.item_type DESC, ii.id', [$id]);
+    $back = [];
+    foreach (rows('SELECT ri.invoice_item_id, SUM(ri.qty) AS qty FROM sale_return_items ri JOIN sale_returns r ON r.id = ri.return_id WHERE r.invoice_id = ? GROUP BY ri.invoice_item_id', [$id]) as $b) {
+        $back[(int) $b['invoice_item_id']] = (float) $b['qty'];
+    }
+    foreach ($inv['items'] as &$it) {
+        $it['returned_qty'] = r2($back[(int) $it['id']] ?? 0);
+    }
+    unset($it);
+    $inv['returns'] = rows('SELECT r.id, r.return_no, r.return_date, r.total, r.refund_amount, r.refund_mode, r.reason, u.name AS user_name FROM sale_returns r LEFT JOIN users u ON u.id = r.user_id WHERE r.invoice_id = ? ORDER BY r.id', [$id]);
     $inv['payments'] = rows(
         'SELECT p.id, p.mode, p.reference, p.received_on, a.amount, u.name AS user_name FROM payment_allocations a
          JOIN customer_payments p ON p.id = a.payment_id LEFT JOIN users u ON u.id = p.user_id WHERE a.invoice_id = ? ORDER BY p.id',
@@ -150,10 +159,11 @@ function rebuild_draft(int $invoiceId, array $counterItems = [], ?array $discoun
 /** Recompute paid / balance / pay_status from allocations. */
 function refresh_invoice_payments(int $invoiceId): void
 {
-    $inv = row('SELECT grand_total, status FROM invoices WHERE id = ?', [$invoiceId]);
+    $inv = row('SELECT grand_total, returned_total, status FROM invoices WHERE id = ?', [$invoiceId]);
     $paid = r2((float) val('SELECT COALESCE(SUM(amount), 0) FROM payment_allocations WHERE invoice_id = ?', [$invoiceId]));
-    $bal = r2((float) $inv['grand_total'] - $paid);
-    $status = $paid <= 0.004 ? 'unpaid' : ($bal <= 0.004 ? 'paid' : 'partial');
+    // Returns lower what the bill needs; a bill fully taken back needs nothing more.
+    $bal = r2((float) $inv['grand_total'] - (float) $inv['returned_total'] - $paid);
+    $status = $paid <= 0.004 && !((float) $inv['returned_total'] > 0 && $bal <= 0.004) ? 'unpaid' : ($bal <= 0.004 ? 'paid' : 'partial');
     update_row('invoices', $invoiceId, ['paid_total' => $paid, 'balance' => max(0, $bal), 'pay_status' => $status]);
 }
 
@@ -225,6 +235,8 @@ function clean_discounts($raw): array
 function apply_customer_advance(int $customerId): void
 {
     $opening = max(0.0, (float) val('SELECT opening_balance FROM customers WHERE id = ? FOR UPDATE', [$customerId]));
+    // Money refunded on returns has left the shop: it uses up free money like the opening balance does.
+    $opening = r2($opening + (float) val('SELECT COALESCE(SUM(refund_amount), 0) FROM sale_returns WHERE customer_id = ?', [$customerId]));
     $payments = rows(
         'SELECT p.id, p.amount - COALESCE((SELECT SUM(a.amount) FROM payment_allocations a WHERE a.payment_id = p.id), 0) AS free
          FROM customer_payments p WHERE p.customer_id = ? ORDER BY p.id',
@@ -587,6 +599,9 @@ route('POST', '/invoices/{id}/cancel', function ($p) {
         if ($inv['status'] !== 'final') {
             fail(409, 'invoice_not_final', 'Only a final bill can be cancelled');
         }
+        if ((float) $inv['returned_total'] > 0) {
+            fail(409, 'invoice_has_returns', 'This bill has returns; take back the rest as a return instead');
+        }
         if ($inv['inv_type'] === 'counter') {
             foreach (rows("SELECT * FROM invoice_items WHERE invoice_id = ? AND part_id IS NOT NULL", [$id]) as $it) {
                 stock_move((int) $it['part_id'], (float) $it['qty'], 'sale_cancel', 'invoice', $id, (float) $it['unit_cost'], 'Cancelled ' . $inv['invoice_no']);
@@ -661,6 +676,13 @@ route('GET', '/customers/{id}/ledger', function ($p) {
     }
     foreach (rows("SELECT id, invoice_no, invoice_date, grand_total, finalized_at FROM invoices WHERE customer_id = ? AND status = 'final'", [$c['id']]) as $r) {
         $entries[] = ['date' => $r['invoice_date'], 'seq' => strtotime((string) $r['finalized_at']), 'type' => 'invoice', 'ref' => $r['invoice_no'], 'ref_id' => (int) $r['id'], 'debit' => (float) $r['grand_total'], 'credit' => 0.0, 'mode' => null];
+    }
+    foreach (rows('SELECT id, return_no, return_date, invoice_id, total, refund_amount, refund_mode, created_at FROM sale_returns WHERE customer_id = ?', [$c['id']]) as $r) {
+        $seq = strtotime((string) $r['created_at']);
+        $entries[] = ['date' => $r['return_date'], 'seq' => $seq, 'type' => 'return', 'ref' => $r['return_no'], 'ref_id' => (int) $r['invoice_id'], 'debit' => 0.0, 'credit' => (float) $r['total'], 'mode' => null];
+        if ((float) $r['refund_amount'] > 0) {
+            $entries[] = ['date' => $r['return_date'], 'seq' => $seq + 1, 'type' => 'refund', 'ref' => $r['return_no'], 'ref_id' => (int) $r['invoice_id'], 'debit' => (float) $r['refund_amount'], 'credit' => 0.0, 'mode' => $r['refund_mode']];
+        }
     }
     foreach (rows('SELECT * FROM customer_payments WHERE customer_id = ?', [$c['id']]) as $r) {
         $entries[] = ['date' => $r['received_on'], 'seq' => strtotime((string) $r['created_at']) + 1, 'type' => 'payment', 'ref' => $r['reference'], 'ref_id' => $r['invoice_id'] ? (int) $r['invoice_id'] : null, 'debit' => 0.0, 'credit' => (float) $r['amount'], 'mode' => $r['mode']];

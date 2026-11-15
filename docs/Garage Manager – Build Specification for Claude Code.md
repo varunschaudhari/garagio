@@ -438,3 +438,11 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     already paid stays with the supplier as advance. **Correct** = a new bill with `replaces_id`: the new stock goes in
     first, then the old bill is cancelled (`replaced_by`) and its payments move to the new bill; only the difference is
     paid for a non-credit bill. The bill number is unique per supplier among bills that are not cancelled.
+20. **Sale returns / credit notes (16 Nov 2026):** a final bill takes returns line by line (`POST /invoices/{id}/returns`,
+    "cancel bills" permission). Each line is reversed in proportion to the bill line (last units take exactly what is
+    left; `return_line` / `return_totals` in lib/gst.php); the total is rounded to the rupee and never exceeds what is left
+    of the bill. Parts go back to stock at the cost they left at unless marked faulty. `invoices.returned_total` lowers what
+    the bill needs; payments beyond that come off the bill (latest first) and become advance, or are refunded now (cash /
+    UPI / bank) up to what the customer is owed after all their bills; a walk-in customer must get it all back. Numbers:
+    `CN/yy-yy/00001` against a GST bill, `RET/yy-yy/00001` against a plain bill. Returns show as minus rows in the sales
+    register and lower output GST and profit in the month they happen. A bill with returns can no longer be cancelled.

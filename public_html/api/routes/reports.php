@@ -49,6 +49,19 @@ function profit_figures(string $from, string $to): array
          WHERE i.status = 'final' AND i.invoice_date BETWEEN ? AND ?",
         [$from, $to]
     );
+    // Returns in the range take their value back off sales; parts put back in stock take their cost back too.
+    $ret = row(
+        "SELECT COALESCE(SUM(ri.taxable), 0) AS taxable,
+                COALESCE(SUM(CASE WHEN ii.item_type = 'part' THEN ri.taxable END), 0) AS parts_sales,
+                COALESCE(SUM(CASE WHEN ii.item_type = 'labour' THEN ri.taxable END), 0) AS labour_sales,
+                COALESCE(SUM(CASE WHEN ii.item_type = 'part' AND ri.restock = 1 THEN ri.qty * ri.unit_cost END), 0) AS parts_cost
+         FROM sale_return_items ri JOIN sale_returns r ON r.id = ri.return_id JOIN invoice_items ii ON ii.id = ri.invoice_item_id
+         WHERE r.return_date BETWEEN ? AND ?",
+        [$from, $to]
+    );
+    foreach (['taxable', 'parts_sales', 'labour_sales', 'parts_cost'] as $k) {
+        $sales[$k] = (float) $sales[$k] - (float) $ret[$k];
+    }
     $mech = (float) val('SELECT COALESCE(SUM(amount), 0) FROM mechanic_payments WHERE work_date BETWEEN ? AND ?', [$from, $to]);
     $out = [
         'sales' => r2((float) $sales['taxable']),
@@ -71,6 +84,18 @@ route('GET', '/reports/sales', function () {
          WHERE i.status = 'final' AND i.invoice_date BETWEEN ? AND ? ORDER BY i.invoice_date, i.invoice_no",
         [$from, $to]
     );
+    // Returns (credit notes) as minus rows on the day they happened.
+    $returns = rows(
+        "SELECT r.return_date AS date, r.return_no AS invoice_no, 'return' AS type, COALESCE(c.name, i.cust_name) AS customer, i.cust_gstin AS gstin,
+                -r.taxable_total AS taxable, -r.cgst AS cgst, -r.sgst AS sgst, -r.igst AS igst, -r.round_off AS round_off, -r.total AS total, -r.refund_amount AS paid, 0 AS balance
+         FROM sale_returns r JOIN invoices i ON i.id = r.invoice_id LEFT JOIN customers c ON c.id = r.customer_id
+         WHERE r.return_date BETWEEN ? AND ?",
+        [$from, $to]
+    );
+    if ($returns) {
+        $rows = array_merge($rows, $returns);
+        usort($rows, static fn ($a, $b) => [$a['date'], $a['type'] === 'return', $a['invoice_no']] <=> [$b['date'], $b['type'] === 'return', $b['invoice_no']]);
+    }
     return report_out('sales', ['date' => 'Date', 'invoice_no' => 'Invoice no', 'type' => 'Type', 'customer' => 'Customer', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'round_off' => 'Round off', 'total' => 'Total', 'paid' => 'Paid', 'balance' => 'Balance'],
         $rows, sum_cols($rows, ['taxable', 'cgst', 'sgst', 'igst', 'round_off', 'total', 'paid', 'balance']));
 }, ['perm' => 'reports', 'also' => 'see_money']);
@@ -160,6 +185,28 @@ route('GET', '/reports/gst', function () {
          FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id WHERE i.status = 'final' AND i.invoice_date BETWEEN ? AND ? GROUP BY ii.gst_rate",
         [$from, $to]
     );
+    // Returns lower the output tax of the month they happen in.
+    $back = rows(
+        "SELECT ii.gst_rate AS rate, SUM(ri.taxable) AS taxable, SUM(ri.cgst) AS cgst, SUM(ri.sgst) AS sgst, SUM(ri.igst) AS igst
+         FROM sale_return_items ri JOIN sale_returns r ON r.id = ri.return_id JOIN invoice_items ii ON ii.id = ri.invoice_item_id
+         WHERE r.return_date BETWEEN ? AND ? GROUP BY ii.gst_rate",
+        [$from, $to]
+    );
+    foreach ($back as $b) {
+        $found = false;
+        foreach ($out as &$o) {
+            if (abs((float) $o['rate'] - (float) $b['rate']) < 0.001) {
+                foreach (['taxable', 'cgst', 'sgst', 'igst'] as $f) {
+                    $o[$f] = (float) $o[$f] - (float) $b[$f];
+                }
+                $found = true;
+            }
+        }
+        unset($o);
+        if (!$found) {
+            $out[] = ['rate' => $b['rate'], 'taxable' => -(float) $b['taxable'], 'cgst' => -(float) $b['cgst'], 'sgst' => -(float) $b['sgst'], 'igst' => -(float) $b['igst']];
+        }
+    }
     $in = rows(
         "SELECT pi.gst_rate AS rate, SUM(pi.taxable) AS taxable, SUM(pi.cgst) AS cgst, SUM(pi.sgst) AS sgst, SUM(pi.igst) AS igst
          FROM purchase_items pi JOIN purchases p ON p.id = pi.purchase_id WHERE p.status <> 'cancelled' AND p.bill_date BETWEEN ? AND ? GROUP BY pi.gst_rate",

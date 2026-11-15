@@ -95,7 +95,8 @@ export default async function invoicePage(ctx) {
         ${final && (i.customer_phone || i.cust_phone) ? html`<button class="btn btn-secondary" data-act="wa">${icon('message-circle')}${t('billing.whatsapp')}</button>` : ''}
         ${final && i.balance > 0 ? html`<button class="btn btn-primary" data-act="pay">${icon('hand-coins')}${t('billing.record_payment')}</button>` : ''}
         ${final && i.job_card_id && i.job_status === 'ready' ? html`<button class="btn btn-primary" data-act="deliver">${icon('bike')}${t('billing.deliver')}</button>` : ''}
-        ${final && canCancel ? html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('billing.cancel')}</button>` : ''}
+        ${final && canCancel ? html`<button class="btn btn-secondary" data-act="return">${icon('undo-2')}${t('billing.return')}</button>` : ''}
+        ${final && canCancel && !Number(i.returned_total) ? html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('billing.cancel')}</button>` : ''}
         ${draft ? html`<button class="btn btn-ghost" data-act="delete">${icon('trash-2')}${t('billing.delete_draft')}</button>` : ''}
       </div>
       ${i.status === 'cancelled' ? html`<div class="banner danger" style="margin-bottom:16px">${icon('ban')}<span>${t('billing.cancelled')}: ${i.cancel_reason}</span></div>` : ''}
@@ -105,7 +106,7 @@ export default async function invoicePage(ctx) {
           <div class="table-wrap"><table class="table">
             <thead><tr><th>${t('inv.description')}</th><th class="num">${t('inv.qty')}</th><th class="num">${t('inv.rate')}</th><th class="num">${t('inv.disc')}</th><th class="num">${t('inv.gst')}</th><th class="num">${t('inv.amount')}</th></tr></thead>
             <tbody>${i.items.map((it) => html`<tr>
-              <td><div class="t-title">${it.description_en}</div><div class="t-sub">${it.part_no ? html`<strong>${it.part_no}</strong> · ` : ''}${it.description_mr || ''}${it.hsn ? ' · ' + it.hsn : ''}</div></td>
+              <td><div class="t-title">${it.description_en}${Number(it.returned_qty) ? html` <span class="chip warning">${t('billing.returned_qty', { qty: qty(it.returned_qty) })}</span>` : ''}</div><div class="t-sub">${it.part_no ? html`<strong>${it.part_no}</strong> · ` : ''}${it.description_mr || ''}${it.hsn ? ' · ' + it.hsn : ''}</div></td>
               <td class="num">${qty(it.qty)}</td><td class="num">${money(it.unit_price)}</td>
               <td class="num">${lineDisc(it)}</td><td class="num">${qty(it.gst_rate)}%</td><td class="num strong">${money(it.line_total)}</td>
             </tr>`)}</tbody>
@@ -119,6 +120,7 @@ export default async function invoicePage(ctx) {
               ${!Number(i.gst_registered) ? html`<dt class="small" style="grid-column:1 / -1">${t('inv.no_gst_note')}</dt>` : Number(i.is_interstate) ? html`<dt>${t('inv.igst')}</dt><dd class="num">${money(i.igst)}</dd>` : html`<dt>${t('inv.cgst')}</dt><dd class="num">${money(i.cgst)}</dd><dt>${t('inv.sgst')}</dt><dd class="num">${money(i.sgst)}</dd>`}
               <dt>${t('inv.round_off')}</dt><dd class="num">${money(i.round_off)}</dd>
               <dt class="strong" style="font-size:18px;color:var(--text)">${t('inv.grand_total')}</dt><dd class="num strong" style="font-size:22px">${money(i.grand_total)}</dd>
+              ${Number(i.returned_total) ? html`<dt>${t('billing.returned')}</dt><dd class="num">−${money(i.returned_total)}</dd>` : ''}
               ${final ? html`<dt>${t('inv.paid')}</dt><dd class="num">${money(i.paid_total)}</dd><dt class="strong">${t('inv.balance')}</dt><dd class="num strong" style="color:${i.balance > 0 ? 'var(--danger-text)' : 'var(--success-text)'}">${money(i.balance)}</dd>` : ''}
             </dl>
             ${draft && owner ? html`<div class="field" style="margin-top:12px"><label for="bill-disc">${t('billing.bill_discount')}</label><input id="bill-disc" class="input num" value="${Number(i.bill_disc_pct) || ''}" inputmode="decimal" style="max-width:120px"></div>` : ''}
@@ -127,6 +129,10 @@ export default async function invoicePage(ctx) {
             ${paymentPanel(i.grand_total, i.customer_id ? { is_trusted: Number(i.is_trusted), credit_limit: i.credit_limit } : null)}
             <button class="btn btn-primary btn-lg" type="submit">${icon('check')}${t('billing.finalize')}</button>
           </form>` : ''}
+          ${i.returns?.length ? html`<div class="card"><div class="card-head"><h3>${t('billing.returns')}</h3></div><div class="list">${i.returns.map((r) => html`<div class="list-item">
+            <div style="flex:1"><div class="strong">${r.return_no}</div><div class="small muted">${date(r.return_date)} · ${r.user_name || ''} · ${r.reason}${Number(r.refund_amount) ? ' · ' + t('billing.refunded_amount', { amount: money(r.refund_amount) }) + ' (' + t('pay.' + r.refund_mode) + ')' : ''}</div></div>
+            <div class="num strong">−${money(r.total)}</div>
+            <button class="btn btn-ghost btn-icon btn-sm" data-ret-print="${r.id}" aria-label="${t('billing.print_receipt')}" title="${t('billing.print_receipt')}">${icon('printer', 16)}</button></div>`)}</div></div>` : ''}
           ${i.payments.length ? html`<div class="card"><div class="card-head"><h3>${t('purchases.payments')}</h3></div><div class="list">${i.payments.map((p) => html`<div class="list-item"><div style="flex:1"><div class="strong">${t('pay.' + p.mode)}${p.reference ? ' · ' + p.reference : ''}</div><div class="small muted">${date(p.received_on)} · ${p.user_name || ''}</div></div><div class="num strong">${money(p.amount)}</div></div>`)}</div></div>` : ''}
           ${i.finalized_at ? html`<div class="small muted">${t('purchases.entered_by')}: ${i.created_by_name || '—'} · ${datetime(i.finalized_at)}</div>` : ''}
         </div>
@@ -201,6 +207,80 @@ export default async function invoicePage(ctx) {
       }
     });
   });
+  on(ctx.el, 'click', '[data-ret-print]', (e, b) => openApiHtml(`/returns/${b.dataset.retPrint}/receipt`).catch(toastError));
+  on(ctx.el, 'click', '[data-act="return"]', () => openReturn());
+  const openReturn = async () => {
+    const rows = inv.items.map((it) => ({ it, left: Math.round((it.qty - (it.returned_qty || 0)) * 100) / 100 }));
+    let preview = null;
+    const res = await openDrawer({
+      title: t('billing.return_title', { no: inv.invoice_no }),
+      wide: true,
+      submitLabel: t('billing.return'),
+      body: html`<div class="stack">
+        <p class="small muted">${t('billing.return_hint')}</p>
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>${t('inv.description')}</th><th class="num">${t('inv.qty')}</th><th class="num">${t('billing.return_qty')}</th><th></th></tr></thead>
+          <tbody>${rows.map(({ it, left }) => html`<tr>
+            <td><div class="t-title">${it.description_en}</div><div class="t-sub">${it.part_no || ''}${it.returned_qty ? ' · ' + t('billing.already_back', { qty: qty(it.returned_qty) }) : ''}</div></td>
+            <td class="num">${qty(it.qty)}</td>
+            <td class="num"><input class="input num" style="width:80px;margin-left:auto" data-ret="${it.id}" data-left="${left}" inputmode="decimal" placeholder="0" ${left > 0 ? '' : 'disabled'} aria-label="${t('billing.return_qty')} · ${it.description_en}"></td>
+            <td>${it.part_id ? html`<label class="check"><input type="checkbox" data-restock="${it.id}" checked><span>${t('billing.restock')}</span></label>` : ''}</td>
+          </tr>`)}</tbody>
+        </table></div>
+        ${field({ name: 'reason', label: t('billing.return_reason'), required: true })}
+        <dl class="dl" id="ret-sum" style="grid-template-columns:1fr auto"></dl>
+        <div id="ret-refund" class="stack hidden">
+          <div class="banner info">${icon('info')}<span id="ret-refund-hint"></span></div>
+          <div class="grid-2">
+            ${field({ name: 'refund', label: t('billing.refund') + ' (₹)', type: 'number' })}
+            ${field({ name: 'refund_mode', label: t('billing.refund_mode'), type: 'select', value: 'cash', options: ['cash', 'upi', 'bank'].map((m) => ({ value: m, label: t('pay.' + m) })) })}
+          </div>
+        </div>
+      </div>`,
+      onOpen(root) {
+        const lines = () => $$('[data-ret]', root)
+          .map((inp) => ({ invoice_item_id: Number(inp.dataset.ret), qty: Number(inp.value.replace(',', '.')) || 0, restock: $(`[data-restock="${inp.dataset.ret}"]`, root)?.checked ?? false }))
+          .filter((l) => l.qty > 0);
+        const update = debounce(async () => {
+          const items = lines();
+          for (const inp of $$('[data-ret]', root)) inp.closest('td').classList.toggle('cell-invalid', (Number(inp.value.replace(',', '.')) || 0) > Number(inp.dataset.left));
+          if (!items.length) {
+            preview = null;
+            setHTML($('#ret-sum', root), '');
+            $('#ret-refund', root).classList.add('hidden');
+            return;
+          }
+          try {
+            preview = await api.post(`/invoices/${id}/returns/preview`, { items });
+          } catch {
+            return;
+          }
+          setHTML($('#ret-sum', root), html`<dt class="strong">${t('billing.return_total')}</dt><dd class="num strong" style="font-size:20px">${money(preview.totals.total)}</dd>
+            ${preview.max_refund > 0 ? '' : html`<dt class="small muted" style="grid-column:1 / -1">${t('billing.no_refund')}</dt>`}`);
+          $('#ret-refund', root).classList.toggle('hidden', !(preview.max_refund > 0));
+          $('#ret-refund-hint', root).textContent = preview.must_refund > 0 ? t('billing.refund_walkin', { amount: money(preview.must_refund) }) : t('billing.refund_max', { amount: money(preview.max_refund) });
+          $('[name=refund]', root).value = String(preview.max_refund);
+        }, 300);
+        root.addEventListener('input', (e) => e.target.matches('[data-ret]') && update());
+        root.addEventListener('change', (e) => e.target.matches('[data-restock]') && update());
+        $('[data-ret]:not([disabled])', root)?.focus();
+        root._lines = lines;
+      },
+      onSubmit: async (d, form) => {
+        const items = form._lines();
+        if (!items.length) {
+          toast(t('billing.return_hint'), 'error');
+          return false;
+        }
+        return api.post(`/invoices/${id}/returns`, { items, reason: d.reason, refund: preview?.max_refund > 0 ? d.refund || 0 : 0, refund_mode: d.refund_mode });
+      },
+    });
+    if (res) {
+      toast(t('billing.returned_ok', { no: res.item.return_no }));
+      draw(res.invoice);
+      openApiHtml(`/returns/${res.item.id}/receipt`).catch(toastError);
+    }
+  };
   on(ctx.el, 'click', '[data-act="cancel"]', async () => {
     const reason = await promptDialog({ title: t('billing.cancel'), label: t('billing.cancel_reason') });
     if (reason === null) return;

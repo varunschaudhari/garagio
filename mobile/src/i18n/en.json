@@ -267,7 +267,8 @@
     "sale_cancel": "Sale cancelled",
     "adjustment": "Adjustment",
     "stock_count": "Stock count",
-    "purchase_cancel": "Purchase bill cancelled"
+    "purchase_cancel": "Purchase bill cancelled",
+    "sale_return": "Returned by customer"
   },
   "settings": {
     "title": "Settings",
@@ -438,7 +439,10 @@
     "scan_failed": "Could not read the job card. Try a clearer photo, or type the details.",
     "scan_limit": "Too many job card scans in the last hour. Try again later.",
     "already_approved": "This job is already approved.",
-    "purchase_cancelled": "This bill is already cancelled."
+    "purchase_cancelled": "This bill is already cancelled.",
+    "invoice_has_returns": "This bill has returns. Take back the rest as a return instead of cancelling.",
+    "refund_too_much": "That is more than the customer is owed.",
+    "refund_required": "Walk-in customer: give back the full amount paid over."
   },
   "fields": {
     "required": "Required",
@@ -903,7 +907,14 @@
     "print": "Print",
     "bill_title": "Bill",
     "no_gst_note": "GST not charged – the shop is not registered under GST.",
-    "part_no": "Part no."
+    "part_no": "Part no.",
+    "credit_note": "Credit Note",
+    "return_note": "Return Note",
+    "return_no": "Return no.",
+    "against_bill": "Against bill",
+    "return_total": "Total returned",
+    "refunded": "Refunded",
+    "return_reason": "Reason"
   },
   "billing": {
     "title": "Billing",
@@ -974,7 +985,28 @@
     "today_sales": "Today's sales",
     "print_receipt": "Print receipt",
     "share_pdf": "Share PDF",
-    "print_a4": "A4 bill / PDF"
+    "print_a4": "A4 bill / PDF",
+    "return": "Return items",
+    "return_title": "Return items · {{no}}",
+    "return_hint": "Enter how many of each come back. Parts go back to stock – untick it for a faulty part.",
+    "return_qty": "Qty back",
+    "sold": "Sold {{qty}}",
+    "already_back": "{{qty}} already back",
+    "restock": "Back to stock",
+    "return_reason": "Reason",
+    "return_total": "Return value",
+    "refund": "Give back now",
+    "refund_mode": "Given back by",
+    "refund_max": "Up to {{amount}} can be given back now; whatever is not given back stays as advance.",
+    "refund_walkin": "Walk-in customer: give back {{amount}}.",
+    "no_refund": "Nothing to give back: the return lowers what is due.",
+    "returned_ok": "Return {{no}} saved.",
+    "returns": "Returns",
+    "returned": "Returned",
+    "returned_qty": "{{qty}} returned",
+    "refunded_amount": "{{amount}} given back",
+    "entry_return": "Return",
+    "entry_refund": "Money given back"
   },
   "reminders": {
     "title": "Reminders",
@@ -1206,7 +1238,8 @@
       "mechanic_payment_delete": "Mechanic payment deleted",
       "backup": "Backup taken",
       "go_live_reset": "Trial data removed (go live)",
-      "purchase_cancel": "Purchase bill cancelled"
+      "purchase_cancel": "Purchase bill cancelled",
+      "sale_return": "Items returned on a bill"
     }
   }
 }

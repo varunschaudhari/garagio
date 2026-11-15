@@ -91,7 +91,9 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET/POST /invoices`, `GET/PUT/DELETE /invoices/{id}` | O D | draft; discounts (`disc_pct`, `bill_disc_pct`, `discounts`) owner only |
 | `POST /invoices/{id}/finalize` | O D | `{payments:[{mode, amount, reference}]}`; credit only for trusted customers within limit |
 | `POST /invoices/{id}/payments` | O D | |
-| `POST /invoices/{id}/cancel` | O | `{reason}` – stock back, job reopens |
+| `POST /invoices/{id}/cancel` | O | `{reason}` – stock back, job reopens; 409 `invoice_has_returns` once a return exists |
+| `POST /invoices/{id}/returns/preview` · `POST /invoices/{id}/returns` | O | `{items: [{invoice_item_id, qty, restock}], reason, refund, refund_mode}`; preview gives `totals`, `max_refund`, `must_refund` (walk-in) |
+| `GET /returns/{id}` · `GET /returns/{id}/receipt?lang=&width=` | O D | return / credit note and its thermal print |
 | `GET /invoices/{id}/html?lang=` | O D | bilingual A4 tax invoice |
 | `GET /invoices/{id}/receipt?lang=&width=58\|80` | O D | thermal receipt in one language; width defaults to the `receipt_width` setting |
 | `POST /invoices/{id}/whatsapp` | O D | |

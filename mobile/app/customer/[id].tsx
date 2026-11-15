@@ -68,7 +68,7 @@ export default function CustomerScreen() {
             {[...ledger.data.items].reverse().map((e, n) => (
               <View key={n}>
                 <Divider />
-                <Pressable disabled={e.type !== 'invoice'} onPress={() => router.push(`/invoice/${e.ref_id}`)} style={styles.line}>
+                <Pressable disabled={!e.ref_id || e.type === 'payment'} onPress={() => router.push(`/invoice/${e.ref_id}`)} style={styles.line}>
                   <View style={{ flex: 1 }}>
                     <Txt weight="semibold">{t(`billing.entry_${e.type}`)}{e.ref ? ` · ${e.ref}` : ''}</Txt>
                     <Txt size="sm" muted>{date(e.date)}{e.mode ? ` · ${t(`pay.${e.mode}`)}` : ''}</Txt>

@@ -267,7 +267,8 @@
     "sale_cancel": "विक्री रद्द",
     "adjustment": "दुरुस्ती",
     "stock_count": "स्टॉक मोजणी",
-    "purchase_cancel": "खरेदी बिल रद्द"
+    "purchase_cancel": "खरेदी बिल रद्द",
+    "sale_return": "ग्राहकाकडून परत"
   },
   "settings": {
     "title": "सेटिंग्ज",
@@ -438,7 +439,10 @@
     "scan_failed": "जॉब कार्ड वाचता आले नाही. अधिक स्पष्ट फोटो घ्या किंवा माहिती टाइप करा.",
     "scan_limit": "गेल्या तासात खूप जॉब कार्ड स्कॅन झाले. थोड्या वेळाने पुन्हा प्रयत्न करा.",
     "already_approved": "हा जॉब आधीच मंजूर आहे.",
-    "purchase_cancelled": "हे बिल आधीच रद्द झाले आहे."
+    "purchase_cancelled": "हे बिल आधीच रद्द झाले आहे.",
+    "invoice_has_returns": "या बिलावर माल परत आला आहे. बिल रद्द करण्याऐवजी उरलेला माल \"माल परत\" ने घ्या.",
+    "refund_too_much": "ग्राहकाला देणे आहे त्यापेक्षा ही रक्कम जास्त आहे.",
+    "refund_required": "वॉक-इन ग्राहक: जादा दिलेली पूर्ण रक्कम परत द्या."
   },
   "fields": {
     "required": "आवश्यक",
@@ -903,7 +907,14 @@
     "print": "प्रिंट",
     "bill_title": "बिल",
     "no_gst_note": "GST आकारलेला नाही – दुकान GST नोंदणीकृत नाही.",
-    "part_no": "पार्ट नं."
+    "part_no": "पार्ट नं.",
+    "credit_note": "क्रेडिट नोट",
+    "return_note": "माल परत पावती",
+    "return_no": "परत नं.",
+    "against_bill": "बिल",
+    "return_total": "एकूण परत",
+    "refunded": "परत दिले",
+    "return_reason": "कारण"
   },
   "billing": {
     "title": "बिलिंग",
@@ -974,7 +985,28 @@
     "today_sales": "आजची विक्री",
     "print_receipt": "पावती प्रिंट करा",
     "share_pdf": "PDF पाठवा",
-    "print_a4": "A4 बिल / PDF"
+    "print_a4": "A4 बिल / PDF",
+    "return": "माल परत घ्या",
+    "return_title": "माल परत · {{no}}",
+    "return_hint": "प्रत्येकी किती परत आले ते लिहा. पार्ट्स स्टॉकमध्ये परत जातात – खराब पार्ट असेल तर टिक काढा.",
+    "return_qty": "परत नग",
+    "sold": "विकले {{qty}}",
+    "already_back": "{{qty}} आधीच परत",
+    "restock": "स्टॉकमध्ये परत",
+    "return_reason": "कारण",
+    "return_total": "परत रक्कम",
+    "refund": "आता परत द्या",
+    "refund_mode": "कसे परत दिले",
+    "refund_max": "आत्ता जास्तीत जास्त {{amount}} परत देता येतील; जे परत दिले नाही ते ॲडव्हान्स म्हणून राहील.",
+    "refund_walkin": "वॉक-इन ग्राहक: {{amount}} परत द्या.",
+    "no_refund": "परत देण्यासारखे काही नाही: परत मालामुळे बाकी कमी होते.",
+    "returned_ok": "परत नोंद {{no}} सेव्ह झाली.",
+    "returns": "परत माल",
+    "returned": "परत",
+    "returned_qty": "{{qty}} परत",
+    "refunded_amount": "{{amount}} परत दिले",
+    "entry_return": "माल परत",
+    "entry_refund": "पैसे परत दिले"
   },
   "reminders": {
     "title": "आठवणी",
@@ -1206,7 +1238,8 @@
       "mechanic_payment_delete": "मेकॅनिक पेमेंट काढले",
       "backup": "बॅकअप घेतला",
       "go_live_reset": "ट्रायलची माहिती काढली (प्रत्यक्ष वापर)",
-      "purchase_cancel": "खरेदी बिल रद्द"
+      "purchase_cancel": "खरेदी बिल रद्द",
+      "sale_return": "बिलावरील माल परत"
     }
   }
 }

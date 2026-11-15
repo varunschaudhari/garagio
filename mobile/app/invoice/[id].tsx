@@ -1,12 +1,13 @@
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Printer, Trash2 } from 'lucide-react-native';
+import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Printer, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { useBillingMutation, useInvoice } from '@/api/queries';
 import { BillChip, emptyPayments, PaymentEntry, paymentsBody, printReceipt, shareInvoicePdf, type Payments } from '@/components/bills';
+import { printReturn, ReturnSheet } from '@/components/returns';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
@@ -37,6 +38,7 @@ export default function InvoiceScreen() {
   const canCancel = can(user, 'cancel_bills');
   const [pay, setPay] = useState<Payments>(emptyPayments());
   const [sheet, setSheet] = useState<'pay' | 'cancel' | null>(null);
+  const [returning, setReturning] = useState(false);
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Exclude<PayMode, 'credit'>>('cash');
   const [disc, setDisc] = useState<Record<string, string>>({});
@@ -120,6 +122,7 @@ export default function InvoiceScreen() {
                     </Txt>
                   ) : null}
                   <Txt size="sm" muted>{qty(it.qty)} × {money(it.unit_price)} · GST {qty(it.gst_rate)}%{Number(it.disc_pct) ? ` · −${qty(it.disc_pct)}%` : ''}</Txt>
+                  {it.returned_qty ? <Txt size="sm" weight="semibold" color="warningText">{t('billing.returned_qty', { qty: qty(it.returned_qty) })}</Txt> : null}
                 </View>
                 {draft && owner ? (
                   <TextInput
@@ -162,6 +165,7 @@ export default function InvoiceScreen() {
             <Txt size="lg" weight="bold">{t('inv.grand_total')}</Txt>
             <Txt size="xl" weight="bold" tabular>{money(i.grand_total)}</Txt>
           </View>
+          {i.returned_total ? <Row label={t('billing.returned')} value={`−${money(i.returned_total)}`} /> : null}
           {final ? (
             <>
               <Row label={t('inv.paid')} value={money(i.paid_total)} />
@@ -194,7 +198,26 @@ export default function InvoiceScreen() {
         {final && i.job_card_id && i.job_status === 'ready' ? (
           <Button title={t('billing.deliver')} icon={Bike} onPress={() => void run({ path: `/jobs/${i.job_card_id}/status`, body: { status: 'delivered' } }, t('billing.delivered_ok'))} needsOnline />
         ) : null}
-        {final && canCancel ? <Button title={t('billing.cancel')} icon={Ban} variant="ghost" onPress={() => { setText(''); setSheet('cancel'); }} needsOnline /> : null}
+        {final && canCancel ? <Button title={t('billing.return')} icon={Undo2} variant="secondary" onPress={() => setReturning(true)} needsOnline /> : null}
+        {final && canCancel && !Number(i.returned_total) ? <Button title={t('billing.cancel')} icon={Ban} variant="ghost" onPress={() => { setText(''); setSheet('cancel'); }} needsOnline /> : null}
+
+        {i.returns?.length ? (
+          <Card style={{ gap: space[2] }}>
+            <Txt weight="semibold">{t('billing.returns')}</Txt>
+            {i.returns.map((r) => (
+              <View key={r.id} style={[styles.kv, { gap: space[2] }]}>
+                <View style={{ flex: 1 }}>
+                  <Txt weight="semibold">{r.return_no} · −{money(r.total)}</Txt>
+                  <Txt size="sm" muted>
+                    {date(r.return_date)} · {r.reason}
+                    {Number(r.refund_amount) ? ` · ${t('billing.refunded_amount', { amount: money(r.refund_amount) })}` : ''}
+                  </Txt>
+                </View>
+                <Button title={t('billing.print_receipt')} icon={Printer} variant="ghost" small onPress={() => void printReturn(r.id, lang)} needsOnline />
+              </View>
+            ))}
+          </Card>
+        ) : null}
 
         {i.payments.length ? (
           <Card style={{ gap: space[2] }}>
@@ -204,6 +227,7 @@ export default function InvoiceScreen() {
         ) : null}
       </ScrollView>
 
+      {returning ? <ReturnSheet inv={i} lang={lang} onClose={() => setReturning(false)} /> : null}
       {sheet ? (
         <Sheet visible onClose={() => setSheet(null)} title={sheet === 'pay' ? t('billing.record_payment') : t('billing.cancel')}>
           <Field label={sheet === 'pay' ? `${t('common.amount')} (₹)` : t('billing.cancel_reason')} value={text} onChangeText={setText} keyboardType={sheet === 'pay' ? 'decimal-pad' : 'default'} autoFocus />

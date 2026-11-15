@@ -23,7 +23,8 @@ const VEHICLE_RULES = [
 /** Amount the customer owes (positive) - opening dues + final invoices − payments. */
 const CUSTOMER_BALANCE_SQL = "c.opening_balance
     + COALESCE((SELECT SUM(i.grand_total) FROM invoices i WHERE i.customer_id = c.id AND i.status = 'final'), 0)
-    - COALESCE((SELECT SUM(p.amount) FROM customer_payments p WHERE p.customer_id = c.id), 0)";
+    - COALESCE((SELECT SUM(p.amount) FROM customer_payments p WHERE p.customer_id = c.id), 0)
+    - COALESCE((SELECT SUM(r.total - r.refund_amount) FROM sale_returns r WHERE r.customer_id = c.id), 0)";
 
 function customer_by_id(int $id): array
 {
