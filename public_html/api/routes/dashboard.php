@@ -38,11 +38,11 @@ route('GET', '/dashboard', function () {
     );
     $out['approvals_waiting'] = (int) val("SELECT COUNT(*) FROM part_request_items i JOIN part_requests r ON r.id = i.request_id WHERE r.status = 'open' AND i.status = 'needs_approval'");
 
-    return $out + dashboard_money($role) + dashboard_bills($role);
+    return $out + dashboard_money() + dashboard_bills();
 });
 
 /** Bill counts / totals (today, this month) and the latest bills: sales for the owner, purchases for owner + inventory. */
-function dashboard_bills(string $role): array
+function dashboard_bills(): array
 {
     $today = today();
     $month = date('Y-m-01');
@@ -51,7 +51,7 @@ function dashboard_bills(string $role): array
         return ['count' => (int) ($r['n'] ?? 0), 'total' => r2((float) ($r['t'] ?? 0))];
     };
     $out = [];
-    if ($role === ROLE_OWNER) {
+    if (can('see_money')) {
         $sales = "SELECT COUNT(*) AS n, COALESCE(SUM(grand_total), 0) AS t FROM invoices WHERE status = 'final' AND invoice_date ";
         $out['sales'] = [
             'today' => $sum($sales . '= ?', [$today]),
@@ -63,7 +63,7 @@ function dashboard_bills(string $role): array
             ),
         ];
     }
-    if (in_array($role, [ROLE_OWNER, ROLE_INVENTORY], true)) {
+    if (can('purchases')) {
         $purch = 'SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS t FROM purchases WHERE bill_date ';
         $out['purchases'] = [
             'today' => $sum($purch . '= ?', [$today]),
@@ -78,10 +78,10 @@ function dashboard_bills(string $role): array
     return $out;
 }
 
-/** Owner-only money figures: today's sales by payment mode, dues, payables, 30-day sales. */
-function dashboard_money(string $role): array
+/** Money figures (permission see_money): today's sales by payment mode, dues, payables, 30-day sales. */
+function dashboard_money(): array
 {
-    if ($role !== ROLE_OWNER) {
+    if (!can('see_money')) {
         return [];
     }
     $today = today();

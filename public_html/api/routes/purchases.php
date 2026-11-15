@@ -118,7 +118,7 @@ function purchase_by_id(int $id): array
 
 route('POST', '/purchases/preview', function () {
     return purchase_preview_view(purchase_calc(body(), false));
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 route('GET', '/purchases', function () {
     [$limit, $offset] = paging(50, 500);
@@ -155,11 +155,11 @@ route('GET', '/purchases', function () {
         $params
     );
     return ['items' => $items, 'total' => (int) $sum['n'], 'sum_total' => (float) $sum['total']];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 route('GET', '/purchases/{id}', function ($p) {
     return ['item' => purchase_by_id((int) $p['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 route('POST', '/purchases', function () {
     $calc = purchase_calc(body(), true);
@@ -234,4 +234,4 @@ route('POST', '/purchases', function () {
         return $pid;
     });
     return ['item' => purchase_by_id($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);

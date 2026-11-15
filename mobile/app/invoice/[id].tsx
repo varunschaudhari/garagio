@@ -12,7 +12,7 @@ import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { date, money, qty } from '@/format';
 import { errorText } from '@/i18n';
-import { hasRole, useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { radius, size, space, useTheme } from '@/theme';
 import type { Invoice, PayMode } from '@/types';
 
@@ -33,7 +33,8 @@ export default function InvoiceScreen() {
   const inv = useInvoice(invId);
   const user = useSession((s) => s.user);
   const lang = useSession((s) => s.lang);
-  const owner = hasRole(user, 'owner');
+  const owner = can(user, 'give_discount'); // discounts on the draft
+  const canCancel = can(user, 'cancel_bills');
   const [pay, setPay] = useState<Payments>(emptyPayments());
   const [sheet, setSheet] = useState<'pay' | 'cancel' | null>(null);
   const [text, setText] = useState('');
@@ -193,7 +194,7 @@ export default function InvoiceScreen() {
         {final && i.job_card_id && i.job_status === 'ready' ? (
           <Button title={t('billing.deliver')} icon={Bike} onPress={() => void run({ path: `/jobs/${i.job_card_id}/status`, body: { status: 'delivered' } }, t('billing.delivered_ok'))} needsOnline />
         ) : null}
-        {final && owner ? <Button title={t('billing.cancel')} icon={Ban} variant="ghost" onPress={() => { setText(''); setSheet('cancel'); }} needsOnline /> : null}
+        {final && canCancel ? <Button title={t('billing.cancel')} icon={Ban} variant="ghost" onPress={() => { setText(''); setSheet('cancel'); }} needsOnline /> : null}
 
         {i.payments.length ? (
           <Card style={{ gap: space[2] }}>

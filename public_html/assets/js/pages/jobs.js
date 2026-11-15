@@ -1,7 +1,7 @@
 import { html, setHTML, $, on, debounce, replaceQuery } from '../dom.js';
 import { t } from '../i18n.js';
 import { api } from '../api.js';
-import { hasRole } from '../store.js';
+import { hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { datetime, parseDT } from '../format.js';
 import { dataTable, bindTable, statusChip, emptyState, skeletonRows } from '../ui/table.js';
@@ -35,7 +35,7 @@ export default async function jobs(ctx) {
         <button data-view="board" aria-pressed="${st.view === 'board'}">${icon('layers', 16)} ${t('jobs.board')}</button>
         <button data-view="list" aria-pressed="${st.view === 'list'}">${icon('list-checks', 16)} ${t('jobs.list')}</button>
       </div>
-      ${hasRole('owner', 'front_desk') ? html`<a class="btn btn-primary" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
+      ${can('jobs') ? html`<a class="btn btn-primary" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
     </div>
     <div class="toolbar card" style="margin-bottom:16px;border-bottom:1px solid var(--border)">
       <div class="input-group">${icon('search')}<input class="input" type="search" name="q" value="${st.q}" placeholder="${t('customers.search_placeholder')}" aria-label="${t('common.search')}"></div>

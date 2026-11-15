@@ -11,7 +11,7 @@ import { toast, toastError } from '@/components/toast';
 import { Button, Card, Chip, Divider, Field, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { datetime, money, qty } from '@/format';
 import { fieldError, nm, nmAlt } from '@/i18n';
-import { hasRole, useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { radius, size, space, touch, useTheme, type Colors } from '@/theme';
 import type { Part } from '@/types';
 
@@ -124,7 +124,7 @@ export default function PartDetail() {
   const part = usePart(partId);
   const ledger = useLedger(partId);
   const [adjusting, setAdjusting] = useState(false);
-  const canAdjust = hasRole(user, 'owner', 'inventory');
+  const canAdjust = can(user, 'edit_parts');
 
   if (part.isPending) return <Loading />;
   if (!part.data) return null;

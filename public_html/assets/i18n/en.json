@@ -340,7 +340,25 @@
     "never": "Never",
     "deactivate": "Deactivate",
     "activate": "Activate",
-    "you": "You"
+    "you": "You",
+    "perm_title": "What this person can do",
+    "perm_owner": "The owner can do everything.",
+    "perm_hint": "Unticked items are hidden from this person and refused by the server.",
+    "perm_changed": "Changed from the role default",
+    "perm_custom": "Custom access",
+    "perms": {
+      "see_money": "See sales, dues and money totals",
+      "see_costs": "See purchase prices, stock value and profit",
+      "make_bills": "Make bills, counter sales and take payments",
+      "give_discount": "Give discounts on bills",
+      "cancel_bills": "Cancel final bills",
+      "jobs": "Create jobs and estimates, approve jobs",
+      "customers": "See customers, phone numbers, dues and reminders",
+      "edit_parts": "Add / edit / import parts, adjust stock, stock count",
+      "purchases": "Purchase bills, suppliers and supplier payments",
+      "issue_parts": "Issue and approve parts requests, returns",
+      "reports": "Open reports (each report also needs its data permission)"
+    }
   },
   "status": {
     "pending": "Pending",

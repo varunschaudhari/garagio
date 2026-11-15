@@ -1,7 +1,7 @@
 import { html, setHTML, $ } from '../dom.js';
 import { t, nm } from '../i18n.js';
 import { api } from '../api.js';
-import { session, hasRole } from '../store.js';
+import { session, hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { rupees, money, qty, date, todayISO } from '../format.js';
 import { skeletonRows } from '../ui/table.js';
@@ -72,7 +72,7 @@ async function drawSalesChart(canvas, series) {
 export default async function dashboard(ctx) {
   ctx.setTitle(t('dashboard.title'));
   setHTML(ctx.el, skeletonRows(4));
-  const showReminders = BUILT_PHASE >= 5 && hasRole('owner', 'front_desk');
+  const showReminders = BUILT_PHASE >= 5 && can('customers');
   const [d, due] = await Promise.all([api.get('/dashboard'), showReminders ? api.get('/messages/due').catch(() => null) : null]);
   if (!ctx.alive()) return;
   const u = session.user;
@@ -117,17 +117,17 @@ export default async function dashboard(ctx) {
   const cards = [];
   if (BUILT_PHASE >= 3) {
     cards.push(kpi({ label: t('dashboard.jobs_in_shop'), value: inShop, sub: d.delivered_today ? `${t('dashboard.delivered_today')}: ${d.delivered_today}` : '', ic: 'bike', href: '#/jobs' }));
-    if (hasRole('owner', 'inventory')) cards.push(kpi({ label: t('dashboard.approvals_waiting'), value: d.approvals_waiting, ic: 'shield-check', tone: d.approvals_waiting ? 'warning' : '', href: '#/requests?tab=approvals' }));
+    if (can('issue_parts')) cards.push(kpi({ label: t('dashboard.approvals_waiting'), value: d.approvals_waiting, ic: 'shield-check', tone: d.approvals_waiting ? 'warning' : '', href: '#/requests?tab=approvals' }));
     cards.push(kpi({ label: t('dashboard.open_requests'), value: d.open_requests, ic: 'package-search', tone: 'info', href: '#/requests' }));
   }
   if (due) cards.push(kpi({ label: t('reminders.title'), value: due.service.length + due.payment.length, sub: `${t('reminders.service')}: ${due.service.length} · ${t('reminders.payment')}: ${due.payment.length}`, ic: 'message-circle', tone: 'primary', href: '#/reminders' }));
   cards.push(kpi({ label: t('dashboard.low_stock'), value: s.low_stock_count, ic: 'triangle-alert', tone: s.low_stock_count ? 'danger' : 'success', href: '#/parts?low=1' }));
-  if (s.stock_value !== undefined) cards.push(kpi({ label: t('dashboard.stock_value'), value: rupees(s.stock_value), sub: `${t('dashboard.parts_count')}: ${s.parts}`, ic: 'warehouse', tone: 'info', href: hasRole('owner', 'inventory') ? '#/reports?tab=stock' : null }));
+  if (s.stock_value !== undefined) cards.push(kpi({ label: t('dashboard.stock_value'), value: rupees(s.stock_value), sub: `${t('dashboard.parts_count')}: ${s.parts}`, ic: 'warehouse', tone: 'info', href: can('reports') ? '#/reports?tab=stock' : null }));
 
   setHTML(ctx.el, html`
     <div class="page-head">
       <div style="flex:1"><h1>${greeting()}, ${u.name.split(' ')[0]}</h1><div class="sub">${t('roles.' + u.role)} · ${date(todayISO())}</div></div>
-      ${hasRole('owner', 'front_desk') ? html`<a class="btn btn-primary" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
+      ${can('jobs') ? html`<a class="btn btn-primary" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
     </div>
     <div class="stack-lg">
       ${moneyCards.length ? html`<div class="kpis">${moneyCards}</div>` : ''}

@@ -49,6 +49,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 
 ## API conventions
 - Register routes with `route(METHOD, '/path/{id}', fn($p) => [...], ['roles' => [...], 'public' => true, 'pw' => true])`.
+  Prefer `'perm' => 'make_bills'` (any of a list; `'also' => 'x'` = AND) over roles: per-person permissions in
+  `lib/auth.php` PERMISSIONS (`can()`, `user_perms()`); clients use `can()` in `store.js` / `session.ts`.
   More specific paths (`/parts/labels`) before `/parts/{id}` in the same file.
 - Validate every input with `clean($in, ['field' => 'type|req|max:N|min:N|def:V'], $partial)`.
   Use `def:0` for NOT NULL numeric columns (forms send empty strings → null otherwise).

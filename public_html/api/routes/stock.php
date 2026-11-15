@@ -56,7 +56,7 @@ route('POST', '/stock-counts', function () {
         return ['id' => $scId, 'lines_counted' => count($clean), 'lines_changed' => count($changes), 'changes' => $changes];
     });
     return $result;
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);
 
 route('GET', '/stock-counts', function () {
     [$limit, $offset] = paging(30, 200);
@@ -67,7 +67,7 @@ route('GET', '/stock-counts', function () {
          ORDER BY s.id DESC LIMIT $limit OFFSET $offset"
     );
     return ['items' => $items, 'total' => $total];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);
 
 route('GET', '/stock-counts/{id}', function ($p) {
     $sc = row(
@@ -83,7 +83,7 @@ route('GET', '/stock-counts/{id}', function ($p) {
         [(int) $p['id']]
     );
     return ['item' => $sc];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);
 
 /*
  * Reorder list = low-stock parts + request lines marked unavailable in the last 30 days,
@@ -166,4 +166,4 @@ route('GET', '/reorder', function () {
         [$since]
     );
     return ['groups' => array_values($groups), 'unlinked' => $unlinked, 'total_items' => count($parts)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);

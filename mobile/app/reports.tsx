@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
+import type { Perm } from '@/types';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
 import { Banner, Card, Divider, EmptyState, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { date, money, qty } from '@/format';
-import { hasRole, useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { space, useTheme } from '@/theme';
 import { ChartColumn } from 'lucide-react-native';
 
@@ -43,8 +44,9 @@ export default function Reports() {
   const { t } = useTranslation();
   const { c } = useTheme();
   const user = useSession((s) => s.user);
-  const owner = hasRole(user, 'owner');
-  const keys: ReportKey[] = owner ? ['profit', 'gst', 'dues', 'payables', 'stock'] : ['stock', 'payables'];
+  // Each report needs the permission for its data (see the API).
+  const NEEDS: Record<ReportKey, Perm> = { profit: 'see_money', gst: 'see_money', dues: 'see_money', payables: 'purchases', stock: 'see_costs' };
+  const keys = (['profit', 'gst', 'dues', 'payables', 'stock'] as ReportKey[]).filter((k) => can(user, NEEDS[k]));
   const [key, setKey] = useState<ReportKey>(keys[0]);
   const [month, setMonth] = useState<0 | -1>(0);
   const [from, to] = monthRange(month);

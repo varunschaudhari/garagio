@@ -18,6 +18,61 @@ test('admin: health check is owner-only and reports schema, secret and https', f
     ok(in_array($h['status'], ['ok', 'warn', 'fail'], true));
 });
 
+test('permissions: role defaults; the owner ticks / unticks per person and it applies at once', function () {
+    $list = status(200, get('/users', 'admin'));
+    ok(in_array('make_bills', $list['permissions'], true) && $list['role_defaults']['front_desk']['make_bills'], 'list + defaults');
+    eq(403, get('/users', 'desk')['status']);
+    $desk = uid_of('desk');
+    $me = status(200, get('/auth/me', 'desk'))['user']['perms'];
+    ok($me['make_bills'] && !$me['give_discount'] && !$me['see_money'], 'front desk defaults');
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 0 ORDER BY id LIMIT 1');
+
+    // Untick "make bills" for the front desk → blocked immediately (no new login needed).
+    $u = status(200, put("/users/$desk", ['permissions' => ['make_bills' => false]], 'admin'))['item'];
+    eq(false, $u['perms']['make_bills']);
+    eq('{"make_bills":false}', tval('SELECT permissions FROM users WHERE id = ?', [$desk]), 'only the difference is stored');
+    eq(403, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'desk')['status']);
+    eq(false, status(200, get('/auth/me', 'desk'))['user']['perms']['make_bills']);
+
+    // Tick "give discount" → the desk may now discount; tick back "make bills" → stored null again.
+    status(200, put("/users/$desk", ['permissions' => ['make_bills' => true, 'give_discount' => true]], 'admin'));
+    $inv = status(200, post('/invoices', ['items' => [['part_id' => $pid, 'qty' => 1, 'disc_pct' => 5]]], 'desk'))['item'];
+    eq(5.0, (float) $inv['items'][0]['disc_pct']);
+    status(200, del("/invoices/{$inv['id']}", 'desk'));
+    status(200, put("/users/$desk", ['permissions' => ['give_discount' => false]], 'admin'));
+    eq(null, tval('SELECT permissions FROM users WHERE id = ?', [$desk]), 'back to role defaults');
+    eq('discount_owner_only', post('/invoices', ['items' => [['part_id' => $pid, 'qty' => 1, 'disc_pct' => 5]]], 'desk')['json']['code']);
+
+    // Extend: a mechanic allowed to make bills.
+    $mech = uid_of('mahesh');
+    eq(403, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'mahesh')['status']);
+    status(200, put("/users/$mech", ['permissions' => ['make_bills' => true]], 'admin'));
+    status(200, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'mahesh'));
+    status(200, put("/users/$mech", ['permissions' => ['make_bills' => false]], 'admin'));
+
+    // Inventory manager: no purchase prices → cost fields disappear; reports need their own data tick.
+    $stock = uid_of('stock');
+    ok(array_key_exists('avg_cost', status(200, get("/parts/$pid", 'stock'))['item']));
+    status(200, put("/users/$stock", ['permissions' => ['see_costs' => false]], 'admin'));
+    ok(!array_key_exists('avg_cost', status(200, get("/parts/$pid", 'stock'))['item']), 'cost hidden');
+    eq(403, get('/reports/stock', 'stock')['status'], 'stock valuation needs purchase prices');
+    status(200, get('/reports/purchases', 'stock'));
+    eq(403, get('/reports/sales', 'stock')['status'], 'sales report needs see_money');
+    status(200, put("/users/$stock", ['permissions' => ['see_costs' => true, 'reports' => false]], 'admin'));
+    eq(403, get('/reports/purchases', 'stock')['status'], 'no reports at all');
+    status(200, put("/users/$stock", ['permissions' => ['reports' => true]], 'admin'));
+
+    // Front desk allowed to see money → dashboard money + sale bills appear.
+    status(200, put("/users/$desk", ['permissions' => ['see_money' => true]], 'admin'));
+    $d = status(200, get('/dashboard', 'desk'));
+    ok(isset($d['money'], $d['sales']) && !isset($d['purchases']), 'money for this desk user');
+    status(200, put("/users/$desk", ['permissions' => ['see_money' => false]], 'admin'));
+
+    eq(422, put('/users/' . uid_of('admin'), ['permissions' => ['make_bills' => false]], 'admin')['status'], 'owners always have everything');
+    eq(422, put("/users/$desk", ['permissions' => ['fly' => true]], 'admin')['status']);
+    eq(403, put("/users/$desk", ['permissions' => ['see_money' => true]], 'desk')['status']);
+});
+
 test('dashboard: sale + purchase bill totals and latest bills, by role', function () {
     $o = status(200, get('/dashboard', 'admin'));
     $sales = trows("SELECT COUNT(*) AS n, COALESCE(SUM(grand_total), 0) AS t FROM invoices WHERE status = 'final' AND invoice_date >= ?", [date('Y-m-01')])[0];

@@ -197,8 +197,9 @@ function audit(string $action, string $entity, ?int $entityId, $before = null, $
 function changed_fields(array $before, array $after): array
 {
     $diff = [];
+    $str = static fn ($x) => is_array($x) ? json_encode($x) : (string) $x;
     foreach ($after as $k => $v) {
-        if (!array_key_exists($k, $before) || (string) $before[$k] !== (string) $v) {
+        if (!array_key_exists($k, $before) || $str($before[$k]) !== $str($v)) {
             $diff[$k] = $v;
         }
     }

@@ -425,3 +425,10 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
 14. **Job photos** are stored in `api/storage/` (blocked from the web) and served through an authenticated endpoint.
 15. **Invoice cancellation** stays as specified; ask the CA whether a credit note is needed once GSTR-1 is filed.
 16. **Shop feedback (15 Nov 2026) – simpler job flow:** front desk / owner can **Approve** a job at the counter (estimate optional; approves the latest draft/sent estimate if any). Catalogue parts on the approved estimate become *planned* job parts (`job_parts.issued = 0`, estimate price) and go on the bill with its labour; the store issuing the same part uses up the planned line. The bill can be made any time after approval (`approved`, `in_progress`, `waiting_parts`, `ready`); planned parts leave stock when the bill is **finalised** (short stock stops finalising). Mechanic parts requests stay optional. `delivered` is allowed from any of those statuses once the bill is final. Free-text estimate parts are not copied (no stock item).
+17. **Per-person permissions (shop feedback, 15 Nov 2026):** roles stay as the default set; the owner ticks / unticks
+    per person: see money, see purchase prices, make bills, give discounts, cancel bills, jobs, customers, edit parts,
+    purchases, issue parts, reports (`users.permissions` JSON stores only differences from the role). Owners always
+    have everything; settings, users, backups, credit limits and mechanic pay stay owner-only. The API enforces every
+    permission (route option `perm`); web menus / pages and Android tabs / buttons follow them.
+18. **Dashboard (shop feedback):** sale and purchase bill totals for today and this month plus the latest 8 bills of
+    each; sales need "see money", purchases need "purchases". **Part numbers** print on bills and receipts.

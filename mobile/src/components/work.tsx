@@ -7,7 +7,7 @@ import { api } from '@/api/client';
 import { useNotifications, useWorkMutation } from '@/api/queries';
 import { datetime, money, qty } from '@/format';
 import { nm } from '@/i18n';
-import { hasRole, useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { radius, space, useTheme } from '@/theme';
 import type { JobListItem, Part, PartRequest, RequestLine } from '@/types';
 import { PartPicker } from './pickers';
@@ -100,7 +100,7 @@ type SheetState = { kind: 'issue' | 'unavailable' | 'reject'; req: PartRequest; 
 export function RequestCard({ req, showJob = true }: { req: PartRequest; showJob?: boolean }) {
   const { t } = useTranslation();
   const user = useSession((s) => s.user);
-  const staff = hasRole(user, 'owner', 'inventory') && req.status === 'open';
+  const staff = can(user, 'issue_parts') && req.status === 'open';
   const [sheet, setSheet] = useState<SheetState>(null);
   const [linking, setLinking] = useState<RequestLine | null>(null);
   const [value, setValue] = useState('');

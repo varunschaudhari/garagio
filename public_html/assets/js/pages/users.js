@@ -17,14 +17,21 @@ export default async function usersPage(ctx) {
     <div class="page-head"><h1>${t('users.title')}</h1><button class="btn btn-primary" data-new>${icon('plus')}${t('users.new')}</button></div>
     <div class="card" id="users-list">${skeletonRows()}</div>`);
   let users = [];
+  let permKeys = [];
+  let roleDefaults = {};
+  /** Does this person have ticks that differ from their role's defaults? */
+  const custom = (u) => u.role !== 'owner' && permKeys.some((k) => !!u.perms?.[k] !== !!roleDefaults[u.role]?.[k]);
 
   const load = async () => {
-    users = (await api.get('/users')).items;
+    const res = await api.get('/users');
+    users = res.items;
+    permKeys = res.permissions || [];
+    roleDefaults = res.role_defaults || {};
     if (!ctx.alive()) return;
     setHTML(ctx.el.querySelector('#users-list'), dataTable({
       columns: [
         { key: 'name', label: t('common.name'), primary: true, render: (u) => html`<div class="row"><span class="avatar">${initials(u.name)}</span><div><div class="t-title">${u.name}${u.id === session.user.id ? html` <span class="chip primary plain">${t('users.you')}</span>` : ''}</div><div class="t-sub">@${u.username}${u.phone ? ' · ' + u.phone : ''}</div></div></div>` },
-        { key: 'role', label: t('users.role'), render: (u) => t('roles.' + u.role) },
+        { key: 'role', label: t('users.role'), render: (u) => html`${t('roles.' + u.role)}${custom(u) ? html` <span class="chip warning plain">${t('users.perm_custom')}</span>` : ''}` },
         { key: 'language', label: t('common.language'), render: (u) => (u.language === 'mr' ? 'मराठी' : 'English') },
         { key: 'last_login', label: t('users.last_login'), render: (u) => (u.last_login_at ? datetime(u.last_login_at) : t('users.never')) },
         { key: 'active', label: t('common.status'), render: (u) => html`<span class="chip ${u.active ? 'success' : ''}">${t(u.active ? 'common.active' : 'common.inactive')}</span>` },
@@ -65,9 +72,27 @@ export default async function usersPage(ctx) {
         ${field({ name: 'language', label: t('common.language'), type: 'select', value: u.language, options: langOptions })}
         ${self ? '' : field({ name: 'active', label: t('common.active'), type: 'switch', value: u.active })}
         ${field({ name: 'reset_password', label: t('users.reset_password'), hint: t('users.reset_password_hint') })}
+        <fieldset class="choices">
+          <legend>${t('users.perm_title')}</legend>
+          ${u.role === 'owner'
+            ? html`<p class="small muted" style="margin:0">${t('users.perm_owner')}</p>`
+            : html`<p class="small muted" style="margin:0">${t('users.perm_hint')}</p>
+              ${permKeys.map((k) => field({
+                name: 'perm_' + k,
+                type: 'check',
+                label: t('users.perms.' + k),
+                value: !!u.perms?.[k],
+                hint: !!u.perms?.[k] !== !!roleDefaults[u.role]?.[k] ? t('users.perm_changed') : '',
+              }))}`}
+        </fieldset>
       </div>`,
       onSubmit: (d) => {
         if (!d.reset_password) delete d.reset_password;
+        if (u.role !== 'owner') {
+          d.permissions = {};
+          for (const k of permKeys) d.permissions[k] = !!d['perm_' + k];
+        }
+        for (const k of permKeys) delete d['perm_' + k];
         return api.put('/users/' + u.id, d);
       },
     });

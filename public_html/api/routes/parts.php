@@ -214,7 +214,7 @@ route('POST', '/parts', function () {
         return $id;
     });
     return strip_cost(['item' => part_by_id($id)]);
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);
 
 route('PUT', '/parts/{id}', function ($p) {
     $id = (int) $p['id'];
@@ -228,7 +228,7 @@ route('PUT', '/parts/{id}', function ($p) {
         audit('price_change', 'part', $id, ['selling_price' => $before['selling_price']], ['selling_price' => $after['selling_price']]);
     }
     return strip_cost(['item' => $after]);
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);
 
 route('GET', '/parts/{id}/ledger', function ($p) {
     $id = (int) $p['id'];
@@ -312,7 +312,7 @@ route('POST', '/parts/{id}/adjust', function ($p) {
         return $mv;
     });
     return strip_cost(['item' => part_by_id($id), 'movement_id' => $mv['id']]);
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);
 
 /*
  * Import / upsert by part_no. The browser parses Excel or CSV and posts rows.
@@ -390,4 +390,4 @@ route('POST', '/parts/import', function () {
     }
     audit('parts_import', 'part', null, null, ['created' => $created, 'updated' => $updated, 'errors' => count($errors)]);
     return ['created' => $created, 'updated' => $updated, 'errors' => $errors];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'edit_parts']);

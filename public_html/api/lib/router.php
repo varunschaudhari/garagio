@@ -9,6 +9,8 @@ $GLOBALS['GM_ROUTES'] = [];
  *   'public' => true       no login needed
  *   'roles'  => [...]      allowed roles (default: any logged-in user)
  *   'pw'     => true       allowed while the user must still change the password
+ *   'perm'   => 'key'|[..]  permission(s) instead of roles (any of); see PERMISSIONS in lib/auth.php
+ *   'also'   => 'key'       a second permission required as well
  */
 function route(string $method, string $pattern, callable $handler, array $opts = []): void
 {
@@ -79,7 +81,12 @@ function dispatch(): void
                 if ((int) $u['must_change_password'] && empty($opts['pw'])) {
                     fail(403, 'password_change_required', 'Please change your password first');
                 }
-                if (!empty($opts['roles']) && !in_array($u['role'], $opts['roles'], true)) {
+                if (!empty($opts['perm'])) {
+                    require_perm($opts['perm']);
+                    if (!empty($opts['also'])) {
+                        require_perm($opts['also']);
+                    }
+                } elseif (!empty($opts['roles']) && !in_array($u['role'], $opts['roles'], true)) {
                     fail(403, 'forbidden', 'You do not have permission for this action');
                 }
             }

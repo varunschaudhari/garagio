@@ -10,7 +10,11 @@ export interface User {
   language: Lang;
   must_change_password: number;
   active: number;
+  /** Effective permissions (role defaults + the owner's ticks); owners have all. */
+  perms?: Partial<Record<Perm, boolean>>;
 }
+
+export type Perm = 'see_money' | 'see_costs' | 'make_bills' | 'give_discount' | 'cancel_bills' | 'jobs' | 'customers' | 'edit_parts' | 'purchases' | 'issue_parts' | 'reports';
 
 export interface PublicInfo {
   app: string;

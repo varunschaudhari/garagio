@@ -81,7 +81,7 @@ route('GET', '/lookup', function () {
         $out[] = $c;
     }
     return ['customers' => $out, 'reg_no' => strlen($reg) >= 4 ? $reg : null, 'phone' => normalize_phone($term)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => ['jobs', 'customers']]);
 
 route('GET', '/customers', function () {
     [$limit, $offset] = paging(50, 500);
@@ -108,7 +108,7 @@ route('GET', '/customers', function () {
         $params
     );
     return ['items' => $items, 'total' => $total];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'customers']);
 
 route('GET', '/customers/{id}', function ($p) {
     $c = customer_by_id((int) $p['id']);
@@ -119,7 +119,7 @@ route('GET', '/customers/{id}', function ($p) {
         [$c['id']]
     );
     return ['item' => $c];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => ['customers', 'jobs', 'make_bills']]);
 
 route('POST', '/customers', function () {
     $body = body();
@@ -144,7 +144,7 @@ route('POST', '/customers', function () {
         return $id;
     });
     return ['item' => customer_by_id($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => ['customers', 'jobs']]);
 
 route('PUT', '/customers/{id}', function ($p) {
     $id = (int) $p['id'];
@@ -161,7 +161,7 @@ route('PUT', '/customers/{id}', function ($p) {
         audit('customer_opening_balance', 'customer', $id, ['opening_balance' => $before['opening_balance']], ['opening_balance' => $in['opening_balance']]);
     }
     return ['item' => customer_by_id($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'customers']);
 
 /* Trusted-for-credit flag and limit: owner only, audited. */
 route('PUT', '/customers/{id}/credit', function ($p) {
@@ -181,7 +181,7 @@ route('POST', '/customers/{id}/vehicles', function ($p) {
     customer_by_id($cid);
     $vid = create_vehicle($cid, body());
     return ['item' => row('SELECT * FROM vehicles WHERE id = ?', [$vid])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => ['customers', 'jobs']]);
 
 route('PUT', '/vehicles/{id}', function ($p) {
     $id = (int) $p['id'];
@@ -192,7 +192,7 @@ route('PUT', '/vehicles/{id}', function ($p) {
     }
     update_row('vehicles', $id, $in);
     return ['item' => row('SELECT * FROM vehicles WHERE id = ?', [$id])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'customers']);
 
 route('GET', '/vehicles/{id}/history', function ($p) {
     $v = row('SELECT v.*, c.name AS customer_name, c.phone AS customer_phone FROM vehicles v JOIN customers c ON c.id = v.customer_id WHERE v.id = ?', [(int) $p['id']]) ?? not_found('Vehicle');

@@ -173,7 +173,7 @@ route('POST', '/jobs', function () {
             ['job' => $job['job_no'], 'reg' => $job['reg_no'], 'complaint' => mb_substr((string) $job['complaint'], 0, 60)], '#/jobs/' . $jobId);
     }
     return ['item' => job_detail($jobId)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 /* Read a photo of a handwritten paper job card (Gemini) → fields to pre-fill New job. Staff check before saving. */
 route('POST', '/jobs/scan-card', function () {
@@ -204,7 +204,7 @@ route('POST', '/jobs/scan-card', function () {
     $scanId = job_card_store($f['tmp_name'], $ext);
     $raw = gemini_read_job_card(JOBCARD_SCAN_DIR . "/$scanId.$ext", (string) $info['mime'], $mechanics);
     return ['scan_id' => $scanId] + job_card_normalize($raw, $mechanics);
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 route('GET', '/jobs/{id}', function ($p) {
     $j = job_row((int) $p['id']);
@@ -423,7 +423,7 @@ route('POST', '/jobs/{id}/return', function ($p) {
         job_event((int) $j['id'], 'job_part_return', ['part_id' => (int) $jp['part_id'], 'qty' => (float) $in['qty']]);
     });
     return ['item' => job_detail((int) $j['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 /* ------------------------------------------------------------------ approve at the counter */
 
@@ -454,7 +454,7 @@ route('POST', '/jobs/{id}/approve', function ($p) {
         notify_estimate_approved(job_row((int) $j['id']), $latest);
     }
     return ['item' => job_detail((int) $j['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 /* Take a planned (estimate) part off the job before billing, e.g. the customer changed their mind. */
 route('DELETE', '/jobs/{id}/parts/{jpid}', function ($p) {
@@ -468,7 +468,7 @@ route('DELETE', '/jobs/{id}/parts/{jpid}', function ($p) {
         job_event((int) $j['id'], 'job_part_removed', ['part_id' => (int) $jp['part_id'], 'qty' => (float) $jp['qty']]);
     });
     return ['item' => job_detail((int) $j['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 /* ------------------------------------------------------------------ WhatsApp: bike ready */
 
@@ -479,4 +479,4 @@ route('POST', '/jobs/{id}/whatsapp', function ($p) {
     $text = wa_text($in['template'], ['name' => $j['customer_name'], 'reg' => $j['reg_no'], 'shop' => shop_name_for($lang)], $lang);
     log_message((int) $j['customer_id'], $in['template'], 'job', (int) $j['id'], $text);
     return ['url' => wa_url($j['customer_phone'], $text), 'text' => $text];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);

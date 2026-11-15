@@ -1,7 +1,7 @@
 import { html, setHTML, $, on } from '../dom.js';
 import { t, nm } from '../i18n.js';
 import { api } from '../api.js';
-import { hasRole } from '../store.js';
+import { hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty, datetime } from '../format.js';
 import { statusChip, emptyState, skeletonRows } from '../ui/table.js';
@@ -15,7 +15,7 @@ const REFRESH_MS = 20000;
 /** Parts requests. Inventory / owner: queue + approvals. Mechanic / desk: their requests. */
 export default async function requests(ctx) {
   ctx.setTitle(t('requests.title'));
-  const staff = hasRole('owner', 'inventory');
+  const staff = can('issue_parts');
   const tabs = staff ? ['queue', 'approvals', 'done'] : ['queue', 'done'];
   let tab = tabs.includes(ctx.query.tab) ? ctx.query.tab : 'queue';
   let data = null;

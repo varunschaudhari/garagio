@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
-import type { Lang, PublicInfo, User } from '@/types';
+import type { Lang, PublicInfo, Perm, User } from '@/types';
 
 export interface Server {
   /** e.g. https://trimurtiauto.in (no trailing slash) */
@@ -86,3 +86,6 @@ export const useSession = create<SessionState>()((set) => ({
 }));
 
 export const hasRole = (user: User | null, ...roles: User['role'][]) => !!user && roles.includes(user.role);
+
+/** Permission ticked by the owner for this person (any of); owners have everything. */
+export const can = (user: User | null, ...perms: Perm[]) => !!user && (user.role === 'owner' || perms.some((p) => !!user.perms?.[p]));

@@ -1,7 +1,7 @@
 import { html, setHTML, $, on, debounce } from '../dom.js';
 import { t, nm, errorText } from '../i18n.js';
 import { api } from '../api.js';
-import { hasRole, session } from '../store.js';
+import { hasRole, session, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty } from '../format.js';
 import { combo } from '../ui/combo.js';
@@ -12,7 +12,7 @@ import { paymentPanel, bindPaymentPanel } from './invoice.js';
 /** Counter sale (POS): walk-in or known customer, parts by barcode / search, pay and print. */
 export default async function counterSale(ctx) {
   ctx.setTitle(t('billing.new_counter'));
-  const owner = hasRole('owner');
+  const owner = can('give_discount');
   const st = { lines: [], customer: null, total: 0, billDisc: 0 };
   let dirty = false;
   ctx.setLeaveGuard(() => (dirty && st.lines.length ? t('stock.unsaved') : null));

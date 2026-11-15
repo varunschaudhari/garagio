@@ -1,7 +1,7 @@
 import { html, setHTML, $, $$, on, debounce } from '../dom.js';
 import { t, errorText } from '../i18n.js';
 import { api, openApiHtml } from '../api.js';
-import { hasRole } from '../store.js';
+import { hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty, date, datetime } from '../format.js';
 import { skeletonRows } from '../ui/table.js';
@@ -68,7 +68,8 @@ export async function openWhatsAppFor(getUrl) {
 
 export default async function invoicePage(ctx) {
   const id = Number(ctx.params.id);
-  const owner = hasRole('owner');
+  const owner = can('give_discount'); // discounts on the draft
+  const canCancel = can('cancel_bills');
   let inv;
   setHTML(ctx.el, skeletonRows(6));
 
@@ -94,7 +95,7 @@ export default async function invoicePage(ctx) {
         ${final && (i.customer_phone || i.cust_phone) ? html`<button class="btn btn-secondary" data-act="wa">${icon('message-circle')}${t('billing.whatsapp')}</button>` : ''}
         ${final && i.balance > 0 ? html`<button class="btn btn-primary" data-act="pay">${icon('hand-coins')}${t('billing.record_payment')}</button>` : ''}
         ${final && i.job_card_id && i.job_status === 'ready' ? html`<button class="btn btn-primary" data-act="deliver">${icon('bike')}${t('billing.deliver')}</button>` : ''}
-        ${final && owner ? html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('billing.cancel')}</button>` : ''}
+        ${final && canCancel ? html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('billing.cancel')}</button>` : ''}
         ${draft ? html`<button class="btn btn-ghost" data-act="delete">${icon('trash-2')}${t('billing.delete_draft')}</button>` : ''}
       </div>
       ${i.status === 'cancelled' ? html`<div class="banner danger" style="margin-bottom:16px">${icon('ban')}<span>${t('billing.cancelled')}: ${i.cancel_reason}</span></div>` : ''}

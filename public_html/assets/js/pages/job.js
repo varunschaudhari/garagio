@@ -1,7 +1,7 @@
 import { html, setHTML, $, on } from '../dom.js';
 import { t, nm, errorText } from '../i18n.js';
 import { api, request } from '../api.js';
-import { session, hasRole } from '../store.js';
+import { session, hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty, datetime } from '../format.js';
 import { statusChip, skeletonRows } from '../ui/table.js';
@@ -49,9 +49,10 @@ function timelineLabel(ev) {
 export default async function jobPage(ctx) {
   const id = Number(ctx.params.id);
   const role = session.user.role;
-  const canEdit = hasRole('owner', 'front_desk');
+  const canEdit = can('jobs'); // estimates, approve, labour, WhatsApp
+  const canBill = can('make_bills');
   const isMech = role === 'mechanic';
-  const canStock = hasRole('owner', 'inventory');
+  const canStock = can('issue_parts');
   let job;
   const photoUrls = new Map();
 
@@ -107,8 +108,8 @@ export default async function jobPage(ctx) {
             return html`<button class="btn btn-${b.kind}" data-status="${s}">${icon(b.ic)}${t(label)}</button>`;
           })}
           ${j.status === 'ready' && canEdit ? html`<button class="btn btn-secondary" data-act="ready-wa">${icon('message-circle')}${t('jobs.ready_whatsapp')}</button>` : ''}
-          ${canEdit && j.invoice ? html`<a class="btn btn-secondary" href="#/invoices/${j.invoice.id}">${icon('receipt')}${j.invoice.invoice_no || t('billing.draft')}</a>` : ''}
-          ${canEdit && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? html`<button class="btn btn-secondary" data-act="bill">${icon('receipt')}${t('billing.create_bill')}</button>` : ''}
+          ${canBill && j.invoice ? html`<a class="btn btn-secondary" href="#/invoices/${j.invoice.id}">${icon('receipt')}${j.invoice.invoice_no || t('billing.draft')}</a>` : ''}
+          ${canBill && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? html`<button class="btn btn-secondary" data-act="bill">${icon('receipt')}${t('billing.create_bill')}</button>` : ''}
         </div>
       </div>
 

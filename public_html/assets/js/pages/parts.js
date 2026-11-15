@@ -1,7 +1,7 @@
 import { html, setHTML, $, on, debounce, replaceQuery } from '../dom.js';
 import { t, nm, nmAlt } from '../i18n.js';
 import { api, openApiHtml } from '../api.js';
-import { hasRole, session } from '../store.js';
+import { hasRole, session, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty } from '../format.js';
 import { dataTable, bindTable, pager, emptyState, skeletonRows } from '../ui/table.js';
@@ -13,7 +13,7 @@ const PER_PAGE = 50;
 
 export default async function parts(ctx) {
   ctx.setTitle(t('parts.title'));
-  const canEdit = hasRole('owner', 'inventory');
+  const canEdit = can('edit_parts');
   const { categories, locations } = await loadMasters(true);
   const st = {
     q: ctx.query.q || '',

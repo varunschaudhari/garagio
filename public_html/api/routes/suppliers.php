@@ -58,11 +58,11 @@ route('GET', '/suppliers', function () {
     $items = rows("SELECT s.*, ROUND(" . SUPPLIER_BALANCE_SQL . ", 2) AS balance FROM suppliers s $w ORDER BY s.name LIMIT $limit OFFSET $offset", $params);
     $payable = (float) val('SELECT COALESCE(SUM(b), 0) FROM (SELECT ' . SUPPLIER_BALANCE_SQL . ' AS b FROM suppliers s) x WHERE b > 0');
     return ['items' => $items, 'total' => $total, 'payable_total' => r2($payable)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 route('GET', '/suppliers/{id}', function ($p) {
     return ['item' => supplier_by_id((int) $p['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 route('POST', '/suppliers', function () {
     $in = prepare_supplier_input(clean(body(), SUPPLIER_RULES));
@@ -70,7 +70,7 @@ route('POST', '/suppliers', function () {
     $in['active'] = $in['active'] ?? 1;
     $id = insert('suppliers', $in);
     return ['item' => supplier_by_id($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 route('PUT', '/suppliers/{id}', function ($p) {
     $id = (int) $p['id'];
@@ -81,7 +81,7 @@ route('PUT', '/suppliers/{id}', function ($p) {
         audit('supplier_opening_balance', 'supplier', $id, ['opening_balance' => $before['opening_balance']], ['opening_balance' => $in['opening_balance']]);
     }
     return ['item' => supplier_by_id($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 /*
  * Supplier ledger: opening balance, bills (add to payable) and payments (reduce it), with a running balance.
@@ -123,7 +123,7 @@ route('GET', '/suppliers/{id}/ledger', function ($p) {
         $out[] = $e;
     }
     return ['supplier' => $s, 'items' => $out, 'brought_forward' => $broughtForward, 'balance' => (float) $s['balance']];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);
 
 /* Record a payment to a supplier (full or part). */
 route('POST', '/suppliers/{id}/payments', function ($p) {
@@ -151,4 +151,4 @@ route('POST', '/suppliers/{id}/payments', function ($p) {
         'user_id' => uid(),
     ]);
     return ['payment_id' => $payId, 'item' => supplier_by_id($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'purchases']);

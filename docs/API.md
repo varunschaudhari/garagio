@@ -15,6 +15,9 @@ change their password can only call `/auth/*` until they do.
 `stock_value`, `margin`…) are removed from every response for front desk and mechanics.
 
 Roles: **O** owner · **I** inventory manager · **D** front desk · **M** mechanic (own jobs only).
+Many routes are gated by a **permission** instead (the role gives the default, the owner can tick / untick per person):
+`see_money`, `see_costs`, `make_bills`, `give_discount`, `cancel_bills`, `jobs`, `customers`, `edit_parts`, `purchases`,
+`issue_parts`, `reports`. `GET /auth/me` returns `user.perms`. Owners always have all of them.
 
 ## Auth & settings
 | Method & path | Roles | Notes |
@@ -28,7 +31,7 @@ Roles: **O** owner · **I** inventory manager · **D** front desk · **M** mecha
 | `GET/POST /locations`, `PUT /locations/{id}` | all / O I | |
 | `GET/POST /categories`, `PUT /categories/{id}` | all / O I | |
 | `GET/POST /labour-rates`, `PUT /labour-rates/{id}` | all / O | |
-| `GET/POST /users`, `PUT /users/{id}` | O | `reset_password`, `active`, `role` |
+| `GET/POST /users`, `PUT /users/{id}` | O | `reset_password`, `active`, `role`, `permissions: {key: bool}` (not for owners); `GET` adds `permissions` + `role_defaults` |
 | `GET /users/mechanics` | all | |
 
 ## Inventory
@@ -68,6 +71,9 @@ Roles: **O** owner · **I** inventory manager · **D** front desk · **M** mecha
 | `POST /jobs/{id}/photos` (multipart `photo`) · `GET/DELETE /jobs/{id}/photos/{pid}` | O D M | max 4 |
 | `POST /jobs/{id}/return` | O I | `{job_part_id, qty}` |
 | `POST /jobs/{id}/whatsapp` | O D | `{template: "ready"}` → `{url, text}` |
+| `POST /jobs/{id}/approve` | jobs | approve at the counter: latest draft/sent estimate (parts become planned job parts) or just the job |
+| `DELETE /jobs/{id}/parts/{jpid}` | jobs | remove a planned (estimate) part before billing |
+| `POST /jobs/scan-card` (multipart `photo`) | jobs | read a handwritten job card (Gemini) → `{scan_id, fields, unclear, match}`; `scan_id` on `POST /jobs` attaches the photo |
 | `POST /jobs/{id}/estimates` · `GET /estimates/{id}` | O D | parts at selling price, labour editable |
 | `POST /estimates/{id}/send` | O D | → `{link, url (wa.me), text}` |
 | `POST /estimates/{id}/approve-call` | O D | `{note}` |

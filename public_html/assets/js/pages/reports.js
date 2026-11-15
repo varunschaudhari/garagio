@@ -1,14 +1,13 @@
 import { html, setHTML, $, on } from '../dom.js';
 import { t } from '../i18n.js';
 import { api, downloadApiFile } from '../api.js';
-import { hasRole } from '../store.js';
+import { hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty, date, todayISO } from '../format.js';
 import { skeletonRows, emptyState } from '../ui/table.js';
 import { toastError } from '../ui/toast.js';
 
 const ALL = ['sales', 'purchases', 'stock', 'profit', 'dues', 'payables', 'gst', 'mechanics'];
-const INVENTORY = ['stock', 'purchases', 'payables'];
 /** Reports that are a snapshot "as of now" rather than a date range. */
 const NO_RANGE = ['stock', 'dues', 'payables'];
 const TEXT_COLS = new Set(['date', 'invoice_no', 'type', 'customer', 'gstin', 'bill_no', 'supplier', 'mode', 'part_no', 'name', 'category', 'location', 'rack', 'unit', 'month', 'phone', 'last_bill', 'last_payment', 'mechanic']);
@@ -37,7 +36,9 @@ function cell(key, v) {
 
 export default async function reports(ctx) {
   ctx.setTitle(t('reports.title'));
-  const tabs = hasRole('owner') ? ALL : INVENTORY;
+  // Each report needs the permission for its data (see the API).
+  const NEEDS = { sales: 'see_money', profit: 'see_money', dues: 'see_money', gst: 'see_money', mechanics: 'see_money', stock: 'see_costs', purchases: 'purchases', payables: 'purchases' };
+  const tabs = ALL.filter((k) => can(NEEDS[k]));
   let tab = tabs.includes(ctx.query.tab) ? ctx.query.tab : tabs[0];
   let [from, to] = [ctx.query.from || monthRange(0)[0], ctx.query.to || todayISO()];
 

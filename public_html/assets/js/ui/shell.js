@@ -1,6 +1,6 @@
 import { html, el, $, $$, on } from '../dom.js';
 import { t, getLang, setLang } from '../i18n.js';
-import { session, hasRole, ROLES, clearSession } from '../store.js';
+import { session, hasRole, can, ROLES, clearSession } from '../store.js';
 import { icon } from './icons.js';
 import { initials } from '../format.js';
 import { api } from '../api.js';
@@ -18,21 +18,21 @@ export const NAV = [
   { key: 'dashboard', href: '#/', ic: 'layout-dashboard', roles: ALL, phase: 1 },
   { section: 'workshop' },
   { key: 'jobs', href: '#/jobs', ic: 'clipboard-list', roles: [OWNER, DESK, MECHANIC], phase: 3 },
-  { key: 'new_job', href: '#/jobs/new', ic: 'plus', roles: [OWNER, DESK], phase: 3 },
+  { key: 'new_job', href: '#/jobs/new', ic: 'plus', perm: 'jobs', phase: 3 },
   { key: 'requests', href: '#/requests', ic: 'package-search', roles: ALL, phase: 3, badge: 'requests' },
-  { key: 'customers', href: '#/customers', ic: 'users', roles: [OWNER, DESK], phase: 3 },
-  { key: 'reminders', href: '#/reminders', ic: 'message-circle', roles: [OWNER, DESK], phase: 5 },
+  { key: 'customers', href: '#/customers', ic: 'users', perm: 'customers', phase: 3 },
+  { key: 'reminders', href: '#/reminders', ic: 'message-circle', perm: 'customers', phase: 5 },
   { section: 'inventory' },
   { key: 'parts', href: '#/parts', ic: 'package', roles: ALL, phase: 1 },
-  { key: 'stock_count', href: '#/stock-count', ic: 'list-checks', roles: [OWNER, INVENTORY], phase: 1 },
-  { key: 'reorder', href: '#/reorder', ic: 'shopping-cart', roles: [OWNER, INVENTORY], phase: 2 },
-  { key: 'purchases', href: '#/purchases', ic: 'truck', roles: [OWNER, INVENTORY], phase: 2 },
-  { key: 'suppliers', href: '#/suppliers', ic: 'store', roles: [OWNER, INVENTORY], phase: 2 },
+  { key: 'stock_count', href: '#/stock-count', ic: 'list-checks', perm: 'edit_parts', phase: 1 },
+  { key: 'reorder', href: '#/reorder', ic: 'shopping-cart', perm: 'purchases', phase: 2 },
+  { key: 'purchases', href: '#/purchases', ic: 'truck', perm: 'purchases', phase: 2 },
+  { key: 'suppliers', href: '#/suppliers', ic: 'store', perm: 'purchases', phase: 2 },
   { section: 'money' },
-  { key: 'billing', href: '#/invoices', ic: 'receipt', roles: [OWNER, DESK], phase: 4 },
-  { key: 'counter_sale', href: '#/invoices/counter', ic: 'shopping-cart', roles: [OWNER, DESK], phase: 4 },
+  { key: 'billing', href: '#/invoices', ic: 'receipt', perm: 'make_bills', phase: 4 },
+  { key: 'counter_sale', href: '#/invoices/counter', ic: 'shopping-cart', perm: 'make_bills', phase: 4 },
   { key: 'mechanics', href: '#/mechanics', ic: 'hand-coins', roles: [OWNER], phase: 5 },
-  { key: 'reports', href: '#/reports', ic: 'chart-column', roles: [OWNER, INVENTORY], phase: 5 },
+  { key: 'reports', href: '#/reports', ic: 'chart-column', perm: 'reports', phase: 5 },
   { section: 'admin' },
   { key: 'settings', href: '#/settings', ic: 'settings', roles: [OWNER], phase: 1 },
   { key: 'users', href: '#/users', ic: 'user-cog', roles: [OWNER], phase: 1 },
@@ -54,7 +54,7 @@ function visibleNav() {
       pendingSection = item;
       continue;
     }
-    if (item.phase > BUILT_PHASE || !hasRole(...item.roles)) continue;
+    if (item.phase > BUILT_PHASE || (item.perm ? !can(item.perm) : !hasRole(...item.roles))) continue;
     if (pendingSection) {
       out.push(pendingSection);
       pendingSection = null;

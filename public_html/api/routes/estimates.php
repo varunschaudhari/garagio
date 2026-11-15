@@ -151,7 +151,7 @@ route('POST', '/jobs/{id}/estimates', function ($p) {
         return $eid;
     });
     return ['item' => estimate_row($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 route('GET', '/estimates/{id}', function ($p) {
     $e = estimate_row((int) $p['id']);
@@ -187,7 +187,7 @@ route('POST', '/estimates/{id}/send', function ($p) {
     $text = wa_text('estimate', ['name' => $j['customer_name'], 'reg' => $j['reg_no'], 'est' => $e['est_no'], 'total' => inr((float) $e['grand_total']), 'link' => $link, 'shop' => shop_name_for($lang)], $lang);
     log_message((int) $j['customer_id'], 'estimate', 'estimate', (int) $e['id'], $text);
     return ['link' => $link, 'url' => wa_url($j['customer_phone'], $text), 'text' => $text, 'item' => job_detail((int) $j['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 route('POST', '/estimates/{id}/approve-call', function ($p) {
     $e = estimate_row((int) $p['id']);
@@ -199,7 +199,7 @@ route('POST', '/estimates/{id}/approve-call', function ($p) {
     $j = job_row((int) $e['job_card_id']);
     notify_estimate_approved($j, $e);
     return ['item' => job_detail((int) $j['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'jobs']);
 
 function notify_estimate_approved(array $j, array $e): void
 {

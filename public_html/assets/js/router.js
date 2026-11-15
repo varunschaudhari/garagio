@@ -1,6 +1,6 @@
 // Hash router: #/parts/12?low=1 → page module default export (ctx) => cleanup?
 
-import { hasRole } from './store.js';
+import { hasRole, can } from './store.js';
 
 const routes = [];
 let cleanup = null;
@@ -10,7 +10,7 @@ let guard = null;
 /**
  * @param {string} pattern  e.g. '/parts/:id'
  * @param {() => Promise<any>} load  dynamic import of the page module
- * @param {{roles?: string[], title?: string}} opts
+ * @param {{roles?: string[], perm?: string|string[], title?: string}} opts
  */
 export function route(pattern, load, opts = {}) {
   const keys = [];
@@ -76,7 +76,7 @@ export async function render() {
     ctx.notFound();
     return;
   }
-  if (match.opts.roles && !hasRole(...match.opts.roles)) {
+  if (match.opts.perm ? !can(...[].concat(match.opts.perm)) : match.opts.roles && !hasRole(...match.opts.roles)) {
     ctx.forbidden();
     return;
   }

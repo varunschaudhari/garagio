@@ -24,6 +24,7 @@ CREATE TABLE users (
   phone VARCHAR(15) NULL,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL,
+  permissions TEXT NULL,
   language VARCHAR(2) NOT NULL DEFAULT 'mr',
   push_token VARCHAR(255) NULL,
   must_change_password TINYINT(1) NOT NULL DEFAULT 0,
@@ -585,6 +586,7 @@ CREATE TABLE schema_migrations (
   applied_at DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT INTO schema_migrations (name, applied_at) VALUES ('001_planned_job_parts.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('002_user_permissions.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

@@ -4,7 +4,7 @@ declare(strict_types=1);
 /* Reminders to send on WhatsApp (service due, payment due). Front desk / owner open each link. */
 route('GET', '/messages/due', function () {
     return reminders_due();
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'customers']);
 
 /* ------------------------------------------------------------------ backups (owner) */
 

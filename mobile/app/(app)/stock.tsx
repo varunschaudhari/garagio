@@ -5,14 +5,14 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { PartsList } from '@/components/parts';
 import { Button } from '@/components/ui';
-import { hasRole, useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { space } from '@/theme';
 
 /** Stock lookup: every role can see stock and rack location. */
 export default function StockTab() {
   const { t } = useTranslation();
   const user = useSession((s) => s.user);
-  const canCount = hasRole(user, 'owner', 'inventory');
+  const canCount = can(user, 'edit_parts');
   return (
     <PartsList
       header={

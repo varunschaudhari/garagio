@@ -148,9 +148,64 @@ function require_role(string ...$roles): array
     return $u;
 }
 
+/* ------------------------------------------------------------------ permissions */
+
+/**
+ * What a person may do. Each role has defaults; the owner can tick / untick any of these per person
+ * (users.permissions JSON). Owners always have everything. Settings, users, backups, credit limits and
+ * mechanic pay stay owner-only and are not in this list, so nobody can lock the owner out.
+ */
+const PERMISSIONS = [
+    'see_money' => [ROLE_OWNER],                    // sales, dues, payables on the dashboard; money reports
+    'see_costs' => [ROLE_OWNER, ROLE_INVENTORY],    // purchase prices, average cost, stock value, profit
+    'make_bills' => [ROLE_OWNER, ROLE_DESK],        // bills, counter sales, payments, receipts
+    'give_discount' => [ROLE_OWNER],                // discounts on bills
+    'cancel_bills' => [ROLE_OWNER],                 // cancel a final bill
+    'jobs' => [ROLE_OWNER, ROLE_DESK],              // new jobs, estimates, approve jobs
+    'customers' => [ROLE_OWNER, ROLE_DESK],         // customer list, phone numbers, dues, reminders
+    'edit_parts' => [ROLE_OWNER, ROLE_INVENTORY],   // add / edit / import parts, adjust stock, stock count
+    'purchases' => [ROLE_OWNER, ROLE_INVENTORY],    // purchase bills, suppliers, supplier payments, reorder
+    'issue_parts' => [ROLE_OWNER, ROLE_INVENTORY],  // issue / approve parts requests, returns
+    'reports' => [ROLE_OWNER, ROLE_INVENTORY],      // reports screen (each report also needs its own data permission)
+];
+
+/** Effective permissions of a user row: role defaults, then the owner's ticks. */
+function user_perms(array $u): array
+{
+    $out = [];
+    $over = $u['role'] === ROLE_OWNER ? [] : (json_decode((string) ($u['permissions'] ?? ''), true) ?: []);
+    foreach (PERMISSIONS as $key => $roles) {
+        $out[$key] = $u['role'] === ROLE_OWNER ? true : (array_key_exists($key, $over) ? (bool) $over[$key] : in_array($u['role'], $roles, true));
+    }
+    return $out;
+}
+
+/** Does the logged-in user have this permission (or any of a list)? */
+function can(string|array $perm): bool
+{
+    $u = user_or_null();
+    if (!$u) {
+        return false;
+    }
+    $mine = user_perms($u);
+    foreach ((array) $perm as $p) {
+        if (!empty($mine[$p])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function require_perm(string|array $perm): void
+{
+    if (!can($perm)) {
+        fail(403, 'forbidden', 'You do not have permission for this action');
+    }
+}
+
 function can_see_cost(): bool
 {
-    return is_role(ROLE_OWNER, ROLE_INVENTORY);
+    return can('see_costs');
 }
 
 /** Remove cost fields from a row (recursively for nested arrays) unless the user may see them. */
@@ -183,6 +238,7 @@ function public_user(array $u): array
         'username' => $u['username'],
         'phone' => $u['phone'],
         'role' => $u['role'],
+        'perms' => user_perms($u),
         'language' => $u['language'],
         'must_change_password' => (int) $u['must_change_password'],
         'active' => (int) $u['active'],

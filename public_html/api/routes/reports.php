@@ -73,7 +73,7 @@ route('GET', '/reports/sales', function () {
     );
     return report_out('sales', ['date' => 'Date', 'invoice_no' => 'Invoice no', 'type' => 'Type', 'customer' => 'Customer', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'round_off' => 'Round off', 'total' => 'Total', 'paid' => 'Paid', 'balance' => 'Balance'],
         $rows, sum_cols($rows, ['taxable', 'cgst', 'sgst', 'igst', 'round_off', 'total', 'paid', 'balance']));
-}, ['roles' => [ROLE_OWNER]]);
+}, ['perm' => 'reports', 'also' => 'see_money']);
 
 route('GET', '/reports/purchases', function () {
     [$from, $to] = report_range();
@@ -85,7 +85,7 @@ route('GET', '/reports/purchases', function () {
     );
     return report_out('purchases', ['date' => 'Date', 'bill_no' => 'Bill no', 'supplier' => 'Supplier', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'other_charges' => 'Other', 'round_off' => 'Round off', 'total' => 'Total', 'mode' => 'Payment'],
         $rows, sum_cols($rows, ['taxable', 'cgst', 'sgst', 'igst', 'other_charges', 'round_off', 'total']));
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'reports', 'also' => 'purchases']);
 
 /* Stock valuation at net (weighted-average) cost, as of now. */
 route('GET', '/reports/stock', function () {
@@ -105,7 +105,7 @@ route('GET', '/reports/stock', function () {
     );
     return report_out('stock', ['part_no' => 'Part no', 'name' => 'Name', 'category' => 'Category', 'location' => 'Location', 'rack' => 'Rack', 'stock' => 'Stock', 'unit' => 'Unit', 'avg_cost' => 'Net cost', 'value' => 'Value', 'mrp' => 'MRP', 'mrp_value' => 'Value at MRP'],
         $rows, sum_cols($rows, ['value', 'mrp_value']));
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'reports', 'also' => 'see_costs']);
 
 route('GET', '/reports/profit', function () {
     [$from, $to] = report_range();
@@ -121,7 +121,7 @@ route('GET', '/reports/profit', function () {
     }
     return report_out('profit', ['month' => 'Month', 'sales' => 'Sales (taxable)', 'parts_sales' => 'Parts sales', 'labour_sales' => 'Labour sales', 'parts_cost' => 'Parts cost', 'gross_margin' => 'Gross margin', 'mechanic_payments' => 'Mechanic payments', 'profit' => 'Profit'],
         $rows, $f, ['summary' => $f]);
-}, ['roles' => [ROLE_OWNER]]);
+}, ['perm' => 'reports', 'also' => 'see_money']);
 
 /* Customer dues by age of the unpaid bills; dues older than any bill (opening / unallocated) are "old". */
 route('GET', '/reports/dues', function () {
@@ -140,7 +140,7 @@ route('GET', '/reports/dues', function () {
     }
     return report_out('dues', ['customer' => 'Customer', 'phone' => 'Phone', 'd0_30' => '0–30 days', 'd31_60' => '31–60 days', 'd61_90' => '61–90 days', 'd90' => 'Over 90 days', 'old' => 'Old dues', 'total' => 'Total'],
         $rows, sum_cols($rows, ['d0_30', 'd31_60', 'd61_90', 'd90', 'old', 'total']));
-}, ['roles' => [ROLE_OWNER]]);
+}, ['perm' => 'reports', 'also' => 'see_money']);
 
 route('GET', '/reports/payables', function () {
     $rows = rows(
@@ -150,7 +150,7 @@ route('GET', '/reports/payables', function () {
          FROM suppliers s HAVING balance > 0.004 ORDER BY balance DESC"
     );
     return report_out('payables', ['supplier' => 'Supplier', 'phone' => 'Phone', 'last_bill' => 'Last bill', 'last_payment' => 'Last payment', 'balance' => 'Payable'], $rows, sum_cols($rows, ['balance']));
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'reports', 'also' => 'purchases']);
 
 /* Monthly GST summary: output tax (sales) − input tax (purchases), by rate and head. */
 route('GET', '/reports/gst', function () {
@@ -188,7 +188,7 @@ route('GET', '/reports/gst', function () {
     return report_out('gst', ['rate' => 'GST %', 'out_taxable' => 'Sales taxable', 'out_cgst' => 'Output CGST', 'out_sgst' => 'Output SGST', 'out_igst' => 'Output IGST',
         'in_taxable' => 'Purchase taxable', 'in_cgst' => 'Input CGST', 'in_sgst' => 'Input SGST', 'in_igst' => 'Input IGST', 'net_cgst' => 'Net CGST', 'net_sgst' => 'Net SGST', 'net_igst' => 'Net IGST', 'net_total' => 'Net GST payable'],
         $rows, sum_cols($rows, $keys));
-}, ['roles' => [ROLE_OWNER]]);
+}, ['perm' => 'reports', 'also' => 'see_money']);
 
 route('GET', '/reports/mechanics', function () {
     [$from, $to] = report_range();
@@ -206,4 +206,4 @@ route('GET', '/reports/mechanics', function () {
     }
     return report_out('mechanics', ['mechanic' => 'Mechanic', 'jobs' => 'Jobs billed', 'labour' => 'Labour billed', 'parts' => 'Parts fitted', 'paid_daily' => 'Paid (daily)', 'paid_advance' => 'Advances'],
         $rows, sum_cols($rows, ['jobs', 'labour', 'parts', 'paid_daily', 'paid_advance']));
-}, ['roles' => [ROLE_OWNER]]);
+}, ['perm' => 'reports', 'also' => 'see_money']);

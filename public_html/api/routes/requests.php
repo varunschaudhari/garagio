@@ -222,7 +222,7 @@ route('POST', '/requests/{id}/items/{iid}/approve', function ($p) {
         update_row('part_request_items', (int) $it['id'], ['status' => 'approved', 'approved_by' => uid(), 'approved_at' => now()]);
     });
     return ['item' => request_by_id($rid)];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 route('POST', '/requests/{id}/items/{iid}/reject', function ($p) {
     $rid = (int) $p['id'];
@@ -240,7 +240,7 @@ route('POST', '/requests/{id}/items/{iid}/reject', function ($p) {
     notify_users(line_audience($req), 'line_rejected', 'notify.line_rejected_title', 'notify.line_rejected_body',
         ['part' => line_label($it), 'job' => $req['job_no'], 'reason' => $in['reason']], '#/jobs/' . $req['job_card_id']);
     return ['item' => $req];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 /* ------------------------------------------------------------------ link a free-text line to the catalogue */
 
@@ -265,7 +265,7 @@ route('POST', '/requests/{id}/items/{iid}/link', function ($p) {
         }
     }
     return ['item' => $req];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 /* ------------------------------------------------------------------ issue */
 
@@ -328,7 +328,7 @@ route('POST', '/requests/{id}/items/{iid}/issue', function ($p) {
     notify_users(line_audience($req), 'parts_issued', 'notify.parts_issued_title', 'notify.parts_issued_body',
         ['part' => line_label($it), 'qty' => fmt_qty($qty), 'job' => $req['job_no']], '#/jobs/' . $req['job_card_id']);
     return ['item' => request_by_id((int) $req['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 /* Issue every line that can be issued in full; report the rest. */
 route('POST', '/requests/{id}/issue-all', function ($p) {
@@ -353,7 +353,7 @@ route('POST', '/requests/{id}/issue-all', function ($p) {
             ['part' => mb_substr($parts, 0, 120), 'qty' => count($issued), 'job' => $req['job_no']], '#/jobs/' . $req['job_card_id']);
     }
     return ['item' => request_by_id((int) $req['id']), 'issued' => $issued, 'skipped' => $skipped];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 route('POST', '/requests/{id}/items/{iid}/unavailable', function ($p) {
     $req = request_by_id((int) $p['id']);
@@ -371,7 +371,7 @@ route('POST', '/requests/{id}/items/{iid}/unavailable', function ($p) {
     notify_users(line_audience($req), 'parts_unavailable', 'notify.parts_unavailable_title', 'notify.parts_unavailable_body',
         ['part' => line_label($it), 'job' => $req['job_no'], 'remark' => !empty($in['remark']) ? '· ' . $in['remark'] : ''], '#/jobs/' . $req['job_card_id']);
     return ['item' => request_by_id((int) $req['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_INVENTORY]]);
+}, ['perm' => 'issue_parts']);
 
 route('POST', '/requests/{id}/cancel', function ($p) {
     $req = request_by_id((int) $p['id']);

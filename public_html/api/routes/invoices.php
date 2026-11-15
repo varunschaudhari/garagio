@@ -275,7 +275,7 @@ function check_discount_rights(array $in): void
             $hasDisc = true;
         }
     }
-    if ($hasDisc && !is_role(ROLE_OWNER)) {
+    if ($hasDisc && !can('give_discount')) {
         fail(403, 'discount_owner_only', 'Only the owner can give a discount');
     }
 }
@@ -322,11 +322,11 @@ route('GET', '/invoices', function () {
                           COALESCE(c.name, i.cust_name) AS customer_name, COALESCE(c.phone, i.cust_phone) AS customer_phone, j.job_no, v.reg_no
                    $base ORDER BY i.status = 'draft' DESC, COALESCE(i.invoice_date, DATE(i.created_at)) DESC, i.id DESC LIMIT $limit OFFSET $offset", $params);
     return ['items' => $items, 'total' => (int) $sum['n'], 'sum_total' => (float) $sum['total'], 'sum_due' => (float) $sum['due']];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 route('GET', '/invoices/{id}', function ($p) {
     return ['item' => invoice_view((int) $p['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* ------------------------------------------------------------------ preview (no writes) */
 
@@ -342,7 +342,7 @@ route('POST', '/invoices/preview', function () {
     }
     $bill = sale_bill($lines, is_interstate($gstin ?: null), (float) $in['bill_disc_pct']);
     return strip_cost(['lines' => $bill['lines'], 'totals' => $bill['totals'], 'by_rate' => $bill['by_rate']]);
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* ------------------------------------------------------------------ create draft */
 
@@ -411,7 +411,7 @@ route('POST', '/invoices', function () {
         return $id;
     });
     return ['item' => invoice_view($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* Update a draft: discounts (owner), counter items / customer (desk, owner), or refresh job lines. */
 route('PUT', '/invoices/{id}', function ($p) {
@@ -432,7 +432,7 @@ route('PUT', '/invoices/{id}', function ($p) {
         rebuild_draft($id, $items, $discounts, array_key_exists('bill_disc_pct', $in) ? (float) ($in['bill_disc_pct'] ?? 0) : null);
     });
     return ['item' => invoice_view($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 route('DELETE', '/invoices/{id}', function ($p) {
     $inv = invoice_row((int) $p['id']);
@@ -447,7 +447,7 @@ route('DELETE', '/invoices/{id}', function ($p) {
         q('DELETE FROM invoices WHERE id = ?', [$inv['id']]);
     });
     return ['ok' => true];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* ------------------------------------------------------------------ finalise: number, stock, payment, credit check */
 
@@ -559,7 +559,7 @@ route('POST', '/invoices/{id}/finalize', function ($p) {
         }
     });
     return ['item' => invoice_view($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* Later payment against one bill. */
 route('POST', '/invoices/{id}/payments', function ($p) {
@@ -576,7 +576,7 @@ route('POST', '/invoices/{id}/payments', function ($p) {
         record_customer_payment($inv['customer_id'] ? (int) $inv['customer_id'] : null, (float) $in['amount'], $in['mode'], $in['reference'] ?? null, $id);
     });
     return ['item' => invoice_view($id)];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* Cancel a final bill (owner only): counter-sale stock comes back, the job reopens. */
 route('POST', '/invoices/{id}/cancel', function ($p) {
@@ -606,7 +606,7 @@ route('POST', '/invoices/{id}/cancel', function ($p) {
         audit('invoice_cancel', 'invoice', $id, ['invoice_no' => $inv['invoice_no'], 'total' => (float) $inv['grand_total']], ['reason' => $in['reason']]);
     });
     return ['item' => invoice_view($id)];
-}, ['roles' => [ROLE_OWNER]]);
+}, ['perm' => 'cancel_bills']);
 
 /* ------------------------------------------------------------------ printable bilingual tax invoice */
 
@@ -617,7 +617,7 @@ route('GET', '/invoices/{id}/html', function ($p) {
     ob_start();
     include API_DIR . '/templates/invoice.php';
     return html_response((string) ob_get_clean());
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* The same bill as a thermal receipt (58 / 80 mm) for phone printing; ?width= overrides the setting. */
 route('GET', '/invoices/{id}/receipt', function ($p) {
@@ -629,7 +629,7 @@ route('GET', '/invoices/{id}/receipt', function ($p) {
     ob_start();
     include API_DIR . '/templates/receipt.php';
     return html_response((string) ob_get_clean());
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 route('POST', '/invoices/{id}/whatsapp', function ($p) {
     $inv = invoice_row((int) $p['id']);
@@ -649,7 +649,7 @@ route('POST', '/invoices/{id}/whatsapp', function ($p) {
     ], $lang);
     log_message($inv['customer_id'] ? (int) $inv['customer_id'] : null, 'bill', 'invoice', (int) $inv['id'], $text);
     return ['url' => wa_url($phone, $text), 'text' => $text];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);
 
 /* ------------------------------------------------------------------ customer ledger and payments */
 
@@ -675,7 +675,7 @@ route('GET', '/customers/{id}/ledger', function ($p) {
     unset($e);
     $open = rows("SELECT id, invoice_no, invoice_date, grand_total, balance FROM invoices WHERE customer_id = ? AND status = 'final' AND balance > 0 ORDER BY invoice_date, id", [$c['id']]);
     return ['customer' => $c, 'items' => $entries, 'balance' => (float) $c['balance'], 'open_invoices' => $open];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'customers']);
 
 /* Payment from a customer: against one bill, or the oldest unpaid bills first. */
 route('POST', '/customers/{id}/payments', function ($p) {
@@ -686,4 +686,4 @@ route('POST', '/customers/{id}/payments', function ($p) {
     }
     $res = tx(fn () => record_customer_payment((int) $c['id'], (float) $in['amount'], $in['mode'], $in['reference'] ?? null, $in['invoice_id'] ?? null, $in['note'] ?? null));
     return $res + ['balance' => customer_balance((int) $c['id'])];
-}, ['roles' => [ROLE_OWNER, ROLE_DESK]]);
+}, ['perm' => 'make_bills']);

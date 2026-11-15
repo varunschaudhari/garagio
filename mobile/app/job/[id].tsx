@@ -14,7 +14,7 @@ import { Banner, Button, Card, Chip, Divider, Field, IconButton, Loading, Offlin
 import { StatusChip } from '@/components/work';
 import { datetime, money, qty } from '@/format';
 import { nm } from '@/i18n';
-import { hasRole, useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { radius, space, useTheme } from '@/theme';
 import type { JobDetail, JobStatus } from '@/types';
 
@@ -39,8 +39,9 @@ export default function JobScreen() {
   const token = useSession((s) => s.token);
   const rates = useLabourRates();
   const isMech = user?.role === 'mechanic';
-  const canEdit = hasRole(user, 'owner', 'front_desk');
-  const canStock = hasRole(user, 'owner', 'inventory');
+  const canEdit = can(user, 'jobs'); // estimates, approve, labour, photos
+  const canBill = can(user, 'make_bills');
+  const canStock = can(user, 'issue_parts');
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [text, setText] = useState('');
   const [notes, setNotes] = useState<string | null>(null);
@@ -168,10 +169,10 @@ export default function JobScreen() {
           </View>
         ) : null}
 
-        {canEdit && j.invoice ? (
+        {canBill && j.invoice ? (
           <Button title={j.invoice.invoice_no ?? t('billing.draft')} icon={Receipt} variant="secondary" onPress={() => router.push(`/invoice/${j.invoice!.id}`)} />
         ) : null}
-        {canEdit && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? (
+        {canBill && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? (
           <Button
             title={t('billing.create_bill')}
             icon={Receipt}

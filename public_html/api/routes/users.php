@@ -3,8 +3,42 @@ declare(strict_types=1);
 
 route('GET', '/users', function () {
     $items = array_map('public_user', rows('SELECT * FROM users ORDER BY active DESC, role, name'));
-    return ['items' => $items, 'total' => count($items)];
+    // Role defaults, so the screen can show which ticks differ from a person's role.
+    $defaults = [];
+    foreach (ROLES as $r) {
+        $defaults[$r] = user_perms(['role' => $r, 'permissions' => null]);
+    }
+    return ['items' => $items, 'total' => count($items), 'permissions' => array_keys(PERMISSIONS), 'role_defaults' => $defaults];
 }, ['roles' => [ROLE_OWNER]]);
+
+/**
+ * Merge ticks sent by the owner ({key: bool}) into a user's stored overrides; keeps only what differs
+ * from the role's defaults. Returns the JSON to store (null = role defaults).
+ */
+function merge_permissions(?string $stored, $sent, string $role): ?string
+{
+    if (!is_array($sent)) {
+        fail(422, 'validation_failed', 'Permissions must be a list of on / off values', ['permissions' => 'invalid']);
+    }
+    $over = json_decode((string) $stored, true) ?: [];
+    foreach ($sent as $key => $value) {
+        if (!array_key_exists((string) $key, PERMISSIONS)) {
+            fail(422, 'validation_failed', 'Unknown permission ' . $key, ['permissions' => 'invalid']);
+        }
+        $on = filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if ($on === null) {
+            fail(422, 'validation_failed', 'Permission values are on / off', ['permissions' => 'invalid']);
+        }
+        $over[$key] = $on;
+    }
+    foreach ($over as $key => $on) {
+        if (!array_key_exists($key, PERMISSIONS) || $on === in_array($role, PERMISSIONS[$key], true)) {
+            unset($over[$key]);
+        }
+    }
+    ksort($over);
+    return $over ? json_encode($over) : null;
+}
 
 route('GET', '/users/mechanics', function () {
     $items = rows("SELECT id, name, phone FROM users WHERE role = 'mechanic' AND active = 1 ORDER BY name");
@@ -55,6 +89,13 @@ route('PUT', '/users/{id}', function ($p) {
     }
     $data = $in;
     unset($data['reset_password']);
+    $body = body();
+    if (array_key_exists('permissions', $body)) {
+        if (($in['role'] ?? $before['role']) === ROLE_OWNER) {
+            fail(422, 'validation_failed', 'Owners always have every permission', ['permissions' => 'invalid']);
+        }
+        $data['permissions'] = merge_permissions($before['permissions'] ?? null, $body['permissions'], $in['role'] ?? $before['role']);
+    }
     if (!empty($in['reset_password'])) {
         validate_new_password($in['reset_password']);
         $data['password_hash'] = password_hash($in['reset_password'], PASSWORD_BCRYPT);

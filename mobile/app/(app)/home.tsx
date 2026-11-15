@@ -8,7 +8,7 @@ import { useDashboard } from '@/api/queries';
 import { Card, Chip, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { date, money, qty, rupees } from '@/format';
 import { nm } from '@/i18n';
-import { useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { radius, space, useTheme, type Colors } from '@/theme';
 
 function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; value: string | number; sub?: string; icon: LucideIcon; tone: 'primary' | 'success' | 'danger' | 'info'; onPress?: () => void }) {
@@ -146,8 +146,8 @@ export default function Home() {
         {s ? (
           <View style={styles.grid}>
             <Kpi label={t('dashboard.jobs_in_shop')} value={Object.values(d.data?.jobs_by_status ?? {}).reduce((a, b) => a + b, 0)} icon={Bike} tone="primary" onPress={() => router.push('/jobs')} />
-            {user?.role === 'owner' || user?.role === 'inventory' ? <Kpi label={t('dashboard.approvals_waiting')} value={d.data?.approvals_waiting ?? 0} icon={ShieldCheck} tone={d.data?.approvals_waiting ? 'danger' : 'success'} onPress={() => router.push('/approvals')} /> : null}
-            <Kpi label={t('dashboard.open_requests')} value={d.data?.open_requests ?? 0} icon={Inbox} tone="info" onPress={() => router.push(user?.role === 'owner' || user?.role === 'inventory' ? '/queue' : '/requests')} />
+            {can(user, 'issue_parts') ? <Kpi label={t('dashboard.approvals_waiting')} value={d.data?.approvals_waiting ?? 0} icon={ShieldCheck} tone={d.data?.approvals_waiting ? 'danger' : 'success'} onPress={() => router.push('/approvals')} /> : null}
+            <Kpi label={t('dashboard.open_requests')} value={d.data?.open_requests ?? 0} icon={Inbox} tone="info" onPress={() => router.push(can(user, 'issue_parts') ? '/queue' : '/requests')} />
             <Kpi label={t('dashboard.low_stock')} value={s.low_stock_count} icon={TriangleExclamationPoint} tone={s.low_stock_count ? 'danger' : 'success'} onPress={() => router.push('/stock')} />
             <Kpi label={t('dashboard.parts_count')} value={s.parts} icon={Package} tone="primary" onPress={() => router.push('/stock')} />
             <Kpi label={t('dashboard.out_of_stock')} value={s.out_of_stock} icon={Boxes} tone={s.out_of_stock ? 'danger' : 'success'} />

@@ -1,7 +1,7 @@
 import { html, setHTML, $, on } from '../dom.js';
 import { t, nm, nmAlt } from '../i18n.js';
 import { api } from '../api.js';
-import { hasRole, session } from '../store.js';
+import { hasRole, session, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty, datetime } from '../format.js';
 import { dataTable, pager, emptyState, skeletonRows } from '../ui/table.js';
@@ -21,7 +21,7 @@ const REF_LINK = {
 
 export default async function partPage(ctx) {
   const id = Number(ctx.params.id);
-  const canEdit = hasRole('owner', 'inventory');
+  const canEdit = can('edit_parts');
   let page = 1;
   let part;
 

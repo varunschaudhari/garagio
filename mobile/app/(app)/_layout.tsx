@@ -7,9 +7,9 @@ import { useMe, useRequests } from '@/api/queries';
 import { Loading } from '@/components/ui';
 import { NotificationBell } from '@/components/work';
 import { listenForTaps, registerPush } from '@/push';
-import { useSession } from '@/store/session';
+import { useSession, can } from '@/store/session';
 import { useTheme } from '@/theme';
-import type { Role } from '@/types';
+import type { Perm, Role } from '@/types';
 
 // Tabs grow with each build phase (mirrors BUILT_PHASE on the web, currently phase 4).
 type TabKey = 'home' | 'jobs' | 'newjob' | 'billing' | 'customers' | 'requests' | 'queue' | 'approvals' | 'stock' | 'purchases' | 'money' | 'more' | 'me';
@@ -23,6 +23,17 @@ export const ROLE_TABS: Record<Role, TabKey[]> = {
   inventory: ['queue', 'approvals', 'stock', 'purchases', 'me'],
   front_desk: ['jobs', 'newjob', 'billing', 'customers', 'me'],
   mechanic: ['jobs', 'requests', 'stock', 'me'],
+};
+
+/** Tabs that need a permission (the owner can untick it per person). */
+const TAB_PERM: Partial<Record<TabKey, Perm>> = {
+  newjob: 'jobs',
+  billing: 'make_bills',
+  customers: 'customers',
+  queue: 'issue_parts',
+  approvals: 'issue_parts',
+  purchases: 'purchases',
+  money: 'see_money',
 };
 
 const TAB_META: Record<TabKey, { icon: LucideIcon; label: string }> = {
@@ -68,7 +79,7 @@ export default function AppLayout() {
   if (!current) return me.isError ? <Redirect href="/login" /> : <Loading />;
   if (current.must_change_password) return <Redirect href={{ pathname: '/password', params: { forced: '1' } }} />;
 
-  const visible = new Set(ROLE_TABS[current.role]);
+  const visible = new Set(ROLE_TABS[current.role].filter((k) => !TAB_PERM[k] || can(current, TAB_PERM[k])));
   const badge = (key: TabKey): number | undefined => {
     if (!staff || !counts.data) return undefined;
     if (key === 'queue') return counts.data.counts.open || undefined;
