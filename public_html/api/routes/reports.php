@@ -80,7 +80,7 @@ route('GET', '/reports/purchases', function () {
     $rows = rows(
         "SELECT p.bill_date AS date, p.bill_no, s.name AS supplier, s.gstin, p.taxable_total AS taxable, p.cgst, p.sgst, p.igst,
                 p.other_charges, p.round_off, p.total, p.payment_mode AS mode
-         FROM purchases p JOIN suppliers s ON s.id = p.supplier_id WHERE p.bill_date BETWEEN ? AND ? ORDER BY p.bill_date, p.id",
+         FROM purchases p JOIN suppliers s ON s.id = p.supplier_id WHERE p.status <> 'cancelled' AND p.bill_date BETWEEN ? AND ? ORDER BY p.bill_date, p.id",
         [$from, $to]
     );
     return report_out('purchases', ['date' => 'Date', 'bill_no' => 'Bill no', 'supplier' => 'Supplier', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'other_charges' => 'Other', 'round_off' => 'Round off', 'total' => 'Total', 'mode' => 'Payment'],
@@ -145,7 +145,7 @@ route('GET', '/reports/dues', function () {
 route('GET', '/reports/payables', function () {
     $rows = rows(
         "SELECT s.id AS supplier_id, s.name AS supplier, s.phone, ROUND(" . SUPPLIER_BALANCE_SQL . ", 2) AS balance,
-                (SELECT MAX(bill_date) FROM purchases p WHERE p.supplier_id = s.id) AS last_bill,
+                (SELECT MAX(bill_date) FROM purchases p WHERE p.supplier_id = s.id AND p.status <> 'cancelled') AS last_bill,
                 (SELECT MAX(paid_on) FROM supplier_payments sp WHERE sp.supplier_id = s.id) AS last_payment
          FROM suppliers s HAVING balance > 0.004 ORDER BY balance DESC"
     );
@@ -162,7 +162,7 @@ route('GET', '/reports/gst', function () {
     );
     $in = rows(
         "SELECT pi.gst_rate AS rate, SUM(pi.taxable) AS taxable, SUM(pi.cgst) AS cgst, SUM(pi.sgst) AS sgst, SUM(pi.igst) AS igst
-         FROM purchase_items pi JOIN purchases p ON p.id = pi.purchase_id WHERE p.bill_date BETWEEN ? AND ? GROUP BY pi.gst_rate",
+         FROM purchase_items pi JOIN purchases p ON p.id = pi.purchase_id WHERE p.status <> 'cancelled' AND p.bill_date BETWEEN ? AND ? GROUP BY pi.gst_rate",
         [$from, $to]
     );
     $rates = [];

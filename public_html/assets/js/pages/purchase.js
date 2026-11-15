@@ -5,6 +5,8 @@ import { icon } from '../ui/icons.js';
 import { money, qty, date, datetime } from '../format.js';
 import { dataTable, skeletonRows } from '../ui/table.js';
 import { modeChip } from './purchases.js';
+import { promptDialog } from '../ui/modal.js';
+import { toast, toastError } from '../ui/toast.js';
 import { openSupplierPayment } from './supplier.js';
 
 export default async function purchasePage(ctx) {
@@ -15,18 +17,23 @@ export default async function purchasePage(ctx) {
     const p = (await api.get('/purchases/' + id)).item;
     if (!ctx.alive()) return null;
     ctx.setTitle(`${t('purchases.bill')} ${p.bill_no}`);
-    const due = Math.max(0, Math.round((p.total - p.paid) * 100) / 100);
+    const cancelled = p.status === 'cancelled';
+    const due = cancelled ? 0 : Math.max(0, Math.round((p.total - p.paid) * 100) / 100);
     const inter = Number(p.is_interstate) === 1;
     const line = (label, value, strong = false) => html`<dt>${label}</dt><dd class="num ${strong ? 'strong' : ''}">${value}</dd>`;
     setHTML(ctx.el, html`
       <div class="page-head">
         <div style="flex:1;min-width:240px">
           <a href="#/purchases" class="small muted">${icon('arrow-left', 14)} ${t('purchases.title')}</a>
-          <h1 style="margin-top:6px">${t('purchases.bill')} ${p.bill_no} ${modeChip(p.payment_mode)}</h1>
+          <h1 style="margin-top:6px">${t('purchases.bill')} ${p.bill_no} ${cancelled ? html`<span class="chip danger">${t('purchases.cancelled')}</span>` : modeChip(p.payment_mode)}</h1>
           <div class="sub"><a href="#/suppliers/${p.supplier_id}">${p.supplier_name}</a> · ${date(p.bill_date)}${p.supplier_gstin ? ' · ' + p.supplier_gstin : ''}</div>
         </div>
+        ${cancelled ? '' : html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('purchases.cancel')}</button>
+          <a class="btn btn-secondary" href="#/purchases/new?replace=${p.id}">${icon('pencil')}${t('purchases.correct')}</a>`}
         ${due > 0 ? html`<button class="btn btn-primary" data-act="pay">${icon('hand-coins')}${t('suppliers.record_payment')}</button>` : ''}
       </div>
+      ${cancelled ? html`<div class="banner danger" style="margin-bottom:16px">${icon('ban')}<span>${t('purchases.cancelled_by', { date: datetime(p.cancelled_at), name: p.cancelled_by_name || '—', reason: p.cancel_reason || '' })}${p.replaced_by_bill ? html` · <a href="#/purchases/${p.replaced_by_bill.id}">${t('purchases.replaced_by', { bill: p.replaced_by_bill.bill_no })}</a>` : ''}</span></div>` : ''}
+      ${p.replaces_bill ? html`<div class="banner info" style="margin-bottom:16px">${icon('info')}<span><a href="#/purchases/${p.replaces_bill.id}">${t('purchases.replaces', { bill: p.replaces_bill.bill_no })}</a></span></div>` : ''}
       <div class="card" style="margin-bottom:20px">
         ${dataTable({
           columns: [
@@ -71,5 +78,16 @@ export default async function purchasePage(ctx) {
   on(ctx.el, 'click', '[data-act="pay"]', async () => {
     const supplier = (await api.get('/suppliers/' + state.p.supplier_id)).item;
     if (await openSupplierPayment(supplier, { purchaseId: id, amount: state.due })) state = await draw();
+  });
+  on(ctx.el, 'click', '[data-act="cancel"]', async () => {
+    const reason = await promptDialog({ title: t('purchases.cancel'), label: t('purchases.cancel_reason'), message: t('purchases.cancel_note'), confirmLabel: t('purchases.cancel'), danger: true });
+    if (reason === null) return;
+    try {
+      await api.post(`/purchases/${id}/cancel`, { reason });
+      toast(t('purchases.cancelled_ok'));
+      state = await draw();
+    } catch (err) {
+      toastError(err);
+    }
   });
 }

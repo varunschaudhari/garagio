@@ -60,6 +60,44 @@ test('supplier ledger shows the bill and the payment with a running balance', as
   await expect(page.locator('.kpi-value')).toHaveText('₹278.00');
 });
 
+test('correct a purchase bill (qty was wrong), then cancel the corrected bill', async ({ page }) => {
+  await login(page, 'stock');
+  await page.goto('/#/purchases');
+  await page.locator('tr', { hasText: 'E2E-1' }).click();
+  await page.getByRole('link', { name: 'Correct bill' }).click();
+
+  // The form starts from the old bill; the supplier stays fixed.
+  await expect(page.locator('h1')).toHaveText('Correct bill E2E-1');
+  await expect(page.locator('#pur-supplier')).toBeDisabled();
+  await expect(page.locator('#pur-bill')).toHaveValue('E2E-1');
+  const row = page.locator('#pur-rows tr').first();
+  await expect(row.locator('[data-f="qty"]')).toHaveValue('5');
+  await expect(row.locator('[data-f="price"]')).toHaveValue('90');
+  await row.locator('[data-f="qty"]').fill('6');
+  await expect(row.locator('[data-out="taxable"]')).toHaveText('₹486.00');
+  await page.getByRole('button', { name: 'Save bill' }).click();
+  await expect(page.locator('.toast')).toContainText('Bill corrected');
+  await expect(page.locator('.banner.info')).toContainText('This bill corrects bill E2E-1');
+  await expect(page.locator('dl')).toContainText('₹200.00'); // the payment moved across
+
+  // Cancel it: a reason is needed; the bill is marked and its actions go away.
+  await page.getByRole('button', { name: 'Cancel bill' }).click();
+  const modal = page.locator('.modal');
+  await expect(modal).toContainText('Money already paid stays with the supplier');
+  await modal.locator('#prompt-in').fill('Supplier took the parts back');
+  await modal.getByRole('button', { name: 'Cancel bill' }).click();
+  await expect(page.locator('.toast', { hasText: 'Bill cancelled' })).toBeVisible();
+  await expect(page.locator('.banner.danger')).toContainText('Supplier took the parts back');
+  await expect(page.locator('h1')).toContainText('Cancelled');
+  await expect(page.getByRole('link', { name: 'Correct bill' })).toHaveCount(0);
+
+  // Hidden from the list unless asked for.
+  await page.goto('/#/purchases');
+  await expect(page.locator('#pur-list')).not.toContainText('E2E-1');
+  await page.locator('select[name=status]').selectOption('cancelled');
+  await expect(page.locator('#pur-list tr', { hasText: 'E2E-1' })).toHaveCount(2);
+});
+
 test('reorder list groups low-stock parts and offers WhatsApp sharing', async ({ page }) => {
   await login(page, 'stock');
   await page.goto('/#/reorder');

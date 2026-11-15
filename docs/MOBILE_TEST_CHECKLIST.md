@@ -74,6 +74,8 @@ Marathi and English** unless the line says otherwise. Automated checks (`npm run
 - [ ] Saving with a bill number already used for that supplier shows the error under "Bill no.".
 - [ ] After saving, the bill opens; stock of each part went up (check the part ledger: "Purchase").
 - [ ] Credit bill shows "Due"; "Record payment" pre-fills the due amount; a part payment reduces it.
+- [ ] "Correct bill" opens the form filled from the bill (supplier fixed); saving shows "This bill corrects bill …" and the old bill shows Cancelled with a link to the new one.
+- [ ] "Cancel bill" needs a reason; stock goes back down; the bill disappears from the Purchases list.
 - [ ] Supplier screen: balance, ledger (newest first), call button, record payment, new bill for this supplier.
 - [ ] Reorder list: groups by supplier; editing an order quantity changes the shared message.
 - [ ] "Share on WhatsApp" opens WhatsApp to the supplier's number with the order text; without a phone number the system share sheet opens.

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Check, Plus, ScanLine, Store, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ import { money, qty } from '@/format';
 import { errorText, nm } from '@/i18n';
 import { useScan } from '@/store/scan';
 import { radius, size, space, useTheme } from '@/theme';
-import type { Part, PayMode, PurchasePreview, Supplier } from '@/types';
+import type { Part, PayMode, Purchase, PurchasePreview, Supplier } from '@/types';
 
 const GST = [0, 5, 12, 18, 28, 40];
 const MODES: PayMode[] = ['credit', 'cash', 'upi', 'bank'];
@@ -67,7 +67,9 @@ function SmallInput({ label, value, onChange, invalid }: { label: string; value:
 export default function NewPurchase() {
   const { t } = useTranslation();
   const { c } = useTheme();
-  const params = useLocalSearchParams<{ supplier?: string }>();
+  const params = useLocalSearchParams<{ supplier?: string; replace?: string }>();
+  const replaceId = Number(params.replace || 0);
+  const [old, setOld] = useState<Purchase | null>(null);
   const save = useSavePurchase();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [billNo, setBillNo] = useState('');
@@ -79,6 +81,39 @@ export default function NewPurchase() {
   const [pickPart, setPickPart] = useState(false);
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [badLines, setBadLines] = useState<Set<number>>(new Set());
+
+  // Correcting a bill: start from its supplier (fixed), number, date and lines.
+  useEffect(() => {
+    if (!replaceId) return;
+    let live = true;
+    (async () => {
+      const p = (await api.get<{ item: Purchase }>(`/purchases/${replaceId}`)).item;
+      const [s, parts] = await Promise.all([
+        api.get<{ item: Supplier }>(`/suppliers/${p.supplier_id}`).then((r) => r.item),
+        Promise.all(p.items.map((it) => api.get<{ item: Part }>(`/parts/${it.part_id}`).then((r) => r.item))),
+      ]);
+      if (!live) return;
+      setOld(p);
+      setSupplier(s);
+      setBillNo(p.bill_no);
+      setBillDate(p.bill_date.split('-').reverse().join('-'));
+      setMode(p.payment_mode);
+      setOther(Number(p.other_charges) ? String(p.other_charges) : '');
+      setLines(
+        p.items.map((it, i) => ({
+          key: ++lineSeq,
+          part: parts[i],
+          qty: String(Number(it.qty)),
+          price: String(Number(it.price)),
+          disc: Number(it.disc_pct) ? String(Number(it.disc_pct)) : '',
+          gst: Number(it.gst_rate),
+        }))
+      );
+    })().catch(toastError);
+    return () => {
+      live = false;
+    };
+  }, [replaceId]);
 
   useEffect(() => {
     if (!params.supplier) return;
@@ -154,8 +189,8 @@ export default function NewPurchase() {
     setErrs(e);
     if (Object.keys(e).length) return;
     try {
-      const res = await save.mutateAsync({ ...payload, bill_no: billNo.trim(), bill_date: iso, payment_mode: mode });
-      toast(t('purchases.saved'));
+      const res = await save.mutateAsync({ ...payload, bill_no: billNo.trim(), bill_date: iso, payment_mode: mode, ...(old ? { replaces_id: old.id, notes: old.notes ?? '' } : {}) });
+      toast(old ? t('purchases.corrected') : t('purchases.saved'));
       router.replace(`/purchase/${res.item.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'duplicate_bill') {
@@ -179,8 +214,10 @@ export default function NewPurchase() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={90}>
+      {replaceId ? <Stack.Screen options={{ title: old ? t('purchases.correct_title', { bill: old.bill_no }) : t('purchases.correct') }} /> : null}
       <OfflineBanner />
       <ScrollView contentContainerStyle={{ padding: space[4], gap: space[4], paddingBottom: space[10] }} keyboardShouldPersistTaps="handled">
+        {old ? <Banner text={t('purchases.correct_note')} /> : null}
         <Card style={{ gap: space[4] }}>
           <View style={{ gap: 6 }}>
             <Txt size="sm" weight="semibold">
@@ -189,6 +226,7 @@ export default function NewPurchase() {
             </Txt>
             <Pressable
               onPress={() => setPickSupplier(true)}
+              disabled={!!replaceId}
               accessibilityRole="button"
               style={[styles.picker, { borderColor: errs.supplier ? c.danger : c.borderStrong, backgroundColor: c.surface }]}
             >

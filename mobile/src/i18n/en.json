@@ -266,7 +266,8 @@
     "counter_sale": "Counter sale",
     "sale_cancel": "Sale cancelled",
     "adjustment": "Adjustment",
-    "stock_count": "Stock count"
+    "stock_count": "Stock count",
+    "purchase_cancel": "Purchase bill cancelled"
   },
   "settings": {
     "title": "Settings",
@@ -436,7 +437,8 @@
     "scan_not_configured": "Reading job cards is not set up on the server.",
     "scan_failed": "Could not read the job card. Try a clearer photo, or type the details.",
     "scan_limit": "Too many job card scans in the last hour. Try again later.",
-    "already_approved": "This job is already approved."
+    "already_approved": "This job is already approved.",
+    "purchase_cancelled": "This bill is already cancelled."
   },
   "fields": {
     "required": "Required",
@@ -568,7 +570,22 @@
     "entered_by": "Entered by",
     "all_suppliers": "All suppliers",
     "all_modes": "All payments",
-    "sum": "Total of shown bills"
+    "sum": "Total of shown bills",
+    "cancel": "Cancel bill",
+    "cancel_reason": "Why is this bill cancelled?",
+    "cancel_note": "Its parts leave stock. Money already paid stays with the supplier as advance.",
+    "cancelled_ok": "Bill cancelled. Stock taken back out.",
+    "cancelled": "Cancelled",
+    "cancelled_by": "Cancelled {{date}} by {{name}}: {{reason}}",
+    "replaced_by": "Replaced by bill {{bill}}",
+    "replaces": "This bill corrects bill {{bill}}",
+    "correct": "Correct bill",
+    "correct_title": "Correct bill {{bill}}",
+    "correct_note": "Change what was wrong and save. The old bill is cancelled and its payments move to this one.",
+    "corrected": "Bill corrected.",
+    "status_active": "Active bills",
+    "status_cancelled": "Cancelled bills",
+    "status_all": "All bills"
   },
   "reorder": {
     "title": "Reorder list",
@@ -1188,7 +1205,8 @@
       "labour_rate_change": "Labour rate changed",
       "mechanic_payment_delete": "Mechanic payment deleted",
       "backup": "Backup taken",
-      "go_live_reset": "Trial data removed (go live)"
+      "go_live_reset": "Trial data removed (go live)",
+      "purchase_cancel": "Purchase bill cancelled"
     }
   }
 }

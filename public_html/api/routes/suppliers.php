@@ -13,7 +13,7 @@ const SUPPLIER_RULES = [
 
 /** SQL expression: amount payable to the supplier (positive = we owe them). */
 const SUPPLIER_BALANCE_SQL = "s.opening_balance
-    + COALESCE((SELECT SUM(p.total) FROM purchases p WHERE p.supplier_id = s.id), 0)
+    + COALESCE((SELECT SUM(p.total) FROM purchases p WHERE p.supplier_id = s.id AND p.status <> 'cancelled'), 0)
     - COALESCE((SELECT SUM(sp.amount) FROM supplier_payments sp WHERE sp.supplier_id = s.id), 0)";
 
 function supplier_by_id(int $id): array
@@ -95,7 +95,7 @@ route('GET', '/suppliers/{id}/ledger', function ($p) {
 
     $entries = [];
     $entries[] = ['date' => substr((string) $s['created_at'], 0, 10), 'seq' => 0, 'type' => 'opening', 'ref' => null, 'ref_id' => null, 'bill' => max(0, (float) $s['opening_balance']), 'paid' => max(0, -(float) $s['opening_balance']), 'note' => null, 'mode' => null];
-    foreach (rows('SELECT id, bill_no, bill_date, total, payment_mode, notes, created_at FROM purchases WHERE supplier_id = ?', [$id]) as $r) {
+    foreach (rows('SELECT id, bill_no, bill_date, total, payment_mode, notes, created_at FROM purchases WHERE supplier_id = ? AND status <> \'cancelled\'', [$id]) as $r) {
         $entries[] = ['date' => $r['bill_date'], 'seq' => strtotime((string) $r['created_at']), 'type' => 'bill', 'ref' => $r['bill_no'], 'ref_id' => (int) $r['id'], 'bill' => (float) $r['total'], 'paid' => 0.0, 'note' => $r['notes'], 'mode' => $r['payment_mode']];
     }
     foreach (rows('SELECT sp.*, p.bill_no FROM supplier_payments sp LEFT JOIN purchases p ON p.id = sp.purchase_id WHERE sp.supplier_id = ?', [$id]) as $r) {

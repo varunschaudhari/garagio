@@ -15,7 +15,7 @@ export function modeChip(mode) {
 export default async function purchases(ctx) {
   ctx.setTitle(t('purchases.title'));
   const q = ctx.query;
-  const st = { q: q.q || '', supplier: q.supplier || '', mode: q.mode || '', from: q.from || '', to: q.to || '', page: Number(q.page || 1) };
+  const st = { q: q.q || '', supplier: q.supplier || '', mode: q.mode || '', status: q.status || '', from: q.from || '', to: q.to || '', page: Number(q.page || 1) };
   const sups = (await api.get('/suppliers', { all: 1, per_page: 500 })).items;
   if (!ctx.alive()) return;
 
@@ -35,6 +35,9 @@ export default async function purchases(ctx) {
         <select class="select" name="mode" style="width:auto" aria-label="${t('purchases.payment_mode')}">
           <option value="">${t('purchases.all_modes')}</option>
           ${['credit', 'cash', 'upi', 'bank'].map((m) => html`<option value="${m}" ${m === st.mode ? 'selected' : ''}>${t('pay.' + m)}</option>`)}
+        </select>
+        <select class="select" name="status" style="width:auto" aria-label="${t('common.status')}">
+          ${[['', 'status_active'], ['cancelled', 'status_cancelled'], ['all', 'status_all']].map(([v, k]) => html`<option value="${v}" ${v === st.status ? 'selected' : ''}>${t('purchases.' + k)}</option>`)}
         </select>
         <input class="input" type="date" name="from" value="${st.from}" style="width:auto" aria-label="${t('common.from')}">
         <input class="input" type="date" name="to" value="${st.to}" style="width:auto" aria-label="${t('common.to')}">
@@ -59,7 +62,7 @@ export default async function purchases(ctx) {
         { key: 'date', label: t('purchases.bill_date'), render: (p) => html`<span class="nowrap">${date(p.bill_date)}</span>` },
         { key: 'bill', label: t('purchases.bill_no'), primary: true, render: (p) => html`<div class="t-title">${p.bill_no}</div><div class="t-sub">${p.supplier_name}</div>` },
         { key: 'lines', label: t('purchases.line_count'), num: true, render: (p) => p.line_count },
-        { key: 'mode', label: t('purchases.payment_mode'), render: (p) => modeChip(p.payment_mode) },
+        { key: 'mode', label: t('purchases.payment_mode'), render: (p) => (p.status === 'cancelled' ? html`<span class="chip danger">${t('purchases.cancelled')}</span>` : modeChip(p.payment_mode)) },
         { key: 'total', label: t('purchases.total'), num: true, render: (p) => html`<span class="strong">${money(p.total)}</span>` },
       ],
       rows: data.items,

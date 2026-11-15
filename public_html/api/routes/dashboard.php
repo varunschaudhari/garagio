@@ -64,14 +64,14 @@ function dashboard_bills(): array
         ];
     }
     if (can('purchases')) {
-        $purch = 'SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS t FROM purchases WHERE bill_date ';
+        $purch = "SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS t FROM purchases WHERE status <> 'cancelled' AND bill_date ";
         $out['purchases'] = [
             'today' => $sum($purch . '= ?', [$today]),
             'month' => $sum($purch . '>= ?', [$month]),
             'latest' => rows(
                 'SELECT p.id, p.bill_no, p.bill_date, p.total, p.payment_mode, s.name AS supplier_name,
                         p.total - COALESCE((SELECT SUM(sp.amount) FROM supplier_payments sp WHERE sp.purchase_id = p.id), 0) AS due
-                 FROM purchases p JOIN suppliers s ON s.id = p.supplier_id ORDER BY p.bill_date DESC, p.id DESC LIMIT 8'
+                 FROM purchases p JOIN suppliers s ON s.id = p.supplier_id WHERE p.status <> \'cancelled\' ORDER BY p.bill_date DESC, p.id DESC LIMIT 8'
             ),
         ];
     }

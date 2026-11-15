@@ -156,11 +156,16 @@ CREATE TABLE purchases (
   round_off DECIMAL(12,2) NOT NULL DEFAULT 0,
   total DECIMAL(12,2) NOT NULL DEFAULT 0,
   payment_mode VARCHAR(10) NOT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'final',
   notes VARCHAR(255) NULL,
+  cancel_reason VARCHAR(255) NULL,
+  cancelled_by INT NULL,
+  cancelled_at DATETIME NULL,
+  replaced_by INT NULL,
   user_id INT NULL,
   created_at DATETIME NULL,
   updated_at DATETIME NULL,
-  UNIQUE KEY uq_purchase_bill (supplier_id, bill_no),
+  KEY ix_purchase_bill (supplier_id, bill_no),
   KEY ix_purchases_date (bill_date),
   CONSTRAINT fk_purchases_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
   CONSTRAINT fk_purchases_user FOREIGN KEY (user_id) REFERENCES users(id)
@@ -590,6 +595,7 @@ CREATE TABLE schema_migrations (
 INSERT INTO schema_migrations (name, applied_at) VALUES ('001_planned_job_parts.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('002_user_permissions.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('003_job_misc_parts.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('004_purchase_cancel.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

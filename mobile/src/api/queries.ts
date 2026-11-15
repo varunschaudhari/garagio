@@ -136,6 +136,14 @@ export function useSavePurchase() {
   });
 }
 
+export function useCancelPurchase(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => api.post<{ item: Purchase }>(`/purchases/${id}/cancel`, { reason }),
+    onSuccess: () => invalidatePurchasing(qc),
+  });
+}
+
 export function useSupplierPayment(supplierId: number) {
   const qc = useQueryClient();
   return useMutation({

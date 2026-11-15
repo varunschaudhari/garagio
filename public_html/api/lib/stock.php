@@ -6,7 +6,7 @@ declare(strict_types=1);
  * in the same transaction, so the ledger balance always equals current_stock.
  */
 
-const MOVEMENT_TYPES = ['opening', 'purchase', 'job_issue', 'job_return', 'counter_sale', 'sale_cancel', 'adjustment', 'stock_count'];
+const MOVEMENT_TYPES = ['opening', 'purchase', 'job_issue', 'job_return', 'counter_sale', 'sale_cancel', 'adjustment', 'stock_count', 'purchase_cancel'];
 
 /** Inbound types that bring their own unit cost and update the weighted average. */
 const COSTED_INBOUND = ['opening', 'purchase', 'job_return', 'sale_cancel'];
@@ -54,6 +54,10 @@ function stock_move(
     if ($qty > 0 && in_array($mtype, COSTED_INBOUND, true) && $unitCost !== null) {
         $cost = max(0.0, $unitCost);
         $avg = $cur <= 0 ? $cost : (($cur * $avg) + ($qty * $cost)) / ($cur + $qty);
+    } elseif ($qty < 0 && $mtype === 'purchase_cancel' && $unitCost !== null) {
+        // A cancelled purchase leaves at the cost it came in at; the average is worked back without it.
+        $cost = max(0.0, $unitCost);
+        $avg = $new > 0 ? max(0.0, (($cur * $avg) + ($qty * $cost)) / $new) : $avg;
     } elseif ($qty > 0 && $avg <= 0 && ($fallback = net_cost((float) $part['last_purchase_price'], (float) $part['last_purchase_disc_pct'])) > 0) {
         // Uncosted stock (count / adjustment) on a part with no average cost yet: value only the
         // new units at the last purchase price; units already on hand keep their cost of 0.

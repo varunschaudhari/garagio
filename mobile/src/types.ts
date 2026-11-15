@@ -145,6 +145,7 @@ export interface PurchaseListItem {
   supplier_id: number;
   supplier_name: string;
   line_count: number;
+  status: 'final' | 'cancelled';
 }
 
 export interface PurchaseItem {
@@ -178,6 +179,11 @@ export interface Purchase extends PurchaseListItem {
   items: PurchaseItem[];
   payments: { id: number; amount: number; mode: PayMode; reference: string | null; paid_on: string; user_name: string | null }[];
   paid: number;
+  cancel_reason: string | null;
+  cancelled_at: string | null;
+  cancelled_by_name: string | null;
+  replaced_by_bill: { id: number; bill_no: string } | null;
+  replaces_bill: { id: number; bill_no: string } | null;
 }
 
 export interface BillTotals {

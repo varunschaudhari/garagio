@@ -432,3 +432,9 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     permission (route option `perm`); web menus / pages and Android tabs / buttons follow them.
 18. **Dashboard (shop feedback):** sale and purchase bill totals for today and this month plus the latest 8 bills of
     each; sales need "see money", purchases need "purchases". **Part numbers** print on bills and receipts.
+19. **Purchase bill cancel / correct (16 Nov 2026):** a purchase bill is never edited in place. **Cancel** (reason
+    required) takes its parts back out of stock at the cost they came in at (the weighted average is worked back; refused
+    when the stock is already used) and drops it from supplier balance, reports, GST input and the dashboard; money
+    already paid stays with the supplier as advance. **Correct** = a new bill with `replaces_id`: the new stock goes in
+    first, then the old bill is cancelled (`replaced_by`) and its payments move to the new bill; only the difference is
+    paid for a non-credit bill. The bill number is unique per supplier among bills that are not cancelled.

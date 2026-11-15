@@ -53,7 +53,8 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 |---|---|---|
 | `GET/POST /suppliers`, `GET/PUT /suppliers/{id}` | O I | balance = payable |
 | `GET /suppliers/{id}/ledger` · `POST /suppliers/{id}/payments` | O I | |
-| `POST /purchases/preview` · `GET/POST /purchases` · `GET /purchases/{id}` | O I | ex-GST prices; inline `new_part`; credit/cash/upi/bank |
+| `POST /purchases/preview` · `GET/POST /purchases` · `GET /purchases/{id}` | O I | ex-GST prices; inline `new_part`; credit/cash/upi/bank; list `status=cancelled` or `status=all` (default hides cancelled); POST `replaces_id` = correct an earlier bill |
+| `POST /purchases/{id}/cancel` | O I | `{reason}`; stock back out at purchase cost (409 `insufficient_stock` if used); payments stay as supplier advance |
 
 ## Customers, jobs, estimates, requests
 | Method & path | Roles | Notes |

@@ -15,15 +15,29 @@ const FIELDS = ['part', 'qty', 'price', 'disc', 'gst'];
 let rowSeq = 0;
 
 export default async function purchaseNew(ctx) {
-  ctx.setTitle(t('purchases.new'));
+  // ?replace=<id>: correct an earlier bill. The form starts from that bill; saving replaces it.
+  const replaceId = Number(ctx.query.replace || 0);
+  let old = null;
+  if (replaceId) {
+    old = (await api.get('/purchases/' + replaceId)).item;
+    if (!ctx.alive()) return;
+    if (old.status !== 'final') {
+      toast(t('errors.purchase_cancelled'), 'error');
+      location.hash = '#/purchases/' + replaceId;
+      return;
+    }
+  }
+  const heading = old ? t('purchases.correct_title', { bill: old.bill_no }) : t('purchases.new');
+  ctx.setTitle(heading);
   const st = { supplier: null, rows: [], interstate: false };
   let dirty = false;
   ctx.setLeaveGuard(() => (dirty ? t('stock.unsaved') : null));
 
   setHTML(ctx.el, html`
     <div class="page-head">
-      <div style="flex:1"><a href="#/purchases" class="small muted">${icon('arrow-left', 14)} ${t('purchases.title')}</a><h1 style="margin-top:6px">${t('purchases.new')}</h1></div>
+      <div style="flex:1"><a href="#/purchases${old ? '/' + old.id : ''}" class="small muted">${icon('arrow-left', 14)} ${old ? t('purchases.bill') + ' ' + old.bill_no : t('purchases.title')}</a><h1 style="margin-top:6px">${heading}</h1></div>
     </div>
+    ${old ? html`<div class="banner info" style="margin-bottom:16px">${icon('info')}<span>${t('purchases.correct_note')}</span></div>` : ''}
     <form class="stack-lg" id="pur-form" novalidate>
       <div class="card card-pad">
         <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
@@ -181,6 +195,7 @@ export default async function purchaseNew(ctx) {
     other_charges: $('#pur-other', ctx.el)?.value.trim() || 0,
     notes: $('#pur-notes', ctx.el).value.trim(),
     items: validRows().map((r) => ({ part_id: r.part.id, qty: r.qty, price: r.price || 0, disc_pct: r.disc || 0, gst_rate: r.gst })),
+    ...(old ? { replaces_id: old.id } : {}),
   });
 
   /* ------------------------------------------------------------ totals (from the server) */
@@ -331,7 +346,7 @@ export default async function purchaseNew(ctx) {
       try {
         const res = await api.post('/purchases', body);
         dirty = false;
-        toast(t('purchases.saved'));
+        toast(old ? t('purchases.corrected') : t('purchases.saved'));
         location.hash = '#/purchases/' + res.item.id;
       } catch (err) {
         if (err.code === 'duplicate_bill') {
@@ -362,8 +377,32 @@ export default async function purchaseNew(ctx) {
     });
   });
 
-  addRow(false);
-  if (ctx.query.supplier) {
+  if (old) {
+    // Start from the bill being corrected: same supplier (fixed), its lines at the prices it was entered with.
+    setSupplier((await api.get('/suppliers/' + old.supplier_id)).item);
+    if (!ctx.alive()) return;
+    supInput.disabled = true;
+    $('[data-act="new-supplier"]', ctx.el).disabled = true;
+    $('#pur-bill', ctx.el).value = old.bill_no;
+    $('#pur-date', ctx.el).value = old.bill_date;
+    $('#pur-mode', ctx.el).value = old.payment_mode;
+    $('#pur-notes', ctx.el).value = old.notes || '';
+    otherCharges = Number(old.other_charges) ? String(old.other_charges) : '';
+    for (const it of old.items) {
+      const row = addRow(false);
+      const tr = tbody.querySelector(`tr[data-key="${row.key}"]`);
+      Object.assign(row, { part: { id: it.part_id, part_no: it.part_no, name_en: it.name_en, name_mr: it.name_mr, unit: it.unit }, qty: String(Number(it.qty)), price: String(Number(it.price)), disc: Number(it.disc_pct) ? String(Number(it.disc_pct)) : '', gst: String(Number(it.gst_rate)) });
+      $('[data-f="part"]', tr).value = partLabel(row.part);
+      for (const f of ['qty', 'price', 'disc', 'gst']) $(`[data-f="${f}"]`, tr).value = row[f];
+    }
+    refresh();
+    $('#pur-bill', ctx.el).focus();
+  } else {
+    addRow(false);
+  }
+  if (old) {
+    /* supplier already set */
+  } else if (ctx.query.supplier) {
     try {
       setSupplier((await api.get('/suppliers/' + Number(ctx.query.supplier))).item);
       $('#pur-bill', ctx.el).focus();

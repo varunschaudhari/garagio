@@ -113,6 +113,9 @@ function purchase_by_id(int $id): array
     );
     $p['payments'] = rows('SELECT sp.*, u.name AS user_name FROM supplier_payments sp LEFT JOIN users u ON u.id = sp.user_id WHERE sp.purchase_id = ? ORDER BY sp.paid_on, sp.id', [$id]);
     $p['paid'] = r2(array_sum(array_column($p['payments'], 'amount')));
+    $p['cancelled_by_name'] = $p['cancelled_by'] ? val('SELECT name FROM users WHERE id = ?', [$p['cancelled_by']]) : null;
+    $p['replaced_by_bill'] = $p['replaced_by'] ? row('SELECT id, bill_no FROM purchases WHERE id = ?', [$p['replaced_by']]) : null;
+    $p['replaces_bill'] = row('SELECT id, bill_no FROM purchases WHERE replaced_by = ?', [$p['id']]);
     return $p;
 }
 
@@ -145,11 +148,16 @@ route('GET', '/purchases', function () {
         $where[] = 'p.payment_mode = ?';
         $params[] = $mode;
     }
+    if (qp('status') === 'cancelled') {
+        $where[] = "p.status = 'cancelled'";
+    } elseif (qp('status') !== 'all') {
+        $where[] = "p.status <> 'cancelled'";
+    }
     $w = $where ? 'WHERE ' . implode(' AND ', $where) : '';
     $base = "FROM purchases p JOIN suppliers s ON s.id = p.supplier_id $w";
     $sum = row("SELECT COUNT(*) AS n, COALESCE(SUM(p.total), 0) AS total $base", $params);
     $items = rows(
-        "SELECT p.id, p.bill_no, p.bill_date, p.total, p.taxable_total, p.cgst, p.sgst, p.igst, p.payment_mode, p.supplier_id, s.name AS supplier_name,
+        "SELECT p.id, p.bill_no, p.bill_date, p.total, p.taxable_total, p.cgst, p.sgst, p.igst, p.payment_mode, p.status, p.supplier_id, s.name AS supplier_name,
                 (SELECT COUNT(*) FROM purchase_items i WHERE i.purchase_id = p.id) AS line_count
          $base ORDER BY p.bill_date DESC, p.id DESC LIMIT $limit OFFSET $offset",
         $params
@@ -161,15 +169,61 @@ route('GET', '/purchases/{id}', function ($p) {
     return ['item' => purchase_by_id((int) $p['id'])];
 }, ['perm' => 'purchases']);
 
+route('POST', '/purchases/{id}/cancel', function ($p) {
+    $in = clean(body(), ['reason' => 'str|req|max:255']);
+    tx(function () use ($p, $in) {
+        $pu = row('SELECT * FROM purchases WHERE id = ? FOR UPDATE', [(int) $p['id']]) ?? not_found('Purchase bill');
+        if ($pu['status'] !== 'final') {
+            fail(409, 'purchase_cancelled', 'This bill is already cancelled');
+        }
+        cancel_purchase($pu, $in['reason']);
+    });
+    return ['item' => purchase_by_id((int) $p['id'])];
+}, ['perm' => 'purchases']);
+
+/**
+ * Cancel a purchase bill inside tx(): its parts leave stock at their purchase cost (refused when they are
+ * already used), the last purchase price falls back to the previous bill, and money already paid stays with
+ * the supplier as an advance (unless a correction moves it to the new bill).
+ */
+function cancel_purchase(array $p, string $reason, ?int $replacedBy = null): void
+{
+    foreach (rows('SELECT * FROM purchase_items WHERE purchase_id = ? ORDER BY id', [$p['id']]) as $it) {
+        stock_move((int) $it['part_id'], -(float) $it['qty'], 'purchase_cancel', 'purchase', (int) $p['id'], (float) $it['net_cost'], 'Cancelled bill ' . $p['bill_no']);
+        $prev = row(
+            "SELECT pi.price, pi.disc_pct FROM purchase_items pi JOIN purchases pu ON pu.id = pi.purchase_id
+             WHERE pi.part_id = ? AND pu.status = 'final' AND pu.id <> ? ORDER BY pu.bill_date DESC, pu.id DESC LIMIT 1",
+            [$it['part_id'], $p['id']]
+        );
+        if ($prev) {
+            q('UPDATE parts SET last_purchase_price = ?, last_purchase_disc_pct = ?, updated_at = ? WHERE id = ?', [$prev['price'], $prev['disc_pct'], now(), $it['part_id']]);
+        }
+    }
+    update_row('purchases', (int) $p['id'], ['status' => 'cancelled', 'cancel_reason' => $reason, 'cancelled_by' => uid(), 'cancelled_at' => now(), 'replaced_by' => $replacedBy]);
+    audit('purchase_cancel', 'purchase', (int) $p['id'], ['bill_no' => $p['bill_no'], 'total' => (float) $p['total']], ['reason' => $reason, 'replaced_by' => $replacedBy]);
+}
+
 route('POST', '/purchases', function () {
-    $calc = purchase_calc(body(), true);
+    $body = body();
+    $calc = purchase_calc($body, true);
     $h = $calc['header'];
     $t = $calc['totals'];
-    if ((int) val('SELECT COUNT(*) FROM purchases WHERE supplier_id = ? AND bill_no = ?', [$h['supplier_id'], $h['bill_no']])) {
+    // A correction: the new bill replaces an earlier one (same supplier), in one step.
+    $old = null;
+    if (!empty($body['replaces_id'])) {
+        $old = row('SELECT * FROM purchases WHERE id = ?', [(int) $body['replaces_id']]) ?? not_found('Purchase bill');
+        if ($old['status'] !== 'final') {
+            fail(409, 'purchase_cancelled', 'This bill is already cancelled');
+        }
+        if ((int) $old['supplier_id'] !== (int) $h['supplier_id']) {
+            fail(422, 'validation_failed', 'A correction must be for the same supplier', ['supplier_id' => 'invalid_choice']);
+        }
+    }
+    if ((int) val("SELECT COUNT(*) FROM purchases WHERE supplier_id = ? AND bill_no = ? AND status <> 'cancelled' AND id <> ?", [$h['supplier_id'], $h['bill_no'], $old['id'] ?? 0])) {
         fail(409, 'duplicate_bill', 'This bill number is already entered for this supplier', ['bill_no' => 'duplicate']);
     }
 
-    $id = tx(function () use ($calc, $h, $t) {
+    $id = tx(function () use ($calc, $h, $t, $old) {
         $pid = insert('purchases', [
             'supplier_id' => $h['supplier_id'],
             'bill_no' => $h['bill_no'],
@@ -219,11 +273,24 @@ route('POST', '/purchases', function () {
             stock_move($partId, $l['qty'], 'purchase', 'purchase', $pid, $l['net_cost'], 'Bill ' . $h['bill_no']);
             q('UPDATE parts SET last_purchase_price = ?, last_purchase_disc_pct = ?, updated_at = ? WHERE id = ?', [$l['unit_price'], $l['disc_pct'], now(), $partId]);
         }
-        if ($h['payment_mode'] !== 'credit' && $t['grand_total'] > 0) {
+        $alreadyPaid = 0.0;
+        if ($old) {
+            // New stock is in first, so parts already used from the old bill can still be corrected
+            // as long as the new bill brings them back in.
+            $old = row('SELECT * FROM purchases WHERE id = ? FOR UPDATE', [$old['id']]);
+            if ($old['status'] !== 'final') {
+                fail(409, 'purchase_cancelled', 'This bill is already cancelled');
+            }
+            $alreadyPaid = (float) val('SELECT COALESCE(SUM(amount), 0) FROM supplier_payments WHERE purchase_id = ?', [$old['id']]);
+            q('UPDATE supplier_payments SET purchase_id = ?, updated_at = ? WHERE purchase_id = ?', [$pid, now(), $old['id']]);
+            cancel_purchase($old, 'Corrected – replaced by bill ' . $h['bill_no'], $pid);
+        }
+        $toPay = r2($t['grand_total'] - $alreadyPaid);
+        if ($h['payment_mode'] !== 'credit' && $toPay > 0) {
             insert('supplier_payments', [
                 'supplier_id' => $h['supplier_id'],
                 'purchase_id' => $pid,
-                'amount' => $t['grand_total'],
+                'amount' => $toPay,
                 'mode' => $h['payment_mode'],
                 'reference' => 'Bill ' . $h['bill_no'],
                 'paid_on' => $h['bill_date'],

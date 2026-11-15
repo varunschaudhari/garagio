@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { HandCoins } from 'lucide-react-native';
+import { Ban, HandCoins, Pencil } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
-import { usePurchase } from '@/api/queries';
+import { useCancelPurchase, usePurchase } from '@/api/queries';
 import { SupplierPaymentSheet } from '@/components/pickers';
-import { Button, Card, Chip, Divider, Loading, OfflineBanner, Txt } from '@/components/ui';
-import { date, money, qty } from '@/format';
+import { Sheet } from '@/components/sheet';
+import { toast, toastError } from '@/components/toast';
+import { Banner, Button, Card, Chip, Divider, Field, Loading, OfflineBanner, Txt } from '@/components/ui';
+import { date, datetime, money, qty } from '@/format';
 import { nm } from '@/i18n';
 import { space, useTheme } from '@/theme';
 import type { Supplier } from '@/types';
@@ -32,6 +34,9 @@ export default function PurchaseView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const p = usePurchase(Number(id));
   const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState('');
+  const cancel = useCancelPurchase(Number(id));
   const supplier = useQuery({
     queryKey: ['supplier', p.data?.supplier_id],
     queryFn: () => api.get<{ item: Supplier }>(`/suppliers/${p.data!.supplier_id}`).then((r) => r.item),
@@ -41,11 +46,12 @@ export default function PurchaseView() {
   if (p.isPending) return <Loading />;
   if (!p.data) return null;
   const b = p.data;
-  const due = Math.max(0, Math.round((b.total - b.paid) * 100) / 100);
+  const cancelled = b.status === 'cancelled';
+  const due = cancelled ? 0 : Math.max(0, Math.round((b.total - b.paid) * 100) / 100);
   const inter = Number(b.is_interstate) === 1;
 
   return (
-    <View style={{ flex: 1 }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <Stack.Screen options={{ title: `${t('purchases.bill')} ${b.bill_no}` }} />
       <OfflineBanner />
       <ScrollView
@@ -59,8 +65,11 @@ export default function PurchaseView() {
           <Txt muted>
             {b.bill_no} · {date(b.bill_date)}
           </Txt>
-          <Chip label={t(`pay.${b.payment_mode}`)} tone={b.payment_mode === 'credit' ? 'warning' : 'success'} />
+          {cancelled ? <Chip label={t('purchases.cancelled')} tone="danger" /> : <Chip label={t(`pay.${b.payment_mode}`)} tone={b.payment_mode === 'credit' ? 'warning' : 'success'} />}
         </Card>
+        {cancelled ? <Banner tone="danger" text={t('purchases.cancelled_by', { date: datetime(b.cancelled_at ?? ''), name: b.cancelled_by_name ?? '—', reason: b.cancel_reason ?? '' })} /> : null}
+        {b.replaced_by_bill ? <Button title={t('purchases.replaced_by', { bill: b.replaced_by_bill.bill_no })} variant="secondary" small onPress={() => router.push(`/purchase/${b.replaced_by_bill!.id}`)} /> : null}
+        {b.replaces_bill ? <Button title={t('purchases.replaces', { bill: b.replaces_bill.bill_no })} variant="ghost" small onPress={() => router.push(`/purchase/${b.replaces_bill!.id}`)} /> : null}
 
         <Card padded={false}>
           {b.items.map((it, i) => (
@@ -112,9 +121,37 @@ export default function PurchaseView() {
         ) : null}
 
         {due > 0 && supplier.data ? <Button title={t('suppliers.record_payment')} icon={HandCoins} onPress={() => setPaying(true)} needsOnline /> : null}
+        {!cancelled ? (
+          <>
+            <Button title={t('purchases.correct')} icon={Pencil} variant="secondary" onPress={() => router.push({ pathname: '/purchase/new', params: { replace: String(b.id) } })} needsOnline />
+            <Button title={t('purchases.cancel')} icon={Ban} variant="ghost" onPress={() => { setReason(''); setCancelling(true); }} needsOnline />
+          </>
+        ) : null}
       </ScrollView>
       {paying && supplier.data ? <SupplierPaymentSheet supplier={supplier.data} purchaseId={b.id} amount={due} onClose={() => setPaying(false)} /> : null}
-    </View>
+      {cancelling ? (
+        <Sheet visible onClose={() => setCancelling(false)} title={t('purchases.cancel')}>
+          <Txt muted>{t('purchases.cancel_note')}</Txt>
+          <Field label={t('purchases.cancel_reason')} value={reason} onChangeText={setReason} autoFocus />
+          <Button
+            title={t('purchases.cancel')}
+            variant="danger"
+            loading={cancel.isPending}
+            disabled={!reason.trim()}
+            needsOnline
+            onPress={() =>
+              void cancel
+                .mutateAsync(reason.trim())
+                .then(() => {
+                  setCancelling(false);
+                  toast(t('purchases.cancelled_ok'));
+                })
+                .catch(toastError)
+            }
+          />
+        </Sheet>
+      ) : null}
+    </KeyboardAvoidingView>
   );
 }
 

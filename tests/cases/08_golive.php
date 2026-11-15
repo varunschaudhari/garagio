@@ -322,6 +322,100 @@ test('stock: uncosted stock on a part with no average cost is valued at its last
     eq(900.0, (float) tval('SELECT SUM(qty * unit_cost) FROM stock_movements WHERE part_id = ?', [$q['id']]), 'ledger value = stock value');
 });
 
+function pc_part(): array
+{
+    return trows("SELECT * FROM parts WHERE part_no = 'PCAN-1'")[0];
+}
+
+function pc_bill(string $no, float $qty, float $price, string $mode = 'credit', array $extra = []): array
+{
+    $p = pc_part();
+    return status(200, post('/purchases', ['supplier_id' => 1, 'bill_no' => $no, 'bill_date' => date('Y-m-d'), 'payment_mode' => $mode,
+        'items' => [['part_id' => (int) $p['id'], 'qty' => $qty, 'price' => $price, 'gst_rate' => 18]]] + $extra, 'stock'))['item'];
+}
+
+test('purchase cancel: stock and average cost go back, last price falls back, cash paid stays as supplier advance', function () {
+    status(200, post('/parts', ['part_no' => 'PCAN-1', 'name_en' => 'Cancel test part', 'selling_price' => 300], 'admin'));
+    $a = pc_bill('PC-A', 10, 100);
+    $bal0 = status(200, get('/suppliers/1', 'stock'))['item']['balance'];
+    $dash0 = status(200, get('/dashboard', 'admin'))['purchases']['today'];
+    $b = pc_bill('PC-B', 10, 120, 'cash');
+    eq(110.0, round((float) pc_part()['avg_cost'], 2));
+    eq(120.0, (float) pc_part()['last_purchase_price']);
+    eq($bal0, status(200, get('/suppliers/1', 'stock'))['item']['balance'], 'cash bill: balance unchanged');
+
+    eq(422, post("/purchases/{$b['id']}/cancel", [], 'stock')['status'], 'reason required');
+    eq(403, post("/purchases/{$b['id']}/cancel", ['reason' => 'x'], 'desk')['status']);
+    $c = status(200, post("/purchases/{$b['id']}/cancel", ['reason' => 'Wrong supplier bill'], 'stock'))['item'];
+    eq('cancelled', $c['status']);
+    eq('Wrong supplier bill', $c['cancel_reason']);
+    ok($c['cancelled_by_name'] !== null, 'who cancelled');
+    $p = pc_part();
+    eq(10.0, (float) $p['current_stock'], 'stock back');
+    eq(100.0, round((float) $p['avg_cost'], 2), 'average cost without the cancelled bill');
+    eq(100.0, (float) $p['last_purchase_price'], 'last price falls back to bill A');
+    $m = trows("SELECT * FROM stock_movements WHERE part_id = ? ORDER BY id DESC LIMIT 1", [$p['id']])[0];
+    eq('purchase_cancel', $m['mtype']);
+    eq(-10.0, (float) $m['qty']);
+    eq(120.0, (float) $m['unit_cost'], 'leaves at the cost it came in at');
+    eq(round($bal0 - $b['total'], 2), status(200, get('/suppliers/1', 'stock'))['item']['balance'], 'cash paid stays as advance');
+    eq(409, post("/purchases/{$b['id']}/cancel", ['reason' => 'again'], 'stock')['status']);
+
+    // Cancelled bills drop out of the list, reports and dashboard; they can still be looked up.
+    $ids = array_column(status(200, get('/purchases', 'stock'))['items'], 'id');
+    ok(!in_array($b['id'], $ids, true) && in_array($a['id'], $ids, true), 'list hides cancelled');
+    ok(in_array($b['id'], array_column(status(200, get('/purchases?status=cancelled', 'stock'))['items'], 'id'), true), 'cancelled filter');
+    $rep = array_column(status(200, get('/reports/purchases?from=' . date('Y-m-d') . '&to=' . date('Y-m-d'), 'admin'))['rows'], 'bill_no');
+    ok(!in_array('PC-B', $rep, true) && in_array('PC-A', $rep, true), 'purchase register');
+    eq($dash0['count'], status(200, get('/dashboard', 'admin'))['purchases']['today']['count'], 'dashboard: cancelled bill not counted');
+    $au = status(200, get('/audit?action=purchase_cancel', 'admin'))['items'];
+    eq('Wrong supplier bill', $au[0]['after']['reason']);
+
+    // The same bill number can be entered again once the wrong one is cancelled.
+    $b2 = pc_bill('PC-B', 1, 120);
+    eq(409, post('/purchases', ['supplier_id' => 1, 'bill_no' => 'PC-B', 'bill_date' => date('Y-m-d'), 'payment_mode' => 'credit', 'items' => [['part_id' => (int) pc_part()['id'], 'qty' => 1, 'price' => 1]]], 'stock')['status'], 'still one active bill per number');
+    status(200, post("/purchases/{$b2['id']}/cancel", ['reason' => 'test'], 'stock'));
+});
+
+test('purchase cancel: refused when its parts are already used', function () {
+    $a = trows("SELECT * FROM purchases WHERE bill_no = 'PC-A'")[0];
+    status(200, post('/parts/' . pc_part()['id'] . '/adjust', ['qty' => -5, 'reason' => 'Used'], 'admin'));
+    $r = post("/purchases/{$a['id']}/cancel", ['reason' => 'x'], 'stock');
+    eq(409, $r['status']);
+    eq('insufficient_stock', $r['json']['code']);
+    eq('final', tval('SELECT status FROM purchases WHERE id = ?', [$a['id']]));
+    eq(5.0, (float) pc_part()['current_stock']);
+});
+
+test('purchase correct: the new bill replaces the old one in one step; payments move across; same number allowed', function () {
+    $stock0 = (float) pc_part()['current_stock'];
+    $bal0 = status(200, get('/suppliers/1', 'stock'))['item']['balance'];
+    $old = pc_bill('PC-C', 5, 200, 'cash');
+    eq(1, count($old['payments']));
+
+    eq(422, post('/purchases', ['supplier_id' => 2, 'bill_no' => 'PC-C', 'bill_date' => date('Y-m-d'), 'payment_mode' => 'cash', 'replaces_id' => $old['id'],
+        'items' => [['part_id' => (int) pc_part()['id'], 'qty' => 6, 'price' => 200]]], 'stock')['status'], 'same supplier only');
+    $new = pc_bill('PC-C', 6, 200, 'cash', ['replaces_id' => $old['id']]);
+    eq('final', $new['status']);
+    eq($old['id'], $new['replaces_bill']['id']);
+    eq(2, count($new['payments']), 'old payment moved + the difference');
+    eq($new['total'], $new['paid'], 'fully paid');
+    $o = status(200, get("/purchases/{$old['id']}", 'stock'))['item'];
+    eq('cancelled', $o['status']);
+    eq($new['id'], $o['replaced_by_bill']['id']);
+    eq(0, count($o['payments']));
+    eq($stock0 + 6, (float) pc_part()['current_stock'], 'stock = new bill only');
+    eq($bal0, status(200, get('/suppliers/1', 'stock'))['item']['balance'], 'cash bill corrected: nothing owed');
+    eq(409, post('/purchases', ['supplier_id' => 1, 'bill_no' => 'PC-C2', 'bill_date' => date('Y-m-d'), 'payment_mode' => 'cash', 'replaces_id' => $old['id'],
+        'items' => [['part_id' => (int) pc_part()['id'], 'qty' => 1, 'price' => 1]]], 'stock')['status'], 'a cancelled bill cannot be corrected again');
+
+    // A correction may bring back parts already used from the old bill, as long as the new bill covers them.
+    status(200, post('/parts/' . pc_part()['id'] . '/adjust', ['qty' => -($stock0 + 6), 'reason' => 'All used'], 'admin'));
+    $fix = pc_bill('PC-C', 6, 210, 'credit', ['replaces_id' => $new['id']]);
+    eq(0.0, (float) pc_part()['current_stock']);
+    eq(round($new['total'], 2), $fix['paid'], 'payments follow the bill again');
+});
+
 test('billing: line discounts must be 0–100 % with known keys', function () {
     $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 2 ORDER BY id LIMIT 1');
     $items = [['part_id' => $pid, 'qty' => 1]];

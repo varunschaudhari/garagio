@@ -68,18 +68,18 @@ export function confirmDialog({ title, message, confirmLabel, danger = false }) 
 }
 
 /** Ask for one line of text. Resolves with the trimmed text, or null. */
-export function promptDialog({ title, label, placeholder = '', required = true, confirmLabel, value = '' }) {
+export function promptDialog({ title, label, message = '', placeholder = '', required = true, confirmLabel, value = '', danger = false }) {
   return new Promise((resolve) => {
     openModal({
       title,
-      body: html`<div class="field"><label for="prompt-in">${label}</label><input id="prompt-in" class="input" placeholder="${placeholder}" value="${value}" autocomplete="off"><div class="err">${t('fields.required')}</div></div>`,
+      body: html`${message ? html`<p class="muted" style="margin-bottom:12px">${message}</p>` : ''}<div class="field"><label for="prompt-in">${label}</label><input id="prompt-in" class="input" placeholder="${placeholder}" value="${value}" autocomplete="off"><div class="err">${t('fields.required')}</div></div>`,
       actions: [
         { label: t('common.cancel'), kind: 'secondary', value: null },
-        { label: confirmLabel || t('common.confirm'), kind: 'primary', value: '__ok' },
+        { label: confirmLabel || t('common.confirm'), kind: danger ? 'danger' : 'primary', value: '__ok' },
       ],
       onOpen(root, close) {
         const input = $('#prompt-in', root);
-        const ok = root.querySelector('.btn-primary');
+        const ok = root.querySelector(danger ? '.btn-danger' : '.btn-primary');
         const submit = (e) => {
           e.preventDefault();
           e.stopPropagation();

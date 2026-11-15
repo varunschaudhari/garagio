@@ -112,7 +112,7 @@ route('GET', '/reorder', function () {
         foreach (rows(
             'SELECT pi.part_id, pu.supplier_id, pu.bill_date FROM purchase_items pi
              JOIN purchases pu ON pu.id = pi.purchase_id
-             WHERE pi.id IN (SELECT MAX(pi2.id) FROM purchase_items pi2 WHERE pi2.part_id IN (' . placeholders($pids) . ') GROUP BY pi2.part_id)',
+             WHERE pi.id IN (SELECT MAX(pi2.id) FROM purchase_items pi2 JOIN purchases p2 ON p2.id = pi2.purchase_id WHERE p2.status <> \'cancelled\' AND pi2.part_id IN (' . placeholders($pids) . ') GROUP BY pi2.part_id)',
             $pids
         ) as $r) {
             $lastSupplier[(int) $r['part_id']] = ['id' => (int) $r['supplier_id'], 'last_bought' => $r['bill_date']];
