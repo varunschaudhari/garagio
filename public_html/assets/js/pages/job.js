@@ -164,8 +164,8 @@ export default async function jobPage(ctx) {
               ${(canEdit || isMech) && !j.invoice && !['delivered', 'cancelled'].includes(j.status) ? html`<button class="btn btn-secondary btn-sm" data-act="labour">${icon('plus', 16)}${t('jobs.add_labour')}</button>` : ''}
             </div>
             ${j.labour.length ? html`<div class="list">${j.labour.map((l) => html`<div class="list-item">
-              <div style="flex:1"><div class="strong">${l.description}</div>${l.description_mr ? html`<div class="small muted">${l.description_mr}</div>` : ''}</div>
-              <div class="num strong">${money(l.amount)}</div>
+              <div style="flex:1"><div class="strong">${l.description}${l.item_kind === 'part' && Number(l.qty) !== 1 ? html` × ${qty(l.qty)}` : ''}</div>${l.description_mr ? html`<div class="small muted">${l.description_mr}</div>` : ''}${l.item_kind === 'part' ? html`<span class="chip info" style="margin-top:4px">${t('jobs.part_not_stock')}</span>` : ''}</div>
+              <div class="num strong">${money(Number(l.amount) * (l.item_kind === 'part' ? Number(l.qty) : 1))}</div>
               ${(canEdit || (isMech && l.user_id === session.user.id)) && !j.invoice ? html`<button class="btn btn-ghost btn-icon btn-sm" data-del-labour="${l.id}" aria-label="${t('common.delete')}">${icon('trash-2', 16)}</button>` : ''}
             </div>`)}</div>` : html`<div class="card-body muted">—</div>`}
           </section>

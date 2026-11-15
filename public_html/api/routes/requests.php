@@ -199,11 +199,11 @@ route('POST', '/requests', function () {
     });
 
     $by = current_user()['name'];
-    notify_users(user_ids_with_role(ROLE_INVENTORY), 'request_new', 'notify.request_new_title', 'notify.request_new_body',
+    notify_users(user_ids_with_perm('issue_parts', true), 'request_new', 'notify.request_new_title', 'notify.request_new_body',
         ['job' => $job['job_no'], 'reg' => $job['reg_no'], 'by' => $by], '#/requests');
     foreach ($lines as $l) {
         if ($l['status'] === 'needs_approval') {
-            notify_users(user_ids_with_role(ROLE_OWNER, ROLE_INVENTORY), 'approval_needed', 'notify.approval_needed_title', 'notify.approval_needed_body',
+            notify_users(user_ids_with_perm('issue_parts'), 'approval_needed', 'notify.approval_needed_title', 'notify.approval_needed_body',
                 ['part' => $l['label'], 'qty' => fmt_qty($l['qty']), 'value' => inr($l['line_value']), 'job' => $job['job_no']], '#/requests?tab=approvals');
         }
     }
@@ -260,7 +260,7 @@ route('POST', '/requests/{id}/items/{iid}/link', function ($p) {
     $req = request_by_id($rid);
     foreach ($req['items'] as $it) {
         if ((int) $it['id'] === (int) $p['iid'] && $it['status'] === 'needs_approval') {
-            notify_users(user_ids_with_role(ROLE_OWNER, ROLE_INVENTORY), 'approval_needed', 'notify.approval_needed_title', 'notify.approval_needed_body',
+            notify_users(user_ids_with_perm('issue_parts'), 'approval_needed', 'notify.approval_needed_title', 'notify.approval_needed_body',
                 ['part' => $it['name_en'], 'qty' => fmt_qty((float) $it['qty']), 'value' => inr((float) $it['line_value']), 'job' => $req['job_no']], '#/requests?tab=approvals');
         }
     }

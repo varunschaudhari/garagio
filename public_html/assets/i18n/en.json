@@ -741,7 +741,8 @@
     "approved_ok": "Job approved",
     "part_planned": "From estimate – leaves stock when billed",
     "remove_part": "Remove",
-    "remove_part_confirm": "Remove {{part}} from this job?"
+    "remove_part_confirm": "Remove {{part}} from this job?",
+    "part_not_stock": "Part – not from stock"
   },
   "estimates": {
     "title": "Estimate",

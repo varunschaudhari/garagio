@@ -64,7 +64,7 @@ function invoice_source_lines(array $inv, array $counterItems, array $discounts)
     if ($inv['inv_type'] === 'job') {
         $lines = job_bill_lines((int) $inv['job_card_id']);
         foreach ($lines as &$l) {
-            $key = $l['item_type'] === 'part' ? 'part:' . $l['job_part_id'] : 'labour:' . $l['job_labour_id'];
+            $key = !empty($l['job_part_id']) ? 'part:' . $l['job_part_id'] : 'labour:' . $l['job_labour_id'];
             $l['disc_pct'] = (float) ($discounts[$key] ?? 0);
             $l['line_key'] = $key;
         }

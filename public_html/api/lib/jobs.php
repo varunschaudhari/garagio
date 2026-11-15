@@ -64,8 +64,12 @@ function job_bill_lines(int $jobId): array
             'disc_pct' => 0, 'gst_rate' => (float) $p['gst_rate'], 'hsn' => $p['hsn'], 'description_en' => $p['name_en'], 'description_mr' => $p['name_mr'], 'part_no' => $p['part_no'], 'unit_cost' => (float) $p['unit_cost']];
     }
     foreach (rows('SELECT * FROM job_labour WHERE job_card_id = ? ORDER BY id', [$jobId]) as $l) {
-        $lines[] = ['item_type' => 'labour', 'job_labour_id' => (int) $l['id'], 'part_id' => null, 'qty' => 1.0, 'unit_price' => (float) $l['amount'],
-            'disc_pct' => 0, 'gst_rate' => setting_num('labour_gst_rate'), 'hsn' => setting('labour_sac', '998714'), 'description_en' => $l['description'], 'description_mr' => $l['description_mr'], 'unit_cost' => 0.0];
+        // kind 'part': a part typed on the estimate (not in the catalogue) – billed, no stock movement.
+        $isPart = ($l['item_kind'] ?? 'labour') === 'part';
+        $lines[] = ['item_type' => $isPart ? 'part' : 'labour', 'job_labour_id' => (int) $l['id'], 'part_id' => null,
+            'qty' => $isPart ? max(0.01, (float) $l['qty']) : 1.0, 'unit_price' => (float) $l['amount'],
+            'disc_pct' => 0, 'gst_rate' => $isPart ? setting_num('default_part_gst_rate') : setting_num('labour_gst_rate'),
+            'hsn' => $isPart ? null : setting('labour_sac', '998714'), 'description_en' => $l['description'], 'description_mr' => $l['description_mr'], 'unit_cost' => 0.0];
     }
     return $lines;
 }

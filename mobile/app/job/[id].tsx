@@ -311,9 +311,15 @@ export default function JobScreen() {
             <View key={l.id}>
               <Divider />
               <View style={styles.line}>
-                <Txt style={{ flex: 1 }}>{l.description}</Txt>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Txt>
+                    {l.description}
+                    {l.item_kind === 'part' && Number(l.qty) !== 1 ? ` × ${qty(l.qty)}` : ''}
+                  </Txt>
+                  {l.item_kind === 'part' ? <Chip label={t('jobs.part_not_stock')} tone="info" /> : null}
+                </View>
                 <Txt tabular weight="semibold">
-                  {money(l.amount)}
+                  {money(Number(l.amount) * (l.item_kind === 'part' ? Number(l.qty) : 1))}
                 </Txt>
                 {(canEdit || (isMech && l.user_id === user?.id)) && !billed ? (
                   <IconButton icon={Trash2} label={t('common.delete')} color={c.dangerText} onPress={() => void run({ method: 'DELETE', path: `/jobs/${jobId}/labour/${l.id}` })} />

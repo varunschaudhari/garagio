@@ -741,7 +741,8 @@
     "approved_ok": "जॉब मंजूर झाला",
     "part_planned": "अंदाजपत्रकातून – बिल झाल्यावर स्टॉकमधून कमी होईल",
     "remove_part": "काढा",
-    "remove_part_confirm": "{{part}} या जॉबमधून काढायचा?"
+    "remove_part_confirm": "{{part}} या जॉबमधून काढायचा?",
+    "part_not_stock": "पार्ट – स्टॉकमधील नाही"
   },
   "estimates": {
     "title": "अंदाजपत्रक",

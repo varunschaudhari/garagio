@@ -318,7 +318,7 @@ export interface JobDetail extends JobListItem {
   approved_estimate_id: number | null;
   invoice_id: number | null;
   estimates: Estimate[];
-  labour: { id: number; description: string; description_mr: string | null; amount: number; user_id: number | null }[];
+  labour: { id: number; description: string; description_mr: string | null; amount: number; user_id: number | null; item_kind?: 'labour' | 'part'; qty?: number }[];
   /** issued 0 = planned from the approved estimate (leaves stock when the bill is finalised). */
   parts: { id: number; part_id: number; part_no: string; name_en: string; name_mr: string | null; unit: string; qty: number; returned_qty: number; issued: number; unit_price: number; issued_at: string | null; issued_by_name: string | null }[];
   requests: PartRequest[];

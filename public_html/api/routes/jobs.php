@@ -279,7 +279,7 @@ route('POST', '/jobs/{id}/status', function ($p) {
         job_event((int) $j['id'], 'job_status', ['from' => $from, 'to' => $to, 'note' => $in['note'] ?? null]);
     });
     if ($to === 'ready') {
-        notify_users(user_ids_with_role(ROLE_OWNER, ROLE_DESK), 'bike_ready', 'notify.bike_ready_title', 'notify.bike_ready_body', ['job' => $j['job_no'], 'reg' => $j['reg_no']], '#/jobs/' . $j['id']);
+        notify_users(user_ids_with_perm(['jobs', 'make_bills']), 'bike_ready', 'notify.bike_ready_title', 'notify.bike_ready_body', ['job' => $j['job_no'], 'reg' => $j['reg_no']], '#/jobs/' . $j['id']);
     }
     return ['item' => job_detail((int) $j['id'])];
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC]]);

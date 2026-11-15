@@ -294,6 +294,8 @@ CREATE TABLE job_labour (
   id INT AUTO_INCREMENT PRIMARY KEY,
   job_card_id INT NOT NULL,
   labour_rate_id INT NULL,
+  item_kind VARCHAR(10) NOT NULL DEFAULT 'labour',
+  qty DECIMAL(10,2) NOT NULL DEFAULT 1,
   description VARCHAR(150) NOT NULL,
   description_mr VARCHAR(150) NULL,
   amount DECIMAL(12,2) NOT NULL,
@@ -587,6 +589,7 @@ CREATE TABLE schema_migrations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT INTO schema_migrations (name, applied_at) VALUES ('001_planned_job_parts.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('002_user_permissions.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('003_job_misc_parts.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

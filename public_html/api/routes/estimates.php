@@ -32,18 +32,22 @@ function approve_estimate(array $e, string $via, ?string $note = null): void
         $data['status'] = 'approved';
     }
     update_row('job_cards', (int) $job['id'], $data);
-    // Approved labour goes onto the job so the bill needs no re-typing (skips lines already on the job).
+    // Approved labour – and parts typed on the estimate (not from the catalogue) – go onto the job so the bill
+    // needs no re-typing (skips lines already on the job). Catalogue parts follow below as planned parts.
     $have = array_map('mb_strtolower', array_column(rows('SELECT description FROM job_labour WHERE job_card_id = ?', [$job['id']]), 'description'));
     foreach ($e['items'] as $it) {
-        if ($it['item_type'] !== 'labour' || in_array(mb_strtolower($it['description']), $have, true)) {
+        $typedPart = $it['item_type'] === 'part' && empty($it['part_id']);
+        if (($it['item_type'] !== 'labour' && !$typedPart) || in_array(mb_strtolower($it['description']), $have, true)) {
             continue;
         }
         insert('job_labour', [
             'job_card_id' => $job['id'],
             'labour_rate_id' => $it['labour_rate_id'],
+            'item_kind' => $typedPart ? 'part' : 'labour',
+            'qty' => $typedPart ? (float) $it['qty'] : 1,
             'description' => $it['description'],
             'description_mr' => $it['description_mr'],
-            'amount' => $it['amount'],
+            'amount' => $typedPart ? $it['unit_price'] : $it['amount'],
             'user_id' => user_or_null()['id'] ?? null,
         ]);
         $have[] = mb_strtolower($it['description']);
@@ -203,7 +207,7 @@ route('POST', '/estimates/{id}/approve-call', function ($p) {
 
 function notify_estimate_approved(array $j, array $e): void
 {
-    $ids = user_ids_with_role(ROLE_OWNER, ROLE_DESK);
+    $ids = user_ids_with_perm('jobs');
     if ($j['mechanic_id']) {
         $ids[] = (int) $j['mechanic_id'];
     }
@@ -265,7 +269,7 @@ route('POST', '/e/{token}/call', function ($p) {
         // At most one call request per estimate per hour
         $recent = (int) val("SELECT COUNT(*) FROM notifications WHERE type = 'customer_call' AND link = ? AND created_at >= ?", ['#/jobs/' . $j['id'], date('Y-m-d H:i:s', time() - 3600)]);
         if (!$recent) {
-            notify_users(user_ids_with_role(ROLE_OWNER, ROLE_DESK), 'customer_call', 'notify.customer_call_title', 'notify.customer_call_body',
+            notify_users(user_ids_with_perm('jobs'), 'customer_call', 'notify.customer_call_title', 'notify.customer_call_body',
                 ['job' => $j['job_no'], 'name' => $j['customer_name'], 'phone' => $j['customer_phone']], '#/jobs/' . $j['id']);
         }
     }

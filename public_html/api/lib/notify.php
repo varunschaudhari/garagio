@@ -56,6 +56,34 @@ function notify_users(array $userIds, string $type, string $titleKey, string $bo
 }
 
 /** Users with any of the given roles. */
+/**
+ * Active users who have a permission (any of the keys) – notifications follow the owner's ticks.
+ * $ownersOnlyIfNone: owners hear about it only when no one else has the permission (e.g. every new parts
+ * request goes to the store; the owner gets them only when the owner does the store work too).
+ */
+function user_ids_with_perm(string|array $perm, bool $ownersOnlyIfNone = false): array
+{
+    $staff = [];
+    $owners = [];
+    foreach (rows('SELECT * FROM users WHERE active = 1 ORDER BY id') as $u) {
+        $mine = user_perms($u);
+        foreach ((array) $perm as $k) {
+            if (!empty($mine[$k])) {
+                if ($u['role'] === ROLE_OWNER) {
+                    $owners[] = (int) $u['id'];
+                } else {
+                    $staff[] = (int) $u['id'];
+                }
+                break;
+            }
+        }
+    }
+    if ($ownersOnlyIfNone) {
+        return $staff ?: $owners;
+    }
+    return array_values(array_unique(array_merge($owners, $staff)));
+}
+
 function user_ids_with_role(string ...$roles): array
 {
     return array_map('intval', array_column(

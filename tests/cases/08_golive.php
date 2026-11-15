@@ -73,6 +73,36 @@ test('permissions: role defaults; the owner ticks / unticks per person and it ap
     eq(403, put("/users/$desk", ['permissions' => ['see_money' => true]], 'desk')['status']);
 });
 
+test('notifications follow the ticks: parts requests reach whoever may issue parts', function () {
+    $stock = uid_of('stock');
+    $desk = uid_of('desk');
+    $admin = uid_of('admin');
+    ok(in_array($stock, user_ids_with_perm('issue_parts', true), true) && !in_array($admin, user_ids_with_perm('issue_parts', true), true), 'store person, not the owner');
+    ok(in_array($admin, user_ids_with_perm('issue_parts'), true), 'approvals reach the owner too');
+
+    // Front desk allowed to issue parts → a mechanic's new request reaches the desk as well.
+    status(200, put("/users/$desk", ['permissions' => ['issue_parts' => true]], 'admin'));
+    $j = status(200, post('/jobs', ['customer' => ['name' => 'Notify Test', 'phone' => '9700033344'], 'vehicle' => ['reg_no' => 'MH19NT3344'], 'mechanic_id' => uid_of('ramesh')], 'desk'))['item'];
+    status(200, post("/jobs/{$j['id']}/approve", [], 'desk'));
+    $before = (int) tval("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'request_new'", [$desk]);
+    $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 0 AND selling_price < 500 ORDER BY id LIMIT 1');
+    status(200, post('/requests', ['job_card_id' => $j['id'], 'items' => [['part_id' => $pid, 'qty' => 1]]], 'ramesh'));
+    eq($before + 1, (int) tval("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'request_new'", [$desk]), 'desk notified');
+    eq(0, (int) tval("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'request_new' AND link = '#/requests' AND created_at >= ?", [$admin, date('Y-m-d H:i:s', time() - 5)]), 'owner not flooded');
+
+    // Nobody but the owner may issue parts → the owner hears about requests.
+    $others = array_map('intval', array_column(trows("SELECT id FROM users WHERE active = 1 AND role = 'inventory'"), 'id'));
+    foreach ($others as $id) {
+        status(200, put("/users/$id", ['permissions' => ['issue_parts' => false]], 'admin'));
+    }
+    status(200, put("/users/$desk", ['permissions' => ['issue_parts' => false]], 'admin'));
+    eq([$admin], user_ids_with_perm('issue_parts', true));
+    foreach ($others as $id) {
+        status(200, put("/users/$id", ['permissions' => ['issue_parts' => true]], 'admin'));
+    }
+    eq(null, tval('SELECT permissions FROM users WHERE id = ?', [$stock]), 'back to defaults');
+});
+
 test('dashboard: sale + purchase bill totals and latest bills, by role', function () {
     $o = status(200, get('/dashboard', 'admin'));
     $sales = trows("SELECT COUNT(*) AS n, COALESCE(SUM(grand_total), 0) AS t FROM invoices WHERE status = 'final' AND invoice_date >= ?", [date('Y-m-01')])[0];
@@ -121,24 +151,36 @@ test('job flow (acceptance): approved estimate parts + labour go on the bill; st
     $e = status(200, post("/jobs/{$j['id']}/estimates", ['items' => [
         ['item_type' => 'part', 'part_id' => $pid, 'qty' => 2],
         ['item_type' => 'labour', 'description' => 'Fitting', 'amount' => 150],
-        ['item_type' => 'part', 'description' => 'Local sticker', 'unit_price' => 40],
+        ['item_type' => 'part', 'description' => 'Local sticker', 'unit_price' => 40, 'qty' => 2],
     ]], 'desk'))['item'];
     $j = status(200, post("/jobs/{$j['id']}/approve", ['note' => 'Customer agreed at counter'], 'desk'))['item'];
     eq('approved', $j['status']);
     eq('approved', $j['estimates'][0]['status']);
     eq('desk', $j['estimates'][0]['approved_via']);
-    eq(1, count($j['parts']), 'catalogue part planned (free-text line is not a stock part)');
+    eq(1, count($j['parts']), 'catalogue part planned');
     eq(0, (int) $j['parts'][0]['issued']);
     eq(2.0, (float) $j['parts'][0]['qty']);
-    eq(1, count($j['labour']));
+    eq(2, count($j['labour']), 'labour + the typed-in part');
+    $typed = array_values(array_filter($j['labour'], static fn ($l) => $l['item_kind'] === 'part'))[0];
+    eq('Local sticker', $typed['description']);
+    eq(2.0, (float) $typed['qty']);
+    eq(40.0, (float) $typed['amount'], 'unit price kept');
     eq($before, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]), 'stock untouched until billing');
 
     $inv = status(200, post('/invoices', ['job_card_id' => $j['id']], 'desk'))['item'];
-    eq(2, count($inv['items']), 'part + labour on the draft');
+    eq(3, count($inv['items']), 'stock part + typed-in part + labour on the draft');
+    $sticker = array_values(array_filter($inv['items'], static fn ($i) => $i['description_en'] === 'Local sticker'))[0];
+    ok($sticker['item_type'] === 'part' && $sticker['part_id'] === null && (float) $sticker['qty'] === 2.0, 'typed-in part billed as a part, no catalogue link');
+    eq(80.0, (float) $sticker['line_total'], '2 × ₹40 (prices include GST)');
+    eq((float) setting_num('default_part_gst_rate'), (float) $sticker['gst_rate'], 'parts GST rate, not labour');
+    // A discount on the typed-in line works (keyed by its job line).
+    $inv = status(200, put("/invoices/{$inv['id']}", ['discounts' => ['labour:' . $typed['id'] => 10]], 'admin'))['item'];
+    eq(10.0, (float) array_values(array_filter($inv['items'], static fn ($i) => $i['description_en'] === 'Local sticker'))[0]['disc_pct']);
     $fin = status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk'))['item'];
     eq($before - 2, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]), 'stock leaves when the bill is final');
     eq(1, (int) tval('SELECT issued FROM job_parts WHERE job_card_id = ? AND part_id = ?', [$j['id'], $pid]));
-    ok((float) tval("SELECT unit_cost FROM invoice_items WHERE invoice_id = ? AND item_type = 'part'", [$inv['id']]) > 0, 'cost recorded for profit');
+    ok((float) tval("SELECT unit_cost FROM invoice_items WHERE invoice_id = ? AND item_type = 'part' AND part_id IS NOT NULL", [$inv['id']]) > 0, 'cost recorded for profit');
+    eq(0, (int) tval("SELECT COUNT(*) FROM stock_movements WHERE ref_type = 'job' AND ref_id = ? AND part_id IS NULL", [$j['id']]), 'typed-in part moves no stock');
     eq('Bill ' . $fin['invoice_no'], tval("SELECT note FROM stock_movements WHERE part_id = ? ORDER BY id DESC LIMIT 1", [$pid]));
 });
 
