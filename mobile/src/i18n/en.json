@@ -857,7 +857,8 @@
     "parts": "Parts",
     "print": "Print",
     "bill_title": "Bill",
-    "no_gst_note": "GST not charged – the shop is not registered under GST."
+    "no_gst_note": "GST not charged – the shop is not registered under GST.",
+    "part_no": "Part no."
   },
   "billing": {
     "title": "Billing",

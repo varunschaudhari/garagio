@@ -113,6 +113,11 @@ export default function InvoiceScreen() {
               <View style={styles.line}>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Txt weight="semibold">{lang === 'mr' && it.description_mr ? it.description_mr : it.description_en}</Txt>
+                  {it.part_no ? (
+                    <Txt size="sm" weight="semibold">
+                      {t('inv.part_no')}: {it.part_no}
+                    </Txt>
+                  ) : null}
                   <Txt size="sm" muted>{qty(it.qty)} × {money(it.unit_price)} · GST {qty(it.gst_rate)}%{Number(it.disc_pct) ? ` · −${qty(it.disc_pct)}%` : ''}</Txt>
                 </View>
                 {draft && owner ? (

@@ -115,7 +115,7 @@ $desc = static function (array $it) use ($lang): string {
     <?php foreach ($inv['items'] as $i => $it): ?>
       <tr>
         <td><?= $i + 1 ?></td>
-        <td><?= $desc($it) ?></td>
+        <td><?= $desc($it) ?><?php if (!empty($it['part_no'])): ?><div class="alt"><?= e($L('part_no')) ?>: <?= e($it['part_no']) ?></div><?php endif; ?></td>
         <?php if ($reg): ?><td><?= e($it['hsn'] ?? '') ?></td><?php endif; ?>
         <td class="n"><?= e(fmt_qty((float) $it['qty'])) ?></td>
         <td class="n"><?= $num($it['unit_price']) ?></td>

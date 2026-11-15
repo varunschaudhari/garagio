@@ -382,6 +382,7 @@ export interface InvoiceItem {
   id: number;
   item_type: 'part' | 'labour';
   part_id: number | null;
+  part_no?: string | null;
   job_part_id: number | null;
   job_labour_id: number | null;
   description_en: string;

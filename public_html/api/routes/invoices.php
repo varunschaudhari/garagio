@@ -18,7 +18,7 @@ function invoice_row(int $id): array
          LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN users u ON u.id = i.created_by WHERE i.id = ?',
         [$id]
     ) ?? not_found('Invoice');
-    $inv['items'] = rows('SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY item_type DESC, id', [$id]);
+    $inv['items'] = rows('SELECT ii.*, p.part_no FROM invoice_items ii LEFT JOIN parts p ON p.id = ii.part_id WHERE ii.invoice_id = ? ORDER BY ii.item_type DESC, ii.id', [$id]);
     $inv['payments'] = rows(
         'SELECT p.id, p.mode, p.reference, p.received_on, a.amount, u.name AS user_name FROM payment_allocations a
          JOIN customer_payments p ON p.id = a.payment_id LEFT JOIN users u ON u.id = p.user_id WHERE a.invoice_id = ? ORDER BY p.id',

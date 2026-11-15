@@ -79,6 +79,7 @@ $font = $paper === 80 ? 13 : 11;
   <?php foreach ($inv['items'] as $it): ?>
     <div class="item">
       <div class="b"><?= e($itemName($it)) ?></div>
+      <?php if (!empty($it['part_no'])): ?><div class="sm"><?= e($L('part_no')) ?>: <?= e($it['part_no']) ?></div><?php endif; ?>
       <div class="row">
         <span><?= e(fmt_qty((float) $it['qty'])) ?> × <?= $num($it['unit_price']) ?><?= (float) $it['disc_pct'] ? ' −' . e(fmt_qty((float) $it['disc_pct'])) . '%' : '' ?></span>
         <span><?= $num($it['line_total']) ?></span>

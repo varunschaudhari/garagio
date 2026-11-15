@@ -284,6 +284,10 @@ test('billing: thermal receipt for phone printing (80 mm default here, 58 mm, cu
     ok(str_contains($r['body'], 'Dharangaon') && $phone !== '' && str_contains($r['body'], $phone), 'shop address and phone');
     ok(str_contains($r['body'], number_format((float) $inv['grand_total'], 2, '.', ',')), 'grand total');
     ok(str_contains($r['body'], 'HSN') && str_contains($r['body'], 'GSTIN: 27ABCDE1234F1Z5'), 'HSN per line, shop GSTIN');
+    $partNo = (string) tval("SELECT p.part_no FROM invoice_items ii JOIN parts p ON p.id = ii.part_id WHERE ii.invoice_id = ? LIMIT 1", [$inv['id']]);
+    ok($partNo !== '' && str_contains($r['body'], 'Part no.: ' . $partNo), 'part number on the receipt');
+    ok(str_contains(get("/invoices/{$inv['id']}/html?lang=en", 'desk')['body'], $partNo), 'part number on the A4 bill');
+    eq($partNo, array_values(array_filter(status(200, get("/invoices/{$inv['id']}", 'desk'))['item']['items'], static fn ($i) => $i['part_id']))[0]['part_no'], 'bill lines carry the part number');
     ok(!str_contains($r['body'], 'unit_cost') && !str_contains($r['body'], '#4B5563'), 'no cost, no grey ink');
     ok(str_contains(get("/invoices/{$inv['id']}/receipt?width=58", 'desk')['body'], 'width: 48mm'), '58 mm on request');
     status(200, put('/settings', ['receipt_width' => '58'], 'admin'));
