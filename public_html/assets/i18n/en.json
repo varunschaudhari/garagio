@@ -112,7 +112,8 @@
     "queue": "Queue",
     "stock": "Stock",
     "reminders": "Reminders",
-    "audit": "Activity log"
+    "audit": "Activity log",
+    "cash": "Cash book"
   },
   "roles": {
     "owner": "Owner",
@@ -360,7 +361,8 @@
       "edit_parts": "Add / edit / import parts, adjust stock, stock count",
       "purchases": "Purchase bills, suppliers and supplier payments",
       "issue_parts": "Issue and approve parts requests, returns",
-      "reports": "Open reports (each report also needs its data permission)"
+      "reports": "Open reports (each report also needs its data permission)",
+      "cash_book": "Shop expenses and the end-of-day cash count"
     }
   },
   "status": {
@@ -442,7 +444,8 @@
     "purchase_cancelled": "This bill is already cancelled.",
     "invoice_has_returns": "This bill has returns. Take back the rest as a return instead of cancelling.",
     "refund_too_much": "That is more than the customer is owed.",
-    "refund_required": "Walk-in customer: give back the full amount paid over."
+    "refund_required": "Walk-in customer: give back the full amount paid over.",
+    "day_closed": "This day's cash is already counted. The owner can reopen it."
   },
   "fields": {
     "required": "Required",
@@ -1057,7 +1060,7 @@
     "last_month": "Last month",
     "today": "Today",
     "run": "Show",
-    "profit_formula": "Profit = sales (without GST) − cost of parts sold − mechanic payments",
+    "profit_formula": "Profit = sales (without GST) − cost of parts sold − mechanic payments − shop expenses",
     "gst_note": "Output tax on bills minus input tax on purchase bills, by rate. Confirm with your CA before filing.",
     "col": {
       "date": "Date",
@@ -1122,7 +1125,8 @@
       "labour": "Labour",
       "parts": "Parts",
       "paid_daily": "Paid",
-      "paid_advance": "Advances"
+      "paid_advance": "Advances",
+      "expenses": "Expenses"
     }
   },
   "system": {
@@ -1239,7 +1243,60 @@
       "backup": "Backup taken",
       "go_live_reset": "Trial data removed (go live)",
       "purchase_cancel": "Purchase bill cancelled",
-      "sale_return": "Items returned on a bill"
+      "sale_return": "Items returned on a bill",
+      "cash_close": "Cash counted",
+      "cash_reopen": "Cash count reopened",
+      "expense_delete": "Expense deleted"
+    }
+  },
+  "cash": {
+    "title": "Cash book",
+    "sub": "Today's cash: what should be in the drawer, and the count at closing.",
+    "date": "Day",
+    "drawer": "Cash in the drawer",
+    "opening": "Opening cash",
+    "opening_from": "left after the count on {{date}}",
+    "opening_first": "first count – enter what was in the drawer this morning",
+    "in_customer_payments": "+ Cash from customers",
+    "out_refunds": "− Cash given back on returns",
+    "out_supplier_payments": "− Cash paid to suppliers",
+    "out_expenses": "− Cash expenses",
+    "out_mechanic_payments": "− Mechanic pay",
+    "expected": "Should be in the drawer",
+    "other_modes": "Not in the drawer: {{list}}",
+    "close": "Count the cash",
+    "close_hint": "Count the notes and coins in the drawer at closing time.",
+    "counted": "Cash counted",
+    "taken_out": "Taken out (bank / owner)",
+    "kept": "Left in the drawer for tomorrow",
+    "difference": "Difference",
+    "short": "Short by {{amount}}",
+    "extra": "Extra {{amount}}",
+    "exact": "Matches",
+    "save_close": "Save the count",
+    "closed_ok": "Cash count saved.",
+    "closed_by": "Counted by {{name}} · {{time}}",
+    "reopen": "Reopen",
+    "reopen_q": "Reopen this day? The count is removed so expenses can be fixed and the cash counted again.",
+    "reopened": "Day reopened.",
+    "expenses": "Expenses",
+    "add_expense": "Add expense",
+    "expense_saved": "Expense saved.",
+    "no_expenses": "No expenses this day.",
+    "category": "For",
+    "delete_q": "Delete this expense?",
+    "history": "Last counts",
+    "none": "No counts yet.",
+    "cat": {
+      "rent": "Rent",
+      "electricity": "Electricity",
+      "tea_snacks": "Tea / snacks",
+      "fuel": "Fuel",
+      "tools": "Tools",
+      "salary": "Staff salary",
+      "repairs": "Shop repairs",
+      "transport": "Transport / courier",
+      "other": "Other"
     }
   }
 }

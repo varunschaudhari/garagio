@@ -11,7 +11,7 @@ const GO_LIVE_WIPE = [
     'estimate_items', 'estimates', 'job_parts', 'part_request_items', 'part_requests',
     'job_labour', 'job_photos', 'job_cards',
     'purchase_items', 'supplier_payments', 'purchases',
-    'stock_counts', 'mechanic_payments', // stock_movements: stock_restart_ledger()
+    'stock_counts', 'mechanic_payments', 'expenses', 'cash_closes', // stock_movements: stock_restart_ledger()
     'notifications', 'message_log', 'login_attempts', 'counters',
 ];
 

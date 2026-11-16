@@ -1,12 +1,13 @@
 import * as Print from 'expo-print';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { Receipt, Search, ShoppingCart } from 'lucide-react-native';
+import { Receipt, Search, ShoppingCart, Wallet } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { useInvoices } from '@/api/queries';
+import { can, useSession } from '@/store/session';
 import { date, money } from '@/format';
 import { radius, size, space, touch, useTheme } from '@/theme';
 import type { Invoice, InvoiceListItem, PayMode } from '@/types';
@@ -32,6 +33,7 @@ export function BillsList({ header }: { header?: React.ReactNode }) {
     const timer = setTimeout(() => setQ(text.trim()), 250);
     return () => clearTimeout(timer);
   }, [text]);
+  const canCash = can(useSession((s) => s.user), 'cash_book');
   const list = useInvoices({ q, status: filter === 'draft' ? 'draft' : '', pay_status: filter === 'unpaid' ? 'unpaid' : '' });
 
   return (
@@ -39,7 +41,10 @@ export function BillsList({ header }: { header?: React.ReactNode }) {
       <OfflineBanner />
       <View style={{ padding: space[4], gap: space[3] }}>
         {header}
-        <Button title={t('billing.new_counter')} icon={ShoppingCart} onPress={() => router.push('/invoice/counter')} needsOnline />
+        <View style={{ flexDirection: 'row', gap: space[2] }}>
+          <Button title={t('billing.new_counter')} icon={ShoppingCart} onPress={() => router.push('/invoice/counter')} needsOnline style={{ flex: 1 }} />
+          {canCash ? <Button title={t('cash.title')} icon={Wallet} variant="secondary" onPress={() => router.push('/cash')} /> : null}
+        </View>
         <View style={[styles.search, { borderColor: c.borderStrong, backgroundColor: c.surface }]}>
           <Search size={20} color={c.muted} />
           <TextInput value={text} onChangeText={setText} placeholder={t('customers.search_placeholder')} placeholderTextColor={c.muted} style={{ flex: 1, fontSize: size.md, color: c.text, fontFamily: font('regular') }} accessibilityLabel={t('common.search')} />

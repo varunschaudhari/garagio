@@ -27,6 +27,7 @@ route('/suppliers/:id', () => import('./pages/supplier.js'), { perm: 'purchases'
 route('/purchases', () => import('./pages/purchases.js'), { perm: 'purchases' });
 route('/purchases/new', () => import('./pages/purchase-new.js'), { perm: 'purchases' });
 route('/purchases/:id', () => import('./pages/purchase.js'), { perm: 'purchases' });
+route('/cash', () => import('./pages/cash.js'), { perm: 'cash_book' });
 route('/settings', () => import('./pages/settings.js'), { roles: ['owner'] });
 route('/users', () => import('./pages/users.js'), { roles: ['owner'] });
 route('/audit', () => import('./pages/audit.js'), { roles: ['owner'] });

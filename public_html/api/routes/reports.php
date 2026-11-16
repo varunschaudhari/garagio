@@ -37,7 +37,7 @@ function sum_cols(array $rows, array $keys): array
     return $t;
 }
 
-/** Profit for a range: sales (taxable, ex-GST) − cost of parts sold − mechanic payments. */
+/** Profit for a range: sales (taxable, ex-GST) − cost of parts sold − mechanic payments − shop expenses. */
 function profit_figures(string $from, string $to): array
 {
     $sales = row(
@@ -69,9 +69,10 @@ function profit_figures(string $from, string $to): array
         'labour_sales' => r2((float) $sales['labour_sales']),
         'parts_cost' => r2((float) $sales['parts_cost']),
         'mechanic_payments' => r2($mech),
+        'expenses' => r2((float) val('SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE spent_on BETWEEN ? AND ?', [$from, $to])),
     ];
     $out['gross_margin'] = r2($out['sales'] - $out['parts_cost']);
-    $out['profit'] = r2($out['sales'] - $out['parts_cost'] - $out['mechanic_payments']);
+    $out['profit'] = r2($out['sales'] - $out['parts_cost'] - $out['mechanic_payments'] - $out['expenses']);
     return $out;
 }
 
@@ -144,7 +145,7 @@ route('GET', '/reports/profit', function () {
         $rows[] = ['month' => date('Y-m', $cur)] + profit_figures($mFrom, $mTo);
         $cur = strtotime('+1 month', $cur);
     }
-    return report_out('profit', ['month' => 'Month', 'sales' => 'Sales (taxable)', 'parts_sales' => 'Parts sales', 'labour_sales' => 'Labour sales', 'parts_cost' => 'Parts cost', 'gross_margin' => 'Gross margin', 'mechanic_payments' => 'Mechanic payments', 'profit' => 'Profit'],
+    return report_out('profit', ['month' => 'Month', 'sales' => 'Sales (taxable)', 'parts_sales' => 'Parts sales', 'labour_sales' => 'Labour sales', 'parts_cost' => 'Parts cost', 'gross_margin' => 'Gross margin', 'mechanic_payments' => 'Mechanic payments', 'expenses' => 'Expenses', 'profit' => 'Profit'],
         $rows, $f, ['summary' => $f]);
 }, ['perm' => 'reports', 'also' => 'see_money']);
 

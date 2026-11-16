@@ -446,3 +446,9 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     UPI / bank) up to what the customer is owed after all their bills; a walk-in customer must get it all back. Numbers:
     `CN/yy-yy/00001` against a GST bill, `RET/yy-yy/00001` against a plain bill. Returns show as minus rows in the sales
     register and lower output GST and profit in the month they happen. A bill with returns can no longer be cancelled.
+21. **Cash book (16 Nov 2026):** shop expenses (rent, electricity, tea / snacks, fuel, tools, staff salary, shop repairs,
+    transport, other; cash / UPI / bank) and a once-a-day cash count, under a new "cash_book" tick (owner + front desk by
+    default). Expected cash = opening + cash from customers − cash given back on returns − cash paid to suppliers − cash
+    expenses − mechanic pay (mechanic pay is treated as cash, on the day it is entered). The first count asks for the
+    opening; after that the opening is the previous count minus what was taken out. A counted day is locked (no expense
+    changes) until the owner reopens it. Profit = sales − parts cost − mechanic pay − expenses.

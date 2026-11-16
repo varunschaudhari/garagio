@@ -81,6 +81,7 @@ export default function RootLayout() {
             <Stack.Screen name="count" options={{ title: t('stock.count_title') }} />
             <Stack.Screen name="purchase/new" options={{ title: t('purchases.new') }} />
             <Stack.Screen name="purchase/[id]" options={{ title: t('purchases.bill') }} />
+            <Stack.Screen name="cash" options={{ title: t('cash.title') }} />
             <Stack.Screen name="suppliers" options={{ title: t('suppliers.title') }} />
             <Stack.Screen name="supplier/[id]" options={{ title: t('suppliers.title') }} />
             <Stack.Screen name="reorder" options={{ title: t('reorder.title') }} />

@@ -31,6 +31,7 @@ export const NAV = [
   { section: 'money' },
   { key: 'billing', href: '#/invoices', ic: 'receipt', perm: 'make_bills', phase: 4 },
   { key: 'counter_sale', href: '#/invoices/counter', ic: 'shopping-cart', perm: 'make_bills', phase: 4 },
+  { key: 'cash', href: '#/cash', ic: 'wallet', perm: 'cash_book', phase: 4 },
   { key: 'mechanics', href: '#/mechanics', ic: 'hand-coins', roles: [OWNER], phase: 5 },
   { key: 'reports', href: '#/reports', ic: 'chart-column', perm: 'reports', phase: 5 },
   { section: 'admin' },

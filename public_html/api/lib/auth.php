@@ -167,6 +167,7 @@ const PERMISSIONS = [
     'purchases' => [ROLE_OWNER, ROLE_INVENTORY],    // purchase bills, suppliers, supplier payments, reorder
     'issue_parts' => [ROLE_OWNER, ROLE_INVENTORY],  // issue / approve parts requests, returns
     'reports' => [ROLE_OWNER, ROLE_INVENTORY],      // reports screen (each report also needs its own data permission)
+    'cash_book' => [ROLE_OWNER, ROLE_DESK],         // shop expenses and the end-of-day cash count
 ];
 
 /** Effective permissions of a user row: role defaults, then the owner's ticks. */

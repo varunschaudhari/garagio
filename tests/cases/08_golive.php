@@ -527,6 +527,53 @@ test('sale return: a walk-in customer must get the money back; a credit bill jus
     eq(1180.0, (float) status(200, get("/customers/{$c['id']}", 'desk'))['item']['balance']);
 });
 
+test('cash book: expenses lower the cash expected in the drawer; front desk may use it, the store may not', function () {
+    eq(403, get('/cash/day', 'stock')['status']);
+    eq(403, get('/cash/day', 'ramesh')['status']);
+    eq(422, get('/cash/day?date=' . date('Y-m-d', strtotime('+1 day')), 'desk')['status'], 'not a future day');
+    $d0 = status(200, get('/cash/day', 'desk'));
+    status(200, post('/expenses', ['category' => 'tea_snacks', 'amount' => 150, 'mode' => 'cash', 'note' => 'Tea for mechanics'], 'desk'));
+    status(200, post('/expenses', ['category' => 'electricity', 'amount' => 200, 'mode' => 'upi'], 'desk'));
+    eq(422, post('/expenses', ['category' => 'party', 'amount' => 10], 'desk')['status'], 'known categories only');
+    eq(422, post('/expenses', ['category' => 'fuel', 'amount' => 0], 'desk')['status']);
+    $d = status(200, get('/cash/day', 'desk'));
+    eq(round($d0['out']['expenses'] + 150, 2), $d['out']['expenses'], 'only cash expenses leave the drawer');
+    eq(round($d0['expected'] - 150, 2), $d['expected']);
+    eq(round($d0['expenses_total'] + 350, 2), $d['expenses_total']);
+    $p = status(200, get('/reports/profit?from=' . date('Y-m-d') . '&to=' . date('Y-m-d'), 'admin'))['summary'];
+    ok($p['expenses'] >= 350, 'profit report counts expenses');
+    eq(round($p['sales'] - $p['parts_cost'] - $p['mechanic_payments'] - $p['expenses'], 2), $p['profit']);
+});
+
+test('cash book: count the drawer; the count carries the next day\'s opening; a counted day is locked until the owner reopens it', function () {
+    $y = date('Y-m-d', strtotime('-1 day'));
+    $dy = status(200, get("/cash/day?date=$y", 'desk'));
+    ok($dy['opening_from'] === null, 'no earlier count');
+    $cy = status(200, post('/cash/close', ['date' => $y, 'opening' => 1000, 'counted' => round($dy['expected'] + 1000, 2) + 20, 'taken_out' => 300], 'desk'))['close'];
+    eq(1000.0, (float) $cy['opening']);
+    eq(20.0, (float) $cy['difference'], 'extra 20');
+
+    $d = status(200, get('/cash/day', 'desk'));
+    eq($y, $d['opening_from']);
+    eq(round((float) $cy['counted'] - 300, 2), $d['opening'], 'yesterday counted − taken out');
+    eq(422, post('/cash/close', ['counted' => 10, 'taken_out' => 20], 'desk')['status'], 'cannot take out more than counted');
+    $c = status(200, post('/cash/close', ['counted' => round($d['expected'] - 50, 2), 'opening' => 99999], 'desk'))['close'];
+    eq(-50.0, (float) $c['difference'], 'short by 50');
+    eq($d['opening'], (float) $c['opening'], 'opening only asked on the first count');
+    eq(409, post('/cash/close', ['counted' => 1], 'desk')['status'], 'counted once');
+    $r = post('/expenses', ['category' => 'fuel', 'amount' => 10], 'desk');
+    eq('day_closed', $r['json']['code']);
+    $eid = (int) tval("SELECT id FROM expenses WHERE note = 'Tea for mechanics'");
+    eq(409, del("/expenses/$eid", 'desk')['status']);
+
+    eq(403, del('/cash/close/' . date('Y-m-d'), 'desk')['status'], 'only the owner reopens');
+    $re = status(200, del('/cash/close/' . date('Y-m-d'), 'admin'));
+    eq(null, $re['close']);
+    status(200, del("/expenses/$eid", 'desk'));
+    ok((int) tval("SELECT COUNT(*) FROM audit_log WHERE action IN ('cash_close', 'cash_reopen', 'expense_delete')") >= 4, 'audited');
+    eq(1, count(status(200, get('/cash/closes', 'desk'))['items']), 'history lists the remaining count');
+});
+
 test('billing: line discounts must be 0–100 % with known keys', function () {
     $pid = (int) tval('SELECT id FROM parts WHERE current_stock > 2 ORDER BY id LIMIT 1');
     $items = [['part_id' => $pid, 'qty' => 1]];

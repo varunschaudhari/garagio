@@ -65,3 +65,34 @@ test('walk-in customer cannot take credit', async ({ page }) => {
   await expect(page.locator('.toast')).toContainText('Credit is only for customers the owner marked as trusted');
   await expect(page.locator('h1')).toContainText('Draft');
 });
+
+test('cash book: add an expense, count the drawer, reopen the day', async ({ page }) => {
+  await login(page, 'admin');
+  await page.locator('.sidebar').getByRole('link', { name: 'Cash book' }).click();
+  await expect(page.getByRole('heading', { name: 'Cash book' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add expense' }).click();
+  const drawer = page.locator('.drawer');
+  await drawer.locator('[name=amount]').fill('120');
+  await drawer.locator('[name=note]').fill('Tea');
+  await drawer.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.toast')).toContainText('Expense saved');
+  const expenses = page.locator('.card', { has: page.getByRole('heading', { name: 'Expenses', exact: true }) });
+  await expect(expenses).toContainText('Tea / snacks · Tea');
+  await expect(expenses).toContainText('₹120.00');
+
+  // First count: say what was in the drawer this morning; the expected cash follows it.
+  await page.locator('#close-form [name=opening]').fill('2000');
+  await expect(page.locator('#cash-expected')).not.toHaveText('₹0.00');
+  const expected = await page.locator('#cash-expected').innerText();
+  const value = Number(expected.replace(/[₹,]/g, ''));
+  await page.locator('#close-form [name=counted]').fill(String(value - 10));
+  await expect(page.locator('#close-diff')).toContainText('Short by ₹10.00');
+  await page.getByRole('button', { name: 'Save the count' }).click();
+  await expect(page.locator('.toast', { hasText: 'Cash count saved' })).toBeVisible();
+  await expect(page.locator('.card', { has: page.getByRole('heading', { name: 'Count the cash' }) })).toContainText('Short by ₹10.00');
+  await expect(page.locator('#cash-history')).toContainText('Short by ₹10.00');
+  await page.getByRole('button', { name: 'Reopen' }).click();
+  await page.locator('.modal').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.locator('.toast', { hasText: 'Day reopened' })).toBeVisible();
+  await expect(page.locator('#close-form')).toBeVisible();
+});

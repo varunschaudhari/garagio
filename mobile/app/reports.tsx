@@ -72,7 +72,7 @@ export default function Reports() {
         {q.isPending ? <Loading /> : null}
         {key === 'profit' && r?.summary ? (
           <Card style={{ gap: space[2] }}>
-            {(['sales', 'parts_cost', 'mechanic_payments'] as const).map((k) => (
+            {(['sales', 'parts_cost', 'mechanic_payments', 'expenses'] as const).map((k) => (
               <View key={k} style={styles.kv}><Txt muted>{t(`reports.col.${k}`)}</Txt><Txt tabular weight="semibold">{money(r.summary![k])}</Txt></View>
             ))}
             <Divider />

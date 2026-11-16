@@ -81,7 +81,7 @@ export default async function reports(ctx) {
     const cols = r.columns;
     const summary = tab === 'profit' && r.summary ? html`
       <div class="kpis" style="padding:16px">
-        ${[['sales', 'col.sales'], ['parts_cost', 'col.parts_cost'], ['mechanic_payments', 'col.mechanic_payments'], ['profit', 'col.profit']].map(([k, label]) => html`
+        ${[['sales', 'col.sales'], ['parts_cost', 'col.parts_cost'], ['mechanic_payments', 'col.mechanic_payments'], ['expenses', 'col.expenses'], ['profit', 'col.profit']].map(([k, label]) => html`
           <div class="card kpi"><div class="kpi-label">${t('reports.' + label)}</div><div class="kpi-value" style="${k === 'profit' ? `color:${r.summary.profit < 0 ? 'var(--danger-text)' : 'var(--success-text)'}` : ''}">${money(r.summary[k])}</div></div>`)}
       </div>
       <div class="banner" style="margin:0 16px 16px">${icon('info')}<span>${t('reports.profit_formula')}</span></div>` : '';
