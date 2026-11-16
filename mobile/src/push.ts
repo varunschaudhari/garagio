@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { Platform } from 'react-native';
 import { api } from '@/api/client';
 import { useSession } from '@/store/session';
+import { hasTab } from '@/tabs';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -47,11 +48,11 @@ export async function registerPush(): Promise<void> {
 
 /** Server links are web hashes (#/jobs/12, #/requests?tab=approvals) → app routes. */
 export function openLink(link: string) {
-  const role = useSession.getState().user?.role;
+  const user = useSession.getState().user;
   const job = /#\/jobs\/(\d+)/.exec(link);
   if (job) return router.push(`/job/${job[1]}`);
-  if (link.includes('tab=approvals')) return router.push('/approvals');
-  if (link.startsWith('#/requests')) return router.push(role === 'owner' || role === 'inventory' ? '/queue' : '/requests');
+  if (link.includes('tab=approvals')) return router.push(hasTab(user, 'approvals') ? '/approvals' : { pathname: '/parts-requests', params: { mode: 'approvals' } });
+  if (link.startsWith('#/requests')) return router.push(hasTab(user, 'queue') ? '/queue' : hasTab(user, 'requests') ? '/requests' : '/parts-requests');
   if (link.startsWith('#/parts/')) return router.push(`/part/${link.split('/').pop()}`);
 }
 

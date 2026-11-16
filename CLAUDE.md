@@ -71,7 +71,9 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Expo SDK 58, RN 0.88, React 19.3, expo-router, TS strict. Install native modules with `npx expo install`.
 - Checks: `npm run typecheck`, `npm run lint` (must be warning-free), `npx expo export --platform android`.
 - Translations: edit the web JSON files, then `npm run sync-i18n` (copies into `src/i18n/`).
-- Screens in `app/`; tabs per role in `app/(app)/_layout.tsx` (`ROLE_TABS`); detail screens on the root stack.
+- Screens in `app/`; tabs per role in `src/tabs.ts` (`ROLE_TABS`, `TAB_PERM`, `hasTab()`); detail screens on the root stack.
+  Never link to a tab the person may not have: expo-router sends them to their first tab. Use the page twin
+  (`/purchase`, `/customer`, `/job/new`, `/parts-requests`, `/profile`, `/parts`; screens shared via `src/screens/`) or `hasTab()`.
 - Data via TanStack Query hooks in `src/api/queries.ts`; session in zustand `src/store/session.ts` (token in SecureStore).
 - UI kit in `src/components/ui.tsx`: `Txt` picks Inter or Noto Sans Devanagari by language; `Button needsOnline` disables while offline.
 - Import fonts by subpath (`@expo-google-fonts/inter/400Regular`), never the package root (bundles every weight).

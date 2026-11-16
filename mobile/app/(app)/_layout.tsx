@@ -9,32 +9,7 @@ import { NotificationBell } from '@/components/work';
 import { listenForTaps, registerPush } from '@/push';
 import { useSession, can } from '@/store/session';
 import { useTheme } from '@/theme';
-import type { Perm, Role } from '@/types';
-
-// Tabs grow with each build phase (mirrors BUILT_PHASE on the web, currently phase 4).
-type TabKey = 'home' | 'jobs' | 'newjob' | 'billing' | 'customers' | 'requests' | 'queue' | 'approvals' | 'stock' | 'purchases' | 'money' | 'more' | 'me';
-
-/**
- * Bottom tabs by role (spec "Android app screens by role"). Phase 4 adds Billing for the front desk
- * and Money for the owner.
- */
-export const ROLE_TABS: Record<Role, TabKey[]> = {
-  owner: ['home', 'approvals', 'jobs', 'money', 'more'],
-  inventory: ['queue', 'approvals', 'stock', 'purchases', 'me'],
-  front_desk: ['jobs', 'newjob', 'billing', 'customers', 'me'],
-  mechanic: ['jobs', 'requests', 'stock', 'me'],
-};
-
-/** Tabs that need a permission (the owner can untick it per person). */
-const TAB_PERM: Partial<Record<TabKey, Perm>> = {
-  newjob: 'jobs',
-  billing: 'make_bills',
-  customers: 'customers',
-  queue: 'issue_parts',
-  approvals: 'issue_parts',
-  purchases: 'purchases',
-  money: 'see_money',
-};
+import { ROLE_TABS, TAB_PERM, type TabKey } from '@/tabs';
 
 const TAB_META: Record<TabKey, { icon: LucideIcon; label: string }> = {
   home: { icon: House, label: 'nav.home' },

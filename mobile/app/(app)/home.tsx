@@ -9,6 +9,7 @@ import { Card, Chip, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { date, money, qty, rupees } from '@/format';
 import { nm } from '@/i18n';
 import { useSession, can } from '@/store/session';
+import { hasTab } from '@/tabs';
 import { radius, space, useTheme, type Colors } from '@/theme';
 
 function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; value: string | number; sub?: string; icon: LucideIcon; tone: 'primary' | 'success' | 'danger' | 'info'; onPress?: () => void }) {
@@ -76,8 +77,8 @@ export default function Home() {
           <View style={styles.grid}>
             {d.data.sales ? <Kpi label={t('dashboard.sales_bills_today')} value={rupees(d.data.sales.today.total)} sub={t('dashboard.bills_count', { n: d.data.sales.today.count })} icon={Receipt} tone="success" onPress={() => router.push('/money')} /> : null}
             {d.data.sales ? <Kpi label={t('dashboard.sales_month')} value={rupees(d.data.sales.month.total)} sub={t('dashboard.bills_count', { n: d.data.sales.month.count })} icon={Calendar} tone="success" onPress={() => router.push('/money')} /> : null}
-            {d.data.purchases ? <Kpi label={t('dashboard.purchases_today')} value={rupees(d.data.purchases.today.total)} sub={t('dashboard.bills_count', { n: d.data.purchases.today.count })} icon={Truck} tone="info" onPress={() => router.push('/purchases')} /> : null}
-            {d.data.purchases ? <Kpi label={t('dashboard.purchases_month')} value={rupees(d.data.purchases.month.total)} sub={t('dashboard.bills_count', { n: d.data.purchases.month.count })} icon={Calendar} tone="info" onPress={() => router.push('/purchases')} /> : null}
+            {d.data.purchases ? <Kpi label={t('dashboard.purchases_today')} value={rupees(d.data.purchases.today.total)} sub={t('dashboard.bills_count', { n: d.data.purchases.today.count })} icon={Truck} tone="info" onPress={() => router.push('/purchase')} /> : null}
+            {d.data.purchases ? <Kpi label={t('dashboard.purchases_month')} value={rupees(d.data.purchases.month.total)} sub={t('dashboard.bills_count', { n: d.data.purchases.month.count })} icon={Calendar} tone="info" onPress={() => router.push('/purchase')} /> : null}
           </View>
         ) : null}
         {d.data?.sales ? (
@@ -146,10 +147,10 @@ export default function Home() {
         {s ? (
           <View style={styles.grid}>
             <Kpi label={t('dashboard.jobs_in_shop')} value={Object.values(d.data?.jobs_by_status ?? {}).reduce((a, b) => a + b, 0)} icon={Bike} tone="primary" onPress={() => router.push('/jobs')} />
-            {can(user, 'issue_parts') ? <Kpi label={t('dashboard.approvals_waiting')} value={d.data?.approvals_waiting ?? 0} icon={ShieldCheck} tone={d.data?.approvals_waiting ? 'danger' : 'success'} onPress={() => router.push('/approvals')} /> : null}
-            <Kpi label={t('dashboard.open_requests')} value={d.data?.open_requests ?? 0} icon={Inbox} tone="info" onPress={() => router.push(can(user, 'issue_parts') ? '/queue' : '/requests')} />
-            <Kpi label={t('dashboard.low_stock')} value={s.low_stock_count} icon={TriangleExclamationPoint} tone={s.low_stock_count ? 'danger' : 'success'} onPress={() => router.push('/stock')} />
-            <Kpi label={t('dashboard.parts_count')} value={s.parts} icon={Package} tone="primary" onPress={() => router.push('/stock')} />
+            {can(user, 'issue_parts') ? <Kpi label={t('dashboard.approvals_waiting')} value={d.data?.approvals_waiting ?? 0} icon={ShieldCheck} tone={d.data?.approvals_waiting ? 'danger' : 'success'} onPress={() => router.push(hasTab(user, 'approvals') ? '/approvals' : { pathname: '/parts-requests', params: { mode: 'approvals' } })} /> : null}
+            <Kpi label={t('dashboard.open_requests')} value={d.data?.open_requests ?? 0} icon={Inbox} tone="info" onPress={() => router.push(hasTab(user, 'queue') ? '/queue' : hasTab(user, 'requests') ? '/requests' : '/parts-requests')} />
+            <Kpi label={t('dashboard.low_stock')} value={s.low_stock_count} icon={TriangleExclamationPoint} tone={s.low_stock_count ? 'danger' : 'success'} onPress={() => router.push('/parts')} />
+            <Kpi label={t('dashboard.parts_count')} value={s.parts} icon={Package} tone="primary" onPress={() => router.push('/parts')} />
             <Kpi label={t('dashboard.out_of_stock')} value={s.out_of_stock} icon={Boxes} tone={s.out_of_stock ? 'danger' : 'success'} />
             {s.stock_value !== undefined ? <Kpi label={t('dashboard.stock_value')} value={rupees(s.stock_value)} icon={Warehouse} tone="info" /> : null}
           </View>

@@ -79,6 +79,7 @@ export default function RootLayout() {
             <Stack.Screen name="part/[id]" options={{ title: t('parts.part') }} />
             <Stack.Screen name="parts" options={{ title: t('parts.title') }} />
             <Stack.Screen name="count" options={{ title: t('stock.count_title') }} />
+            <Stack.Screen name="purchase/index" options={{ title: t('purchases.title') }} />
             <Stack.Screen name="purchase/new" options={{ title: t('purchases.new') }} />
             <Stack.Screen name="purchase/[id]" options={{ title: t('purchases.bill') }} />
             <Stack.Screen name="cash" options={{ title: t('cash.title') }} />
@@ -88,7 +89,11 @@ export default function RootLayout() {
             <Stack.Screen name="job/[id]" options={{ title: t('jobs.job') }} />
             <Stack.Screen name="job/request" options={{ title: t('requests.new') }} />
             <Stack.Screen name="job/estimate" options={{ title: t('estimates.title') }} />
+            <Stack.Screen name="customer/index" options={{ title: t('customers.title') }} />
             <Stack.Screen name="customer/[id]" options={{ title: t('jobs.customer') }} />
+            <Stack.Screen name="job/new" options={{ title: t('jobs.new') }} />
+            <Stack.Screen name="parts-requests" options={{ title: t('requests.title') }} />
+            <Stack.Screen name="profile" options={{ title: t('nav.profile') }} />
             <Stack.Screen name="notifications" options={{ title: t('notifications.title') }} />
             <Stack.Screen name="invoice/[id]" options={{ title: t('billing.title') }} />
             <Stack.Screen name="invoice/counter" options={{ title: t('billing.new_counter') }} />

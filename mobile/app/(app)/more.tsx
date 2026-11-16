@@ -30,9 +30,9 @@ export default function More() {
       <OfflineBanner />
       <ScrollView contentContainerStyle={{ padding: space[4], gap: space[4] }}>
         <Card padded={false}>
-          <Row icon={Plus} label={t('jobs.new')} href="/newjob" />
-          <Row icon={Users} label={t('customers.title')} href="/customers" />
-          <Row icon={Inbox} label={t('requests.title')} href="/queue" />
+          <Row icon={Plus} label={t('jobs.new')} href="/job/new" />
+          <Row icon={Users} label={t('customers.title')} href="/customer" />
+          <Row icon={Inbox} label={t('requests.title')} href="/parts-requests" />
           <Row icon={Receipt} label={t('billing.new_counter')} href="/invoice/counter" />
         </Card>
         <Card padded={false}>
@@ -41,7 +41,7 @@ export default function More() {
           <Row icon={ScanLine} label={t('mobile.scan_title')} href={{ pathname: '/scan', params: { mode: 'open' } }} />
         </Card>
         <Card padded={false}>
-          <Row icon={Truck} label={t('purchases.title')} href="/purchases" />
+          <Row icon={Truck} label={t('purchases.title')} href="/purchase" />
           <Row icon={Store} label={t('suppliers.title')} href="/suppliers" />
           <Row icon={ShoppingCart} label={t('reorder.title')} href="/reorder" />
         </Card>
@@ -55,7 +55,7 @@ export default function More() {
           <Row icon={UserCog} label={t('users.title')} href="/users" />
           <Row icon={ShieldCheck} label={t('audit.title')} href="/audit" />
           <Row icon={Settings} label={t('settings.title')} href="/settings" />
-          <Row icon={UserIcon} label={t('nav.profile')} href="/me" />
+          <Row icon={UserIcon} label={t('nav.profile')} href="/profile" />
         </Card>
       </ScrollView>
     </View>

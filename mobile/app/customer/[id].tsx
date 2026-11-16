@@ -59,7 +59,7 @@ export default function CustomerScreen() {
         </View>
         <View style={{ flexDirection: 'row', gap: space[2] }}>
           <Button title={t('billing.record_payment')} icon={HandCoins} variant="secondary" onPress={() => { setAmount(x.balance > 0 ? String(x.balance) : ''); setPaying(true); }} needsOnline style={{ flex: 1 }} />
-          <Button title={t('jobs.new')} icon={Plus} onPress={() => router.push({ pathname: '/newjob', params: { customer: String(x.id) } })} needsOnline style={{ flex: 1 }} />
+          <Button title={t('jobs.new')} icon={Plus} onPress={() => router.push({ pathname: '/job/new', params: { customer: String(x.id) } })} needsOnline style={{ flex: 1 }} />
         </View>
 
         {ledger.data?.items.length ? (
