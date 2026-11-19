@@ -2,6 +2,7 @@ import { html, $ } from '../dom.js';
 import { t, errorText } from '../i18n.js';
 import { api, request } from '../api.js';
 import { openModal } from '../ui/modal.js';
+import { hasRole } from '../store.js';
 import { toast } from '../ui/toast.js';
 import { busy } from '../ui/form.js';
 
@@ -65,6 +66,8 @@ export function openImport() {
         <button type="button" class="btn btn-ghost" id="imp-tpl">${t('parts.import_template')}</button>
         <span id="imp-count" class="muted"></span>
       </div>
+      <label class="row" style="gap:8px;margin-top:12px;align-items:flex-start"><input type="checkbox" id="imp-stock" checked><span>${t('parts.import_set_stock')}</span></label>
+      ${hasRole('owner') ? html`<label class="row" style="gap:8px;margin-top:8px;align-items:flex-start"><input type="checkbox" id="imp-replace"><span><strong>${t('parts.import_replace')}</strong><br><span class="small muted">${t('parts.import_replace_note')}</span></span></label>` : ''}
       <div id="imp-result"></div>`,
     actions: [
       { label: t('common.close'), value: 'close' },
@@ -89,12 +92,16 @@ export function openImport() {
         e.stopPropagation();
         await busy(runBtn, async () => {
           try {
-            const res = await api.post('/parts/import', { rows });
+            const replace = !!$('#imp-replace', root)?.checked;
+            if (replace && !window.confirm(t('parts.import_replace_q') + '\n\n' + t('parts.import_replace_note'))) return;
+            const res = await api.post('/parts/import', { rows, set_stock: $('#imp-stock', root).checked, replace });
             imported = imported || res.created + res.updated > 0;
             toast(t('parts.import_done', res));
             const box = $('#imp-result', root);
             box.innerHTML = String(html`
-              <div class="banner ${res.errors.length ? 'warning' : 'success'}">${t('parts.import_done', res)}${res.errors.length ? ' · ' + t('parts.import_errors', { n: res.errors.length }) : ''}</div>
+              <div class="banner ${res.aborted ? 'danger' : res.errors.length ? 'warning' : 'success'}">${res.aborted ? t('parts.import_aborted') : t('parts.import_done', res)}${res.errors.length ? ' · ' + t('parts.import_errors', { n: res.errors.length }) : ''}</div>
+              ${res.stock_set ? html`<p class="small" style="margin-top:8px">${t('parts.import_stock_set', { n: res.stock_set })}</p>` : ''}
+              ${res.replaced ? html`<p class="small" style="margin-top:8px">${t('parts.import_replaced', res)}</p>` : ''}
               ${res.auto_numbered ? html`<p class="small muted" style="margin-top:8px">${t('parts.import_auto', { n: res.auto_numbered })}</p>` : ''}
               ${res.unused_columns?.length ? html`<p class="small" style="margin-top:8px">${t('parts.import_unused', { list: res.unused_columns.join(', ') })}</p>` : ''}
               ${res.errors.length ? html`<div class="table-wrap" style="max-height:240px;margin-top:12px"><table class="table"><thead><tr><th>${t('parts.row')}</th><th>${t('parts.part_no')}</th><th>${t('common.details')}</th></tr></thead>

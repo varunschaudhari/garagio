@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 /** Transaction tables, children before parents, so foreign keys stay on during the wipe. */
 const GO_LIVE_WIPE = [
-    'sale_return_items', 'sale_returns', 'payment_allocations', 'customer_payments', 'invoice_items', 'invoices',
+    'sale_return_items', 'sale_returns', 'payment_allocations', 'customer_payments', 'bill_refunds', 'invoice_items', 'invoices',
     'estimate_items', 'estimates', 'job_parts', 'part_request_items', 'part_requests',
     'job_labour', 'job_photos', 'job_cards',
     'purchase_items', 'supplier_payments', 'purchases',

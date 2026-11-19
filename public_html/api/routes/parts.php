@@ -414,13 +414,41 @@ route('POST', '/parts/{id}/adjust', function ($p) {
  * Category and location may be given by name (English or Marathi); missing ones are created.
  * opening_stock is used only for new parts - stock of existing parts is never overwritten.
  */
+/** Thrown inside the replace transaction when any row is wrong: nothing of the upload is kept. */
+final class PartsImportAborted extends RuntimeException
+{
+}
+
+/** Parts that appear on a purchase, a bill, a job, a request, an estimate or a return keep their history. */
+function part_is_used(int $id): bool
+{
+    foreach (['purchase_items', 'invoice_items', 'job_parts', 'part_request_items', 'estimate_items', 'sale_return_items'] as $t) {
+        if (val("SELECT 1 FROM `$t` WHERE part_id = ? LIMIT 1", [$id])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * set_stock: the sheet's quantity becomes the stock of parts already in the app (a stock adjustment "Excel upload").
+ * replace (owner): the sheet is the whole parts list. A backup is taken first; any wrong row stops the whole upload.
+ * Parts not in the sheet are deleted when never used, otherwise hidden with their stock set to 0 (history stays).
+ */
 route('POST', '/parts/import', function () {
-    $rowsIn = body()['rows'] ?? null;
+    $body = body();
+    $rowsIn = $body['rows'] ?? null;
     if (!is_array($rowsIn) || !$rowsIn) {
         fail(422, 'validation_failed', 'No rows to import', ['rows' => 'required']);
     }
     if (count($rowsIn) > 3000) {
         fail(422, 'too_many_rows', 'Import at most 3000 rows at a time');
+    }
+    $opt = clean($body, ['set_stock' => 'bool', 'replace' => 'bool']);
+    $setStock = !empty($opt['set_stock']);
+    $replace = !empty($opt['replace']);
+    if ($replace && !is_role(ROLE_OWNER)) {
+        fail(403, 'forbidden', 'Only the owner can replace the whole parts list');
     }
     $catCache = [];
     $locCache = [];
@@ -436,71 +464,119 @@ route('POST', '/parts/import', function () {
         return $cache[$key] = (int) $id;
     };
 
-    $created = 0;
-    $updated = 0;
-    $autoNumbered = 0;
+    $n = ['created' => 0, 'updated' => 0, 'auto_numbered' => 0, 'stock_set' => 0, 'deleted' => 0, 'hidden' => 0];
     $errors = [];
     $unused = [];
-    foreach ($rowsIn as $i => $raw) {
-        $rowNo = $i + 2; // +1 for header, +1 for 1-based
-        $r = is_array($raw) ? import_part_row($raw, $unused) : null;
+    $seen = [];
+    $run = function () use ($rowsIn, $setStock, $findOrCreate, &$catCache, &$locCache, &$n, &$errors, &$unused, &$seen) {
+        foreach ($rowsIn as $i => $raw) {
+            $rowNo = $i + 2; // +1 for header, +1 for 1-based
+            $r = is_array($raw) ? import_part_row($raw, $unused) : null;
+            try {
+                if ($r === null) {
+                    throw new ApiError(422, 'bad_row', 'Row is not an object');
+                }
+                if (!$r) {
+                    continue; // nothing we know in this row (an empty or notes row)
+                }
+                tx(function () use (&$r, $setStock, $findOrCreate, &$catCache, &$locCache, &$n, &$seen) {
+                    if (empty($r['name_en']) && !empty($r['name_mr'])) {
+                        $r['name_en'] = $r['name_mr'];
+                    }
+                    if (empty($r['part_no'])) {
+                        // No part number in the sheet: the same name updates that part, otherwise a new number.
+                        $same = !empty($r['name_en']) ? val('SELECT part_no FROM parts WHERE LOWER(name_en) = ? LIMIT 1', [mb_strtolower((string) $r['name_en'])]) : null;
+                        $auto = !$same;
+                        $r['part_no'] = $same ?: next_auto_part_no();
+                    }
+                    if (!empty($r['category'])) {
+                        $r['category_id'] = $findOrCreate('categories', (string) $r['category'], $catCache);
+                    }
+                    if (!empty($r['location'])) {
+                        $r['location_id'] = $findOrCreate('storage_locations', (string) $r['location'], $locCache);
+                    }
+                    $existing = row('SELECT id, current_stock FROM parts WHERE part_no = ?', [strtoupper((string) preg_replace('/\s+/', '', (string) $r['part_no']))]);
+                    if ($existing) {
+                        $id = (int) $existing['id'];
+                        $in = prepare_part_input(clean($r, PART_RULES, true));
+                        $in['active'] = 1; // in the sheet = in use
+                        update_row('parts', $id, $in);
+                        $n['updated']++;
+                        if ($setStock && isset($r['opening_stock'])) {
+                            $qty = clean($r, ['opening_stock' => 'num|min:0|max:100000'])['opening_stock'] ?? null;
+                            $diff = $qty === null ? 0.0 : r2((float) $qty - (float) $existing['current_stock']);
+                            if (abs($diff) >= 0.005) {
+                                stock_move($id, $diff, 'adjustment', 'part', $id, null, 'Excel upload');
+                                $n['stock_set']++;
+                            }
+                        }
+                    } else {
+                        $in = clean($r, PART_RULES + ['opening_stock' => 'num|min:0|max:100000', 'opening_cost' => 'num|min:0']);
+                        $in['gst_rate'] = $in['gst_rate'] ?? null;
+                        $in = prepare_part_input($in);
+                        $opening = (float) ($in['opening_stock'] ?? 0);
+                        $openingCost = $in['opening_cost'] ?? null;
+                        unset($in['opening_stock'], $in['opening_cost']);
+                        $in['active'] = $in['active'] ?? 1;
+                        $id = insert('parts', $in);
+                        if ($opening > 0) {
+                            $cost = $openingCost ?? net_cost((float) ($in['last_purchase_price'] ?? 0), (float) ($in['last_purchase_disc_pct'] ?? 0));
+                            stock_move($id, $opening, 'opening', 'part', $id, (float) $cost, 'Opening stock (import)');
+                        }
+                        $n['created']++;
+                        if (!empty($auto)) {
+                            $n['auto_numbered']++;
+                        }
+                    }
+                    $seen[$id] = true;
+                });
+            } catch (ApiError $e) {
+                $errors[] = ['row' => $rowNo, 'part_no' => $r['part_no'] ?? null, 'error' => $e->getMessage(), 'fields' => $e->fields];
+            } catch (PDOException $e) {
+                $dup = ($e->errorInfo[1] ?? 0) === 1062;
+                if (!$dup) {
+                    throw $e;
+                }
+                $errors[] = ['row' => $rowNo, 'part_no' => $r['part_no'] ?? null, 'error' => 'Duplicate value', 'fields' => []];
+            }
+        }
+    };
+
+    $backup = null;
+    $aborted = false;
+    if ($replace) {
+        $backup = basename(backup_database('before-parts-replace'));
         try {
-            if ($r === null) {
-                throw new ApiError(422, 'bad_row', 'Row is not an object');
-            }
-            if (!$r) {
-                continue; // nothing we know in this row (an empty or notes row)
-            }
-            tx(function () use (&$r, $findOrCreate, &$catCache, &$locCache, &$created, &$updated, &$autoNumbered) {
-                if (empty($r['name_en']) && !empty($r['name_mr'])) {
-                    $r['name_en'] = $r['name_mr'];
+            tx(function () use ($run, &$errors, &$seen, &$n) {
+                $run();
+                if ($errors) {
+                    throw new PartsImportAborted();
                 }
-                if (empty($r['part_no'])) {
-                    // No part number in the sheet: the same name updates that part, otherwise a new number.
-                    $same = !empty($r['name_en']) ? val('SELECT part_no FROM parts WHERE LOWER(name_en) = ? LIMIT 1', [mb_strtolower((string) $r['name_en'])]) : null;
-                    $auto = !$same;
-                    $r['part_no'] = $same ?: next_auto_part_no();
-                }
-                if (!empty($r['category'])) {
-                    $r['category_id'] = $findOrCreate('categories', (string) $r['category'], $catCache);
-                }
-                if (!empty($r['location'])) {
-                    $r['location_id'] = $findOrCreate('storage_locations', (string) $r['location'], $locCache);
-                }
-                $existing = isset($r['part_no']) ? row('SELECT id FROM parts WHERE part_no = ?', [strtoupper(preg_replace('/\s+/', '', (string) $r['part_no']))]) : null;
-                if ($existing) {
-                    $in = prepare_part_input(clean($r, PART_RULES, true));
-                    update_row('parts', (int) $existing['id'], $in);
-                    $updated++;
-                } else {
-                    $in = clean($r, PART_RULES + ['opening_stock' => 'num|min:0|max:100000', 'opening_cost' => 'num|min:0']);
-                    $in['gst_rate'] = $in['gst_rate'] ?? null;
-                    $in = prepare_part_input($in);
-                    $opening = (float) ($in['opening_stock'] ?? 0);
-                    $openingCost = $in['opening_cost'] ?? null;
-                    unset($in['opening_stock'], $in['opening_cost']);
-                    $in['active'] = $in['active'] ?? 1;
-                    $id = insert('parts', $in);
-                    if ($opening > 0) {
-                        $cost = $openingCost ?? net_cost((float) ($in['last_purchase_price'] ?? 0), (float) ($in['last_purchase_disc_pct'] ?? 0));
-                        stock_move($id, $opening, 'opening', 'part', $id, (float) $cost, 'Opening stock (import)');
+                foreach (rows('SELECT id, current_stock FROM parts ORDER BY id') as $p) {
+                    $id = (int) $p['id'];
+                    if (isset($seen[$id])) {
+                        continue;
                     }
-                    $created++;
-                    if (!empty($auto)) {
-                        $autoNumbered++;
+                    if (!part_is_used($id)) {
+                        q('DELETE FROM stock_movements WHERE part_id = ?', [$id]);
+                        q('DELETE FROM parts WHERE id = ?', [$id]);
+                        $n['deleted']++;
+                        continue;
                     }
+                    if (abs((float) $p['current_stock']) >= 0.005) {
+                        stock_move($id, -(float) $p['current_stock'], 'adjustment', 'part', $id, null, 'Not in the uploaded parts list');
+                    }
+                    q('UPDATE parts SET active = 0, updated_at = ? WHERE id = ?', [now(), $id]);
+                    $n['hidden']++;
                 }
             });
-        } catch (ApiError $e) {
-            $errors[] = ['row' => $rowNo, 'part_no' => $r['part_no'] ?? null, 'error' => $e->getMessage(), 'fields' => $e->fields];
-        } catch (PDOException $e) {
-            $dup = ($e->errorInfo[1] ?? 0) === 1062;
-            if (!$dup) {
-                throw $e;
-            }
-            $errors[] = ['row' => $rowNo, 'part_no' => $r['part_no'] ?? null, 'error' => 'Duplicate value', 'fields' => []];
+        } catch (PartsImportAborted) {
+            $aborted = true;
+            $n = array_fill_keys(array_keys($n), 0);
         }
+    } else {
+        $run();
     }
-    audit('parts_import', 'part', null, null, ['created' => $created, 'updated' => $updated, 'errors' => count($errors)]);
-    return ['created' => $created, 'updated' => $updated, 'auto_numbered' => $autoNumbered, 'errors' => $errors, 'unused_columns' => array_keys($unused)];
+    audit($replace ? 'parts_replace' : 'parts_import', 'part', null, null, $n + ['errors' => count($errors), 'set_stock' => $setStock, 'backup' => $backup, 'aborted' => $aborted]);
+    return $n + ['errors' => $errors, 'unused_columns' => array_keys($unused), 'replaced' => $replace && !$aborted, 'aborted' => $aborted, 'backup' => $backup];
 }, ['perm' => 'edit_parts']);

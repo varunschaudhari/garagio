@@ -85,6 +85,25 @@ route('PUT', '/suppliers/{id}', function ($p) {
 }, ['perm' => 'purchases']);
 
 /*
+ * Delete a supplier entered by mistake. A supplier with bills, payments or an opening balance keeps its history:
+ * it is hidden from the lists instead (active = 0) and can be shown again by editing it.
+ */
+route('DELETE', '/suppliers/{id}', function ($p) {
+    $id = (int) $p['id'];
+    $s = supplier_by_id($id);
+    $used = (int) val('SELECT COUNT(*) FROM purchases WHERE supplier_id = ?', [$id])
+        + (int) val('SELECT COUNT(*) FROM supplier_payments WHERE supplier_id = ?', [$id]);
+    if ($used || abs((float) $s['opening_balance']) >= 0.005) {
+        update_row('suppliers', $id, ['active' => 0]);
+        audit('supplier_hide', 'supplier', $id, ['name' => $s['name'], 'active' => (int) $s['active']], ['active' => 0]);
+        return ['deleted' => false, 'hidden' => true];
+    }
+    q('DELETE FROM suppliers WHERE id = ?', [$id]);
+    audit('supplier_delete', 'supplier', $id, ['name' => $s['name'], 'phone' => $s['phone'], 'gstin' => $s['gstin']], null);
+    return ['deleted' => true, 'hidden' => false];
+}, ['perm' => 'purchases']);
+
+/*
  * Supplier ledger: opening balance, bills (add to payable) and payments (reduce it), with a running balance.
  * ?from=&to= limits the rows; the balance before "from" is shown as "brought forward".
  */

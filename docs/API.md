@@ -43,7 +43,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET /parts/{id}/ledger` | all | movements with `balance_after`, `balanced` flag |
 | `POST /parts/{id}/adjust` | O I | `{qty (±), reason}` – audited |
 | `POST /parts/{id}/mrp` | change_mrp | `{mrp, invoice_id?}` – new selling price (audited); with a draft `invoice_id` the draft is rebuilt (job parts take the price); returns `{item, invoice}` |
-| `POST /parts/import` | O I | `{rows:[{heading: cell}]}` - headings matched loosely (Part No, Part Name, MRP, Rate, Qty, GST, Marathi too); upsert by part no., or by name when there is none (else automatic `P00001…`); returns `created, updated, auto_numbered, errors, unused_columns` |
+| `POST /parts/import` | O I | `set_stock` (sheet qty → stock of existing parts, as adjustments), `replace` (owner: the sheet is the whole list; backup first, all-or-nothing; others deleted if unused, else hidden at 0) + `{rows:[{heading: cell}]}` - headings matched loosely (Part No, Part Name, MRP, Rate, Qty, GST, Marathi too); upsert by part no., or by name when there is none (else automatic `P00001…`); returns `created, updated, auto_numbered, errors, unused_columns` |
 | `GET /parts/import-sample` | O I | sample .xlsx (Parts + How to fill) |
 | `GET /parts/labels` | all | HTML QR sheet; `mode=part|rack, location, rack, ids, copies` |
 | `POST /stock-counts` · `GET /stock-counts[/{id}]` | O I | `{location_id, lines:[{part_id, counted}]}` |
@@ -54,6 +54,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | Method & path | Roles | Notes |
 |---|---|---|
 | `GET/POST /suppliers`, `GET/PUT /suppliers/{id}` | O I | balance = payable; `contact_person` |
+| `DELETE /suppliers/{id}` | O I | deleted when unused, else hidden: `{deleted, hidden}` |
 | `GET /suppliers/{id}/ledger` · `POST /suppliers/{id}/payments` | O I | |
 | `POST /purchases/preview` · `GET/POST /purchases` · `GET /purchases/{id}` | O I | `price_mode`: `net` (default, prices without GST) or `mrp` (prices with GST, less the discount); line `mrp` → part selling price (needs edit_parts); inline `new_part`; credit/cash/upi/bank; list `status=cancelled` or `status=all` (default hides cancelled); POST `replaces_id` = correct an earlier bill |
 | `POST /purchases/import-lines` | O I | `{rows:[{heading: cell}]}` from the supplier's Excel → `{lines:[{part \| new_part, qty, price, disc_pct, gst_rate, mrp}], errors, unused_columns}`; nothing saved; send `new_part` lines with POST /purchases (empty `part_no` → automatic) |
@@ -106,6 +107,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET/POST /invoices`, `GET/PUT/DELETE /invoices/{id}` | O D | draft; discounts (`disc_pct`, `bill_disc_pct`, `discounts`) owner only; items carry `rate` next to `unit_price` (MRP) |
 | `POST /invoices/{id}/finalize` | O D | `{payments:[{mode, amount, reference}]}`; credit only for trusted customers within limit |
 | `POST /invoices/{id}/payments` | O D | |
+| `POST /invoices/{id}/edit/preview` · `PUT /invoices/{id}/edit` | cancel_bills | owner edits a final bill, same number: `{reason, lines:[{item_id, qty, unit_price, disc_pct, remove} \| {part_id, qty, unit_price}], bill_disc_pct, cust_name, cust_phone, payment:{mode, amount}, refund_mode}` → `{old_total, total, paid, to_collect, to_refund, walk_in, credit_ok, item}`; 409 `payment_needed`, `edit_has_returns`, `edit_empty`, `gst_mode_changed` |
 | `POST /invoices/{id}/cancel` | O | `{reason}` – stock back, job reopens; 409 `invoice_has_returns` once a return exists |
 | `POST /invoices/{id}/returns/preview` · `POST /invoices/{id}/returns` | O | `{items: [{invoice_item_id, qty, restock}], reason, refund, refund_mode}`; preview gives `totals`, `max_refund`, `must_refund` (walk-in) |
 | `GET /returns/{id}` · `GET /returns/{id}/receipt?lang=&width=` | O D | return / credit note and its thermal print |

@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Pencil, Printer, Trash2, Undo2 } from 'lucide-react-native';
+import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Pencil, PencilLine, Printer, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -12,7 +12,7 @@ import { printReturn, ReturnSheet } from '@/components/returns';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
-import { date, money, qty } from '@/format';
+import { date, datetime, money, qty } from '@/format';
 import { errorText } from '@/i18n';
 import { useSession, can } from '@/store/session';
 import { radius, size, space, useTheme } from '@/theme';
@@ -110,6 +110,14 @@ export default function InvoiceScreen() {
             {i.invoice_date ? ` · ${date(i.invoice_date)}` : ''}
           </Txt>
           {i.status === 'cancelled' ? <Banner tone="danger" text={`${t('billing.cancelled')}: ${i.cancel_reason ?? ''}`} /> : null}
+          {i.edited_at ? (
+            <Banner
+              text={[
+                t('billing.edited_by', { date: datetime(i.edited_at), name: i.edited_by_name ?? '—' }),
+                ...(i.refunds ?? []).map((r) => `${t('billing.given_back', { amount: money(r.amount), date: date(r.refunded_on) })} (${t(`pay.${r.mode}`)})`),
+              ].join(' · ')}
+            />
+          ) : null}
         </Card>
 
         <Card padded={false}>
@@ -215,6 +223,7 @@ export default function InvoiceScreen() {
           <Button title={t('billing.deliver')} icon={Bike} onPress={() => void run({ path: `/jobs/${i.job_card_id}/status`, body: { status: 'delivered' } }, t('billing.delivered_ok'))} needsOnline />
         ) : null}
         {final && canCancel ? <Button title={t('billing.return')} icon={Undo2} variant="secondary" onPress={() => setReturning(true)} needsOnline /> : null}
+        {final && canCancel && !Number(i.returned_total) ? <Button title={t('billing.edit')} icon={PencilLine} variant="secondary" onPress={() => router.push({ pathname: '/invoice/edit', params: { id: String(i.id) } })} needsOnline /> : null}
         {final && canCancel && !Number(i.returned_total) ? <Button title={t('billing.cancel')} icon={Ban} variant="ghost" onPress={() => { setText(''); setSheet('cancel'); }} needsOnline /> : null}
 
         {i.returns?.length ? (

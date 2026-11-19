@@ -64,6 +64,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
   `PURCHASE_IMPORT_ALIASES` (purchases.php). Clients read sheets with SheetJS (`readSheetRows` web, `src/excel.ts` phone).
 - Uploaded photos: `save_uploaded_image($dir)` / `image_response($file)` (lib/util.php), files under `api/storage/`
   (photos, bills, scans), never served directly.
+- Final sales bills change only through `invoice_edit_apply()` (routes/invoice_edit.php: same number, stock and money
+  follow, preview = same code rolled back). Drafts use `rebuild_draft()`.
 - `audit()` for discounts, invoice cancels, stock adjustments, credit changes, user changes.
 - GST maths only in `lib/gst.php` (`gst_line`, `gst_bill`); never on clients. Anything we *sell* goes through
   `sale_bill()`, which drops GST while setting `gst_registered` is 0 (shop not registered yet; bills `BIL/…`,

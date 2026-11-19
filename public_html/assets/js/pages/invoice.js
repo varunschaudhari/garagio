@@ -10,6 +10,7 @@ import { openDrawer } from '../ui/drawer.js';
 import { confirmDialog, promptDialog } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
 import { billChips } from './invoices.js';
+import { openBillEdit } from './invoice-edit.js';
 
 const MODES = ['cash', 'upi', 'card', 'bank'];
 
@@ -97,10 +98,12 @@ export default async function invoicePage(ctx) {
         ${final && i.balance > 0 ? html`<button class="btn btn-primary" data-act="pay">${icon('hand-coins')}${t('billing.record_payment')}</button>` : ''}
         ${final && i.job_card_id && i.job_status === 'ready' ? html`<button class="btn btn-primary" data-act="deliver">${icon('bike')}${t('billing.deliver')}</button>` : ''}
         ${final && canCancel ? html`<button class="btn btn-secondary" data-act="return">${icon('undo-2')}${t('billing.return')}</button>` : ''}
+        ${final && canCancel && !Number(i.returned_total) ? html`<button class="btn btn-secondary" data-act="edit">${icon('pencil')}${t('billing.edit')}</button>` : ''}
         ${final && canCancel && !Number(i.returned_total) ? html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('billing.cancel')}</button>` : ''}
         ${draft ? html`<button class="btn btn-ghost" data-act="delete">${icon('trash-2')}${t('billing.delete_draft')}</button>` : ''}
       </div>
       ${i.status === 'cancelled' ? html`<div class="banner danger" style="margin-bottom:16px">${icon('ban')}<span>${t('billing.cancelled')}: ${i.cancel_reason}</span></div>` : ''}
+      ${i.edited_at ? html`<div class="banner info" style="margin-bottom:16px" id="bill-edited">${icon('pencil')}<span>${t('billing.edited_by', { date: datetime(i.edited_at), name: i.edited_by_name || '—' })}${(i.refunds || []).map((r) => html` · ${t('billing.given_back', { amount: money(r.amount), date: date(r.refunded_on) })} (${t('pay.' + r.mode)})`)}</span></div>` : ''}
       <div class="grid-2" style="grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:start">
         <div class="card">
           <div class="card-head"><h3>${t('billing.items')}</h3>${draft && !owner ? html`<span class="small muted">${t('billing.owner_discount')}</span>` : ''}</div>
@@ -293,6 +296,13 @@ export default async function invoicePage(ctx) {
       openApiHtml(`/returns/${res.item.id}/receipt`).catch(toastError);
     }
   };
+  on(ctx.el, 'click', '[data-act="edit"]', async () => {
+    const saved = await openBillEdit((await api.get('/invoices/' + id)).item);
+    if (saved) {
+      toast(t('billing.edited'));
+      draw(saved);
+    }
+  });
   on(ctx.el, 'click', '[data-act="cancel"]', async () => {
     const reason = await promptDialog({ title: t('billing.cancel'), label: t('billing.cancel_reason') });
     if (reason === null) return;

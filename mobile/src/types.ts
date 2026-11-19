@@ -462,6 +462,10 @@ export interface Invoice extends InvoiceListItem {
   igst: number;
   round_off: number;
   cancel_reason: string | null;
+  edited_at?: string | null;
+  edited_by_name?: string | null;
+  /** Money given back to a walk-in customer when an edited bill went down. */
+  refunds?: { amount: number; mode: string; refunded_on: string }[];
   returned_total?: number;
   returns?: InvoiceReturn[];
   items: InvoiceItem[];

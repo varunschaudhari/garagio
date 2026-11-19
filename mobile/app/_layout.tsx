@@ -103,6 +103,7 @@ export default function RootLayout() {
             <Stack.Screen name="notifications" options={{ title: t('notifications.title') }} />
             <Stack.Screen name="invoice/[id]" options={{ title: t('billing.title') }} />
             <Stack.Screen name="invoice/counter" options={{ title: t('billing.new_counter') }} />
+            <Stack.Screen name="invoice/edit" options={{ title: t('billing.edit') }} />
             <Stack.Screen name="mechanics" options={{ title: t('mechanics.title') }} />
             <Stack.Screen name="reports" options={{ title: t('reports.title') }} />
             <Stack.Screen name="reminders" options={{ title: t('reminders.title') }} />

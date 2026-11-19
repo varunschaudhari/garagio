@@ -29,6 +29,8 @@ function invoice_row(int $id): array
     }
     unset($it);
     $inv['next_service'] = $inv['job_card_id'] ? job_next_service(['created_at' => $inv['job_created_at']] + $inv) : null;
+    $inv['refunds'] = rows('SELECT amount, mode, refunded_on FROM bill_refunds WHERE invoice_id = ? ORDER BY id', [$id]);
+    $inv['edited_by_name'] = $inv['edited_by'] ? val('SELECT name FROM users WHERE id = ?', [$inv['edited_by']]) : null;
     $inv['returns'] = rows('SELECT r.id, r.return_no, r.return_date, r.total, r.refund_amount, r.refund_mode, r.reason, u.name AS user_name FROM sale_returns r LEFT JOIN users u ON u.id = r.user_id WHERE r.invoice_id = ? ORDER BY r.id', [$id]);
     $inv['payments'] = rows(
         'SELECT p.id, p.mode, p.reference, p.received_on, a.amount, u.name AS user_name FROM payment_allocations a
@@ -70,7 +72,7 @@ function customer_balance(int $customerId): float
  * Source lines for a draft: from the job (issued parts + labour) or from posted counter-sale items.
  * Discounts are taken from $discounts keyed by "part:<job_part_id>" / "labour:<job_labour_id>" / "line:<n>".
  */
-function invoice_source_lines(array $inv, array $counterItems, array $discounts): array
+function invoice_source_lines(array $inv, array $counterItems, array $discounts, bool $keepPrices = false): array
 {
     if ($inv['inv_type'] === 'job') {
         $lines = job_bill_lines((int) $inv['job_card_id']);
@@ -84,9 +86,11 @@ function invoice_source_lines(array $inv, array $counterItems, array $discounts)
     }
     $lines = [];
     foreach (array_values($counterItems) as $n => $raw) {
-        $it = clean(is_array($raw) ? $raw : [], ['part_id' => 'int|req', 'qty' => 'num|req|min:0.01|max:10000', 'disc_pct' => 'num|min:0|max:100|def:0']);
-        $p = row('SELECT id, part_no, name_en, name_mr, hsn, gst_rate, selling_price FROM parts WHERE id = ? AND active = 1', [$it['part_id']]) ?? not_found('Part');
-        $lines[] = ['item_type' => 'part', 'job_part_id' => null, 'part_id' => (int) $p['id'], 'qty' => (float) $it['qty'], 'unit_price' => (float) $p['selling_price'],
+        $it = clean(is_array($raw) ? $raw : [], ['part_id' => 'int|req', 'qty' => 'num|req|min:0.01|max:10000', 'disc_pct' => 'num|min:0|max:100|def:0', 'unit_price' => 'num|min:0|max:10000000']);
+        // A final bill being edited keeps the prices it was sold at (and may be hidden parts by now).
+        $p = row('SELECT id, part_no, name_en, name_mr, hsn, gst_rate, selling_price FROM parts WHERE id = ?' . ($keepPrices ? '' : ' AND active = 1'), [$it['part_id']]) ?? not_found('Part');
+        $price = $keepPrices && isset($it['unit_price']) ? (float) $it['unit_price'] : (float) $p['selling_price'];
+        $lines[] = ['item_type' => 'part', 'job_part_id' => null, 'part_id' => (int) $p['id'], 'qty' => (float) $it['qty'], 'unit_price' => $price,
             'disc_pct' => (float) $it['disc_pct'], 'gst_rate' => (float) $p['gst_rate'], 'hsn' => $p['hsn'], 'description_en' => $p['name_en'], 'description_mr' => $p['name_mr'],
             'part_no' => $p['part_no'], 'unit_cost' => 0.0, 'line_key' => 'line:' . $n];
     }
@@ -94,7 +98,7 @@ function invoice_source_lines(array $inv, array $counterItems, array $discounts)
 }
 
 /** Recompute and store the items and totals of a draft. Runs inside tx(). */
-function rebuild_draft(int $invoiceId, array $counterItems = [], ?array $discounts = null, ?float $billDisc = null): void
+function rebuild_draft(int $invoiceId, array $counterItems = [], ?array $discounts = null, ?float $billDisc = null, bool $keepPrices = false): void
 {
     $inv = row('SELECT * FROM invoices WHERE id = ? FOR UPDATE', [$invoiceId]);
     if ($discounts === null) {
@@ -113,7 +117,7 @@ function rebuild_draft(int $invoiceId, array $counterItems = [], ?array $discoun
             rows("SELECT part_id, qty, disc_pct FROM invoice_items WHERE invoice_id = ? AND item_type = 'part' ORDER BY id", [$invoiceId]));
     }
     $billDisc ??= (float) $inv['bill_disc_pct'];
-    $lines = invoice_source_lines($inv, $counterItems, $discounts);
+    $lines = invoice_source_lines($inv, $counterItems, $discounts, $keepPrices);
     $gstin = $inv['customer_id'] ? val('SELECT gstin FROM customers WHERE id = ?', [$inv['customer_id']]) : $inv['cust_gstin'];
     $inter = gst_registered() && is_interstate($gstin ?: null);
     $bill = $lines ? sale_bill($lines, $inter, $billDisc) : ['lines' => [], 'totals' => ['discount_total' => 0, 'taxable_total' => 0, 'cgst' => 0, 'sgst' => 0, 'igst' => 0, 'round_off' => 0, 'grand_total' => 0]];

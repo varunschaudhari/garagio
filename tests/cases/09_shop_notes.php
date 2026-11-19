@@ -265,3 +265,111 @@ test('bills: MRP changed from the bill screen - counter preview and a draft job 
     status(200, put("/users/$desk", ['permissions' => ['change_mrp' => true]], 'admin'));
     status(200, post("/parts/$pid/mrp", ['mrp' => 225], 'desk'));
 });
+
+test('suppliers: delete one entered by mistake; one with bills is hidden instead', function () {
+    $s = status(200, post('/suppliers', ['name' => 'Typo Traders'], 'stock'))['item'];
+    eq(403, del('/suppliers/' . $s['id'], 'desk')['status']);
+    eq(['deleted' => true, 'hidden' => false], status(200, del('/suppliers/' . $s['id'], 'stock')));
+    eq(404, get('/suppliers/' . $s['id'], 'stock')['status']);
+    $raj = (int) tval("SELECT id FROM suppliers WHERE name = 'Raj Sports'");
+    eq(['deleted' => false, 'hidden' => true], status(200, del("/suppliers/$raj", 'stock')));
+    eq(0, (int) tval('SELECT active FROM suppliers WHERE id = ?', [$raj]), 'hidden, bills kept');
+    ok(!in_array('Raj Sports', array_column(status(200, get('/suppliers', 'stock'))['items'], 'name'), true));
+    status(200, put("/suppliers/$raj", ['active' => true], 'stock'));
+});
+
+test('parts upload: the sheet quantity becomes the stock when asked (recorded as an adjustment)', function () {
+    $before = (float) tval("SELECT current_stock FROM parts WHERE part_no = 'IMPX-1'");
+    status(200, post('/parts/import', ['rows' => [['Part No' => 'IMPX-1', 'Part Name' => 'Clutch plate', 'MRP' => '1250', 'Qty' => '9']]], 'stock'));
+    eq($before, (float) tval("SELECT current_stock FROM parts WHERE part_no = 'IMPX-1'"), 'not asked: stock kept');
+    $r = status(200, post('/parts/import', ['set_stock' => true, 'rows' => [['Part No' => 'IMPX-1', 'Part Name' => 'Clutch plate', 'MRP' => '1250', 'Qty' => '9']]], 'stock'));
+    eq(1, $r['stock_set']);
+    eq(9.0, (float) tval("SELECT current_stock FROM parts WHERE part_no = 'IMPX-1'"));
+    eq('Excel upload', tval("SELECT m.note FROM stock_movements m JOIN parts p ON p.id = m.part_id WHERE p.part_no = 'IMPX-1' ORDER BY m.id DESC LIMIT 1"));
+});
+
+test('bills: the owner edits a final bill, same number - stock and money follow (walk-in gets cash back, extra is collected, a customer keeps an advance)', function () {
+    status(200, post('/parts', ['part_no' => 'EDIT-1', 'name_en' => 'Edit test part', 'selling_price' => 100, 'gst_rate' => 18, 'opening_stock' => 10, 'opening_cost' => 60], 'admin'));
+    status(200, post('/parts', ['part_no' => 'EDIT-2', 'name_en' => 'Edit extra part', 'selling_price' => 50, 'gst_rate' => 18, 'opening_stock' => 5, 'opening_cost' => 30], 'admin'));
+    $p1 = (int) tval("SELECT id FROM parts WHERE part_no = 'EDIT-1'");
+    $p2 = (int) tval("SELECT id FROM parts WHERE part_no = 'EDIT-2'");
+    $draft = status(200, post('/invoices', ['items' => [['part_id' => $p1, 'qty' => 2]]], 'admin'))['item'];
+    $bill = status(200, post("/invoices/{$draft['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => 200]]], 'admin'))['item'];
+    $no = $bill['invoice_no'];
+    $line = $bill['items'][0]['id'];
+    eq(8.0, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$p1]));
+
+    eq(403, put("/invoices/{$bill['id']}/edit", ['reason' => 'x', 'lines' => [['item_id' => $line, 'qty' => 1]]], 'desk')['status'], 'owner only');
+    eq(422, put("/invoices/{$bill['id']}/edit", ['lines' => [['item_id' => $line, 'qty' => 1]]], 'admin')['status'], 'reason needed');
+
+    // Preview changes nothing.
+    $pv = status(200, post("/invoices/{$bill['id']}/edit/preview", ['lines' => [['item_id' => $line, 'qty' => 1]]], 'admin'));
+    eq([200.0, 100.0, 100.0], array_map('floatval', [$pv['old_total'], $pv['total'], $pv['to_refund']]));
+    eq(true, $pv['walk_in']);
+    eq(200.0, (float) tval('SELECT grand_total FROM invoices WHERE id = ?', [$bill['id']]));
+    eq(8.0, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$p1]));
+
+    // Down: one piece back to stock, cash given back (in the cash book).
+    $out0 = status(200, get('/cash/day', 'admin'))['out']['refunds'];
+    $e = status(200, put("/invoices/{$bill['id']}/edit", ['reason' => 'Customer took only one', 'lines' => [['item_id' => $line, 'qty' => 1]]], 'admin'));
+    eq($no, $e['item']['invoice_no'], 'same number');
+    eq('final', $e['item']['status']);
+    eq([100.0, 100.0], [(float) $e['item']['grand_total'], (float) $e['item']['paid_total']]);
+    eq(9.0, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$p1]));
+    eq(100.0, (float) ($e['item']['refunds'][0]['amount'] ?? 0));
+    eq('Owner', $e['item']['edited_by_name']);
+    eq(round($out0 + 100, 2), (float) status(200, get('/cash/day', 'admin'))['out']['refunds']);
+
+    // Up: price change and a new part; a walk-in must pay the extra now.
+    $line = $e['item']['items'][0]['id'];
+    $up = ['reason' => 'Wrong price', 'lines' => [['item_id' => $line, 'unit_price' => 120], ['part_id' => $p2, 'qty' => 1]]];
+    $pv = status(200, post("/invoices/{$bill['id']}/edit/preview", $up, 'admin'));
+    eq([170.0, 70.0], array_map('floatval', [$pv['total'], $pv['to_collect']]));
+    eq(false, $pv['credit_ok']);
+    eq('payment_needed', put("/invoices/{$bill['id']}/edit", $up, 'admin')['json']['code']);
+    $e = status(200, put("/invoices/{$bill['id']}/edit", $up + ['payment' => ['mode' => 'upi', 'amount' => 70]], 'admin'));
+    eq([170.0, 170.0, 'paid'], [(float) $e['item']['grand_total'], (float) $e['item']['paid_total'], $e['item']['pay_status']]);
+    eq(4.0, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$p2]));
+    eq(120.0, (float) $e['item']['items'][0]['unit_price']);
+    ok((int) tval("SELECT COUNT(*) FROM audit_log WHERE action = 'invoice_edit' AND entity_id = ?", [$bill['id']]) === 2, 'audited twice');
+
+    // A customer's job bill goes down: the labour price is lowered; the extra money stays as advance.
+    $job = (int) tval("SELECT j.id FROM job_cards j JOIN customers c ON c.id = j.customer_id WHERE c.name = 'Flow next-service'");
+    $jb = (int) tval("SELECT id FROM invoices WHERE job_card_id = ? AND status = 'final'", [$job]);
+    $cid = (int) tval('SELECT customer_id FROM invoices WHERE id = ?', [$jb]);
+    $labour = trows("SELECT id, unit_price FROM invoice_items WHERE invoice_id = ? AND item_type = 'labour'", [$jb])[0];
+    $e = status(200, put("/invoices/$jb/edit", ['reason' => 'Labour was less', 'lines' => [['item_id' => (int) $labour['id'], 'unit_price' => (float) $labour['unit_price'] - 50]]], 'admin'));
+    eq(round((float) $labour['unit_price'] - 50, 2), (float) $e['item']['grand_total']);
+    eq([], $e['item']['refunds'], 'a customer keeps it as advance');
+    eq(-50.0, (float) status(200, get("/customers/$cid", 'admin'))['item']['balance'], 'advance of 50');
+    eq(round((float) $labour['unit_price'] - 50, 2), (float) tval('SELECT amount FROM job_labour WHERE job_card_id = ?', [$job]));
+});
+
+test('parts upload (owner): replace the whole list - unused parts deleted, used ones hidden at 0 stock; a wrong row changes nothing', function () {
+    eq(403, post('/parts/import', ['replace' => true, 'rows' => [['Part Name' => 'X', 'MRP' => '1']]], 'stock')['status'], 'owner only');
+    $count = (int) tval('SELECT COUNT(*) FROM parts');
+    $bad = status(200, post('/parts/import', ['replace' => true, 'set_stock' => true, 'rows' => [
+        ['Part No' => 'BRK-LINE', 'Part Name' => 'Brake lines', 'MRP' => '185', 'Qty' => '7'],
+        ['Part Name' => 'No price here'],
+    ]], 'admin'));
+    eq(true, $bad['aborted']);
+    eq(0, $bad['created'] + $bad['updated'] + $bad['deleted'] + $bad['hidden']);
+    eq($count, (int) tval('SELECT COUNT(*) FROM parts'), 'nothing changed');
+
+    $unusedId = (int) tval("SELECT id FROM parts WHERE name_en = 'Side mirror'");
+    ok($unusedId > 0);
+    $res = status(200, post('/parts/import', ['replace' => true, 'set_stock' => true, 'rows' => [
+        ['Part No' => 'BRK-LINE', 'Part Name' => 'Brake lines', 'MRP' => '185', 'Qty' => '7'],
+        ['Part No' => 'NEW-ONLY', 'Part Name' => 'Fresh part', 'MRP' => '99', 'Qty' => '3'],
+    ]], 'admin'));
+    eq(true, $res['replaced']);
+    eq([1, 1], [$res['created'], $res['updated']]);
+    ok($res['deleted'] >= 1 && $res['hidden'] >= 1, 'deleted ' . $res['deleted'] . ', hidden ' . $res['hidden']);
+    ok(str_contains((string) $res['backup'], 'before-parts-replace'), 'backup first');
+    eq(0, (int) tval('SELECT COUNT(*) FROM parts WHERE id = ?', [$unusedId]), 'never used: deleted');
+    $mrp = trows("SELECT active, current_stock FROM parts WHERE part_no = 'MRP-SALE'")[0];
+    eq([0, 0.0], [(int) $mrp['active'], (float) $mrp['current_stock']], 'on bills: hidden, stock 0');
+    eq(7.0, (float) tval("SELECT current_stock FROM parts WHERE part_no = 'BRK-LINE'"));
+    eq(2, (int) tval('SELECT COUNT(*) FROM parts WHERE active = 1'));
+    ok((int) tval("SELECT COUNT(*) FROM audit_log WHERE action = 'parts_replace'") === 2, 'audited (aborted and done)');
+});

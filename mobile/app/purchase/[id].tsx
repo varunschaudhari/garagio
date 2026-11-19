@@ -76,6 +76,12 @@ export default function PurchaseView() {
           </Txt>
           {cancelled ? <Chip label={t('purchases.cancelled')} tone="danger" /> : <Chip label={t(`pay.${b.payment_mode}`)} tone={b.payment_mode === 'credit' ? 'warning' : 'success'} />}
         </Card>
+        {!cancelled ? (
+          <View style={{ flexDirection: 'row', gap: space[2] }}>
+            <Button title={t('purchases.correct')} icon={Pencil} variant="secondary" small onPress={() => router.push({ pathname: '/purchase/new', params: { replace: String(b.id) } })} needsOnline style={{ flex: 1 }} />
+            <Button title={t('purchases.cancel')} icon={Ban} variant="secondary" small onPress={() => { setReason(''); setCancelling(true); }} needsOnline style={{ flex: 1 }} />
+          </View>
+        ) : null}
         {cancelled ? <Banner tone="danger" text={t('purchases.cancelled_by', { date: datetime(b.cancelled_at ?? ''), name: b.cancelled_by_name ?? '—', reason: b.cancel_reason ?? '' })} /> : null}
         {b.replaced_by_bill ? <Button title={t('purchases.replaced_by', { bill: b.replaced_by_bill.bill_no })} variant="secondary" small onPress={() => router.push(`/purchase/${b.replaced_by_bill!.id}`)} /> : null}
         {b.replaces_bill ? <Button title={t('purchases.replaces', { bill: b.replaces_bill.bill_no })} variant="ghost" small onPress={() => router.push(`/purchase/${b.replaces_bill!.id}`)} /> : null}
@@ -132,12 +138,6 @@ export default function PurchaseView() {
         <BillPhotoCard path={`/purchases/${b.id}/photo`} version={b.photo} canEdit onChanged={() => void p.refetch()} />
 
         {due > 0 && supplier.data ? <Button title={t('suppliers.record_payment')} icon={HandCoins} onPress={() => setPaying(true)} needsOnline /> : null}
-        {!cancelled ? (
-          <>
-            <Button title={t('purchases.correct')} icon={Pencil} variant="secondary" onPress={() => router.push({ pathname: '/purchase/new', params: { replace: String(b.id) } })} needsOnline />
-            <Button title={t('purchases.cancel')} icon={Ban} variant="ghost" onPress={() => { setReason(''); setCancelling(true); }} needsOnline />
-          </>
-        ) : null}
       </ScrollView>
       {paying && supplier.data ? <SupplierPaymentSheet supplier={supplier.data} purchaseId={b.id} amount={due} onClose={() => setPaying(false)} /> : null}
       {cancelling ? (

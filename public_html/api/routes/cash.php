@@ -40,7 +40,8 @@ function cash_day(string $date): array
         'customer_payments' => $sum("SELECT COALESCE(SUM(amount), 0) FROM customer_payments WHERE mode = 'cash' AND received_on = ?"),
     ];
     $out = [
-        'refunds' => $sum("SELECT COALESCE(SUM(refund_amount), 0) FROM sale_returns WHERE refund_mode = 'cash' AND return_date = ?"),
+        'refunds' => r2($sum("SELECT COALESCE(SUM(refund_amount), 0) FROM sale_returns WHERE refund_mode = 'cash' AND return_date = ?")
+            + $sum("SELECT COALESCE(SUM(amount), 0) FROM bill_refunds WHERE mode = 'cash' AND refunded_on = ?")),
         'supplier_payments' => $sum("SELECT COALESCE(SUM(amount), 0) FROM supplier_payments WHERE mode = 'cash' AND paid_on = ?"),
         'expenses' => $sum("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE mode = 'cash' AND spent_on = ?"),
         // Mechanic pay is handed over in cash, on the day it is entered.

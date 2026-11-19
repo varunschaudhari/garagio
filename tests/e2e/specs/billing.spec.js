@@ -126,3 +126,27 @@ test('counter sale: the owner changes a part MRP right on the bill', async ({ pa
   await expect(page.locator('#cs-lines')).toContainText('₹333.00');
   await expect(page.locator('#cs-totals')).toContainText('₹333.00');
 });
+
+test('owner edits a final walk-in bill: one piece less, same bill number, money given back', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('/#/invoices/counter');
+  await page.locator('#cs-code').fill('BS-SPL');
+  await page.locator('#cs-code').press('Enter');
+  await expect(page.locator('#cs-lines')).toContainText('BS-SPL');
+  await page.locator('[data-q="0"]').fill('2');
+  await expect(page.locator('#cs-totals')).toContainText('₹520.00');
+  await page.locator('[data-pay="cash"]').fill('520');
+  await page.getByRole('button', { name: 'Finalise bill' }).click();
+  await expect(page.locator('h1')).toContainText('Paid');
+  const billNo = (await page.locator('h1').innerText()).split(/\s+/).find((w) => /\//.test(w));
+
+  await page.getByRole('button', { name: 'Edit bill' }).click();
+  const d = page.locator('.drawer');
+  await d.locator('[data-e-qty]').first().fill('1');
+  await expect(d.locator('#e-sum')).toContainText('Give back: ₹260.00');
+  await d.locator('#e-reason').fill('Customer took one');
+  await d.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.locator('.toast', { hasText: 'Bill changed' })).toBeVisible();
+  await expect(page.locator('#bill-edited')).toContainText('Given back ₹260.00');
+  await expect(page.locator('h1')).toContainText(billNo);
+});

@@ -1,12 +1,15 @@
+import { useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { HandCoins, Pencil, Phone, Truck } from 'lucide-react-native';
+import { HandCoins, Pencil, Phone, Trash2, Truck } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { api } from '@/api/client';
 import { useSupplierLedger } from '@/api/queries';
 import { SupplierPaymentSheet } from '@/components/pickers';
 import { SupplierFormSheet } from '@/components/supplierForm';
+import { toast, toastError } from '@/components/toast';
 import { Button, Card, Divider, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { date, money } from '@/format';
 import { radius, space, useTheme } from '@/theme';
@@ -20,6 +23,24 @@ export default function SupplierScreen() {
   const ledger = useSupplierLedger(Number(id));
   const [paying, setPaying] = useState(false);
   const [editing, setEditing] = useState(false);
+  const qc = useQueryClient();
+  const remove = (name: string) =>
+    Alert.alert(t('suppliers.delete_q', { name }), t('suppliers.delete_note'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: () =>
+          void api
+            .del<{ deleted: boolean }>(`/suppliers/${id}`)
+            .then((res) => {
+              toast(res.deleted ? t('suppliers.deleted') : t('suppliers.hidden'));
+              void qc.invalidateQueries({ queryKey: ['suppliers'] });
+              router.back();
+            })
+            .catch(toastError),
+      },
+    ]);
 
   if (ledger.isPending) return <Loading />;
   if (!ledger.data) return null;
@@ -51,7 +72,10 @@ export default function SupplierScreen() {
           <Button title={t('suppliers.record_payment')} icon={HandCoins} onPress={() => setPaying(true)} needsOnline style={{ flex: 1 }} />
           {s.phone ? <Button title={t('common.phone')} icon={Phone} variant="secondary" onPress={() => void Linking.openURL(`tel:${s.phone}`)} /> : null}
         </View>
-        <Button title={t('suppliers.edit')} icon={Pencil} variant="ghost" small onPress={() => setEditing(true)} needsOnline />
+        <View style={{ flexDirection: 'row', gap: space[2] }}>
+          <Button title={t('suppliers.edit')} icon={Pencil} variant="ghost" small onPress={() => setEditing(true)} needsOnline style={{ flex: 1 }} />
+          <Button title={t('suppliers.delete')} icon={Trash2} variant="ghost" small onPress={() => remove(s.name)} needsOnline style={{ flex: 1 }} />
+        </View>
         <Button title={t('suppliers.new_purchase')} icon={Truck} variant="secondary" onPress={() => router.push({ pathname: '/purchase/new', params: { supplier: String(s.id) } })} needsOnline />
 
         <Card padded={false}>

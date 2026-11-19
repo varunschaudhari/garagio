@@ -4,19 +4,24 @@ import * as Sharing from 'expo-sharing';
 import { FileDown, FileSpreadsheet, Upload } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Alert, ScrollView, Switch, View } from 'react-native';
 import { api, apiUrl } from '@/api/client';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, OfflineBanner, Txt } from '@/components/ui';
 import { pickSheet, SheetReadError, type SheetRow } from '@/excel';
 import { useSession } from '@/store/session';
-import { space } from '@/theme';
+import { space, useTheme } from '@/theme';
 
 type Row = SheetRow;
 interface ImportResult {
   created: number;
   updated: number;
   auto_numbered: number;
+  stock_set: number;
+  deleted: number;
+  hidden: number;
+  replaced: boolean;
+  aborted: boolean;
   errors: { row: number; part_no: string | null; error: string; fields?: Record<string, unknown> }[];
   unused_columns: string[];
 }
@@ -45,6 +50,10 @@ export default function PartsImport() {
   const qc = useQueryClient();
   const server = useSession((s) => s.server);
   const token = useSession((s) => s.token);
+  const owner = useSession((s) => s.user?.role === 'owner');
+  const { c } = useTheme();
+  const [setStock, setSetStock] = useState(true);
+  const [replace, setReplace] = useState(false);
   const [file, setFile] = useState<{ name: string; rows: Row[] } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState<'' | 'sample' | 'pick' | 'import'>('');
@@ -84,9 +93,18 @@ export default function PartsImport() {
 
   const run = async () => {
     if (!file?.rows.length) return;
+    if (replace) {
+      const sure = await new Promise<boolean>((resolve) =>
+        Alert.alert(t('parts.import_replace_q'), t('parts.import_replace_note'), [
+          { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+          { text: t('parts.import_run'), style: 'destructive', onPress: () => resolve(true) },
+        ])
+      );
+      if (!sure) return;
+    }
     setBusy('import');
     try {
-      const res = await api.post<ImportResult>('/parts/import', { rows: file.rows });
+      const res = await api.post<ImportResult>('/parts/import', { rows: file.rows, set_stock: setStock, replace });
       setResult(res);
       setFile(null);
       void qc.invalidateQueries({ queryKey: ['parts'] });
@@ -109,6 +127,22 @@ export default function PartsImport() {
           <Button title={t('parts.import_sample_share')} icon={FileDown} variant="secondary" onPress={() => void getSample()} loading={busy === 'sample'} needsOnline />
         </Card>
 
+        <Card style={{ gap: space[3] }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+            <Txt style={{ flex: 1 }}>{t('parts.import_set_stock')}</Txt>
+            <Switch value={setStock} onValueChange={setSetStock} trackColor={{ true: c.primary }} accessibilityLabel={t('parts.import_set_stock')} />
+          </View>
+          {owner ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Txt weight="semibold">{t('parts.import_replace')}</Txt>
+                <Txt size="sm" muted>{t('parts.import_replace_note')}</Txt>
+              </View>
+              <Switch value={replace} onValueChange={setReplace} trackColor={{ true: c.danger }} accessibilityLabel={t('parts.import_replace')} />
+            </View>
+          ) : null}
+        </Card>
+
         <Button title={t('parts.import_file')} icon={FileSpreadsheet} variant="secondary" onPress={() => void pick()} loading={busy === 'pick'} />
 
         {file ? (
@@ -125,7 +159,12 @@ export default function PartsImport() {
 
         {result ? (
           <Card style={{ gap: space[2] }}>
-            <Banner tone={result.errors.length ? 'warning' : 'success'} text={`${t('parts.import_done', { created: result.created, updated: result.updated })}${result.errors.length ? ' · ' + t('parts.import_errors', { n: result.errors.length }) : ''}`} />
+            <Banner
+              tone={result.aborted ? 'danger' : result.errors.length ? 'warning' : 'success'}
+              text={`${result.aborted ? t('parts.import_aborted') : t('parts.import_done', { created: result.created, updated: result.updated })}${result.errors.length ? ' · ' + t('parts.import_errors', { n: result.errors.length }) : ''}`}
+            />
+            {result.stock_set ? <Txt size="sm">{t('parts.import_stock_set', { n: result.stock_set })}</Txt> : null}
+            {result.replaced ? <Txt size="sm">{t('parts.import_replaced', { deleted: result.deleted, hidden: result.hidden })}</Txt> : null}
             {result.auto_numbered ? <Txt size="sm" muted>{t('parts.import_auto', { n: result.auto_numbered })}</Txt> : null}
             {result.unused_columns.length ? <Txt size="sm">{t('parts.import_unused', { list: result.unused_columns.join(', ') })}</Txt> : null}
             {result.errors.map((er) => (

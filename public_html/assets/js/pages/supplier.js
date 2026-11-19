@@ -6,7 +6,8 @@ import { money, date, todayISO } from '../format.js';
 import { dataTable, emptyState, skeletonRows } from '../ui/table.js';
 import { field } from '../ui/form.js';
 import { openDrawer } from '../ui/drawer.js';
-import { toast } from '../ui/toast.js';
+import { toast, toastError } from '../ui/toast.js';
+import { confirmDialog } from '../ui/modal.js';
 import { openSupplierForm } from './suppliers.js';
 
 const PAY_MODES = ['cash', 'upi', 'bank', 'card'];
@@ -55,6 +56,7 @@ export default async function supplierPage(ctx) {
             ${s.state_code !== '27' ? html` <span class="chip info">${t('suppliers.interstate')}</span>` : ''}
           </div>
         </div>
+        <button class="btn btn-ghost" data-act="delete">${icon('trash-2')}${t('suppliers.delete')}</button>
         <button class="btn btn-secondary" data-act="edit">${icon('pencil')}${t('common.edit')}</button>
         <a class="btn btn-secondary" href="#/purchases/new?supplier=${s.id}">${icon('truck')}${t('suppliers.new_purchase')}</a>
         <button class="btn btn-primary" data-act="pay">${icon('hand-coins')}${t('suppliers.record_payment')}</button>
@@ -100,5 +102,15 @@ export default async function supplierPage(ctx) {
   });
   on(ctx.el, 'click', '[data-act="pay"]', async () => {
     if (await openSupplierPayment(supplier)) supplier = await draw();
+  });
+  on(ctx.el, 'click', '[data-act="delete"]', async () => {
+    if (!(await confirmDialog({ title: t('suppliers.delete_q', { name: supplier.name }), message: t('suppliers.delete_note'), danger: true, confirmLabel: t('common.delete') }))) return;
+    try {
+      const res = await api.del('/suppliers/' + id);
+      toast(res.deleted ? t('suppliers.deleted') : t('suppliers.hidden'));
+      location.hash = '#/suppliers';
+    } catch (err) {
+      toastError(err);
+    }
   });
 }

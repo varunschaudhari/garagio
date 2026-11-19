@@ -453,6 +453,8 @@ CREATE TABLE invoices (
   cancelled_by INT NULL,
   cancelled_at DATETIME NULL,
   finalized_at DATETIME NULL,
+  edited_at DATETIME NULL,
+  edited_by INT NULL,
   created_by INT NULL,
   created_at DATETIME NULL,
   updated_at DATETIME NULL,
@@ -463,6 +465,21 @@ CREATE TABLE invoices (
   CONSTRAINT fk_inv_customer FOREIGN KEY (customer_id) REFERENCES customers(id),
   CONSTRAINT fk_inv_cancelled_by FOREIGN KEY (cancelled_by) REFERENCES users(id),
   CONSTRAINT fk_inv_created_by FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE bill_refunds (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_id INT NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  mode VARCHAR(10) NOT NULL DEFAULT 'cash',
+  refunded_on DATE NOT NULL,
+  note VARCHAR(255) NULL,
+  user_id INT NULL,
+  created_at DATETIME NULL,
+  updated_at DATETIME NULL,
+  KEY ix_br_date (refunded_on),
+  CONSTRAINT fk_br_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+  CONSTRAINT fk_br_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE invoice_items (
@@ -721,6 +738,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('008_expense_categories
 INSERT INTO schema_migrations (name, applied_at) VALUES ('009_next_service.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('010_bill_photos.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('011_shop_phone.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('012_bill_edit.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

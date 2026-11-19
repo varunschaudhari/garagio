@@ -496,3 +496,17 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     "Change MRP" pencil on counter-sale and draft-bill lines sets the part's selling price (audited) for this bill and
     later ones; on a job bill the job's parts take it too. New tick change_mrp (owner + store keeper by default; the
     owner can give it to the front desk). Discounts stay owner-only.
+30. **Shop requests of 19 Nov 2026, third batch (answers from the owner):**
+    - Parts upload: "The sheet's quantity becomes the stock" (default on) sets each existing part's stock to the sheet's
+      quantity through a stock adjustment "Excel upload". The owner can "Replace the whole parts list": a backup is
+      taken first; any wrong row stops the whole upload (nothing changes); parts not in the sheet are deleted when never
+      on a purchase, bill, job, request, estimate or return, otherwise hidden with their stock adjusted to 0.
+    - Suppliers can be deleted; one with bills, payments or an opening balance is hidden instead.
+    - Purchase bills: "Correct bill" and "Cancel bill" stay the way to change them (no hard delete); on the phone they
+      sit right under the bill header.
+    - The owner (cancel_bills tick) edits a final sales bill and it keeps its number: qty, price, discount, remove lines,
+      add parts (counter bills), bill discount, walk-in name / phone. Stock follows the difference (job bills through
+      the job's parts). If the bill goes up the extra is collected now (credit only for trusted customers within their
+      limit); if it goes down a customer keeps the extra as advance and a walk-in customer gets it back (bill_refunds,
+      in the cash book). Not after a return or a change of GST registration. Every edit is previewed first and audited
+      with the old and new lines; the bill shows "Edited … by …".

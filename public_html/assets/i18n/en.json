@@ -256,7 +256,7 @@
       "mrp": "MRP: the selling price, with GST.",
       "rate": "Purchase Rate: what you pay the supplier for one piece, without GST, before discount.",
       "discount": "Discount %: the discount the supplier gives you.",
-      "qty": "Available Qty: pieces in the shop today. Used only for new parts; parts already in the app keep their stock.",
+      "qty": "Available Qty: pieces in the shop today. It becomes the stock when \"The sheet's quantity becomes the stock\" is ticked (for new parts always).",
       "min": "Min Qty: below this the part shows as low stock.",
       "headings": "Your own sheet works too: headings like Part No, Part Name, MRP, Rate, Qty, GST (in English or Marathi) are understood. Keep the headings in the first row.",
       "update": "A part number that is already in the app is updated, not added twice.",
@@ -267,7 +267,14 @@
     "import_unused": "Columns not used: {{list}}",
     "import_auto": "{{n}} new parts got an automatic part number.",
     "import_empty": "No rows in this file. Put the headings in the first row and the parts below.",
-    "import_read_error": "Could not read this file. Save it as .xlsx or .csv and try again."
+    "import_read_error": "Could not read this file. Save it as .xlsx or .csv and try again.",
+    "import_set_stock": "The sheet's quantity becomes the stock (also for parts already in the app)",
+    "import_replace": "Replace the whole parts list with this sheet",
+    "import_replace_note": "Parts not in this sheet are deleted, or hidden with stock 0 if they were ever on a bill, purchase or job. A backup is taken first; if any row is wrong, nothing changes.",
+    "import_replace_q": "Replace the whole parts list?",
+    "import_stock_set": "Stock changed for {{n}} parts (see each part's ledger: \"Excel upload\").",
+    "import_replaced": "{{deleted}} parts deleted, {{hidden}} hidden (they have history).",
+    "import_aborted": "Nothing was changed: fix the rows below and upload again."
   },
   "stock": {
     "count_title": "Stock count",
@@ -475,7 +482,11 @@
     "invoice_has_returns": "This bill has returns. Take back the rest as a return instead of cancelling.",
     "refund_too_much": "That is more than the customer is owed.",
     "refund_required": "Walk-in customer: give back the full amount paid over.",
-    "day_closed": "This day's cash is already counted. The owner can reopen it."
+    "day_closed": "This day's cash is already counted. The owner can reopen it.",
+    "payment_needed": "Collect the extra amount to save this change (credit only for trusted customers).",
+    "gst_mode_changed": "GST registration changed since this bill. Cancel it and make a new one.",
+    "edit_has_returns": "This bill has returns, so it can't be edited.",
+    "edit_empty": "The bill would be empty. Cancel it instead."
   },
   "fields": {
     "required": "Required",
@@ -565,7 +576,12 @@
     "against_bill": "Against bill",
     "advance_note": "Paying more than the balance leaves an advance with the supplier.",
     "contact_person": "Contact person",
-    "gstin_hint": "Optional. The state is read from the GSTIN (another state means IGST on purchases)."
+    "gstin_hint": "Optional. The state is read from the GSTIN (another state means IGST on purchases).",
+    "delete": "Delete supplier",
+    "delete_q": "Delete {{name}}?",
+    "delete_note": "A supplier with bills, payments or an opening balance is only hidden from the lists, so its history stays.",
+    "deleted": "Supplier deleted.",
+    "hidden": "This supplier has bills, so it is hidden from the lists instead."
   },
   "purchases": {
     "title": "Purchase bills",
@@ -1071,7 +1087,25 @@
     "entry_refund": "Money given back",
     "change_mrp": "Change MRP",
     "change_mrp_note": "New MRP for {{part}}. It is used on this bill and on later bills.",
-    "mrp_changed": "MRP changed."
+    "mrp_changed": "MRP changed.",
+    "edit": "Edit bill",
+    "edit_title": "Edit bill {{no}}",
+    "edit_note": "The bill keeps its number. Stock and payments follow the change; the old version stays in the audit log.",
+    "edit_reason": "Why are you changing this bill?",
+    "edit_remove": "Remove",
+    "edit_add_part": "Add a part",
+    "edit_new_total": "New total",
+    "edit_old_total": "Old total",
+    "edit_collect": "Collect now: {{amount}}",
+    "edit_credit": "{{amount}} goes on the customer's credit",
+    "edit_refund": "Give back: {{amount}}",
+    "edit_advance": "{{amount}} stays with the customer as advance",
+    "edit_same": "No money changes hands",
+    "edit_save": "Save changes",
+    "edited": "Bill changed.",
+    "edited_by": "Edited {{date}} by {{name}}",
+    "given_back": "Given back {{amount}} on {{date}}",
+    "edit_job_qty": "Parts taken off a job bill go back to stock; extra parts leave stock."
   },
   "reminders": {
     "title": "Reminders",

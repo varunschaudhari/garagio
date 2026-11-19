@@ -127,11 +127,16 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] The printed receipt of a job bill ends with the next service date and km.
 - [ ] Owner: counter sale and draft bill lines have a pencil "Change MRP"; the new MRP shows at once and the total changes; the part's MRP is the new one afterwards. Front desk sees the pencil only after the owner ticks "Change a part's MRP".
 - [ ] Bill lines read "2 × rate"; a discounted part line adds "MRP … −10%"; the printed receipt shows the same.
+- [ ] Owner: "Edit bill" on a final bill opens the edit screen; changing qty / price shows the new total and "Collect now" / "Give back" at once; the amount to collect is filled in; saving keeps the bill number and shows "Edited … by …" (and "Given back …").
+- [ ] Front desk does not see "Edit bill".
 - [ ] Final bill: "Print receipt" opens the Android print screen; the thermal printer prints a 58 / 80 mm receipt in the customer's language (`docs/PRINTER_SETUP.md`).
 - [ ] "Share PDF" opens the share sheet with the A4 PDF; sharing to WhatsApp attaches it (Marathi + English bill).
 - [ ] "Send on WhatsApp" opens a chat with the bill message; "Record payment" reduces the balance; "Deliver bike" closes the job.
 - [ ] Owner: Money tab shows today's sales and customer dues; "Cancel bill" asks for a reason; a counter-sale cancel puts stock back.
 - [ ] Owner → More: New job, Customers, Parts requests, Purchase bills and My profile each open their own page with a back arrow (not the dashboard). Dashboard purchase / low-stock cards open purchase bills / parts.
+- [ ] Parts import: "The sheet's quantity becomes the stock" is on; the owner also sees "Replace the whole parts list" (asks to confirm). A sheet with a wrong row shows "Nothing was changed".
+- [ ] Supplier page: "Delete supplier" – a new, unused supplier disappears; one with bills is hidden (message says so).
+- [ ] Purchase bill: "Correct bill" and "Cancel bill" are right under the bill header.
 - [ ] Cash book (Bills tab button, or More → Cash book): add a tea expense in cash – "Should be in the drawer" goes down; a UPI expense does not change it.
 - [ ] Owner Home starts with eight tiles (Purchase bill, Sales bill, Stock, Job card, Supplier payables with the amount, Expenses, Reports, Suppliers); each opens its screen and Back returns to Home (no bounce to the dashboard).
 - [ ] Owner: "Change the list of expense types" in the cash book – add "Cleaning", rename it, hide it; the add-expense sheet shows only the visible types. Front desk does not see the button.
