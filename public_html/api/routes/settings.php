@@ -64,4 +64,6 @@ function master_routes(string $path, string $table, array $extraRules, array $wr
 
 master_routes('/locations', 'storage_locations', ['sort_order' => 'int|min:0|max:9999|def:0'], [ROLE_OWNER, ROLE_INVENTORY], 'sort_order, id');
 master_routes('/categories', 'categories', [], [ROLE_OWNER, ROLE_INVENTORY], 'name_en');
+// Expense categories (cash book): everyone picks from the active ones; the owner changes the list.
+master_routes('/expense-categories', 'expense_categories', ['sort_order' => 'int|min:0|max:9999|def:0'], [ROLE_OWNER], 'sort_order, id');
 master_routes('/labour-rates', 'labour_rates', ['amount' => 'num|req|min:0|max:1000000'], [ROLE_OWNER], 'name_en');

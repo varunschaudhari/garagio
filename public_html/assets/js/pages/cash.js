@@ -1,5 +1,5 @@
 import { html, setHTML, $, on, replaceQuery } from '../dom.js';
-import { t } from '../i18n.js';
+import { t, nm } from '../i18n.js';
 import { api } from '../api.js';
 import { hasRole } from '../store.js';
 import { icon } from '../ui/icons.js';
@@ -10,7 +10,6 @@ import { openDrawer } from '../ui/drawer.js';
 import { confirmDialog } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
 
-const CATS = ['rent', 'electricity', 'tea_snacks', 'fuel', 'tools', 'salary', 'repairs', 'transport', 'other'];
 const MODES = ['cash', 'upi', 'bank'];
 
 export function diffText(d) {
@@ -78,7 +77,7 @@ export default async function cashPage(ctx) {
       <div class="card" style="margin-top:20px">
         <div class="card-head"><h3>${t('cash.expenses')}</h3><span class="strong num">${money(d.expenses_total)}</span></div>
         ${d.expenses.length ? html`<div class="list">${d.expenses.map((e) => html`<div class="list-item">
-          <div style="flex:1"><div class="strong">${t('cash.cat.' + e.category)}${e.note ? ' · ' + e.note : ''}</div><div class="small muted">${t('pay.' + e.mode)} · ${e.user_name || ''}</div></div>
+          <div style="flex:1"><div class="strong">${nm(e, 'category')}${e.note ? ' · ' + e.note : ''}</div><div class="small muted">${t('pay.' + e.mode)} · ${e.user_name || ''}</div></div>
           <div class="num strong">${money(e.amount)}</div>
           ${c ? '' : html`<button class="btn btn-ghost btn-icon btn-sm" data-del="${e.id}" aria-label="${t('common.delete')}">${icon('trash-2', 16)}</button>`}
         </div>`)}</div>` : html`<div class="card-body muted">${t('cash.no_expenses')}</div>`}
@@ -164,11 +163,18 @@ export default async function cashPage(ctx) {
     }
   });
   on(ctx.el, 'click', '[data-act="expense"]', async () => {
+    let cats;
+    try {
+      cats = (await api.get('/expense-categories')).items;
+    } catch (err) {
+      return toastError(err);
+    }
     const res = await openDrawer({
       title: t('cash.add_expense'),
       body: html`<div class="stack">
         ${field({ name: 'spent_on', label: t('cash.date'), type: 'date', value: day, required: true })}
-        ${field({ name: 'category', label: t('cash.category'), type: 'select', value: 'tea_snacks', options: CATS.map((k) => ({ value: k, label: t('cash.cat.' + k) })) })}
+        ${field({ name: 'category_id', label: t('cash.category'), type: 'select', dtype: 'int', value: cats[0]?.id, options: cats.map((c) => ({ value: c.id, label: nm(c) })), required: true })}
+        ${owner ? html`<a class="small" href="#/settings?tab=expense_categories">${t('cash.edit_categories')}</a>` : ''}
         ${field({ name: 'amount', label: t('common.amount') + ' (₹)', type: 'number', required: true })}
         ${field({ name: 'mode', label: t('suppliers.mode'), type: 'select', value: 'cash', options: MODES.map((m) => ({ value: m, label: t('pay.' + m) })) })}
         ${field({ name: 'note', label: t('common.notes') })}

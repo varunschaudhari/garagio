@@ -88,7 +88,8 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 
 | Endpoint | Who | Notes |
 |---|---|---|
-| `GET /expenses?from&to&category` · `POST /expenses` · `DELETE /expenses/{id}` | cash_book | `{spent_on, category, amount, mode, note}`; 409 `day_closed` once the day is counted |
+| `GET /expenses?from&to&category_id` · `POST /expenses` · `DELETE /expenses/{id}` | cash_book | `{spent_on, category_id, amount, mode, note}` (old `category` codes still accepted); rows carry `category_en/_mr`; 409 `day_closed` once the day is counted |
+| `GET /expense-categories[?all=1]` · `POST` · `PUT /expense-categories/{id}` | any · O | `{name_en, name_mr, sort_order, active}`; hidden types stay on old entries |
 | `GET /cash/day?date=` | cash_book | opening, money in / out by kind, expected, other modes, expenses, the count |
 | `POST /cash/close` · `GET /cash/closes?from&to` | cash_book | `{date, counted, taken_out, note, opening}` (opening only on the first count) |
 | `DELETE /cash/close/{date}` | O | reopen a counted day |

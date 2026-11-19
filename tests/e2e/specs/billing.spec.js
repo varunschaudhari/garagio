@@ -66,6 +66,21 @@ test('walk-in customer cannot take credit', async ({ page }) => {
   await expect(page.locator('h1')).toContainText('Draft');
 });
 
+test('owner adds an expense category in Settings; it shows up in the cash book', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('/#/settings?tab=expense_categories');
+  await expect(page.locator('.table')).toContainText('Machinery');
+  await page.getByRole('button', { name: 'New expense type' }).click();
+  await page.locator('.drawer [name=name_en]').fill('Cleaning');
+  await page.locator('.drawer [name=name_mr]').fill('साफसफाई');
+  await page.locator('.drawer').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.table')).toContainText('Cleaning');
+  await page.goto('/#/cash');
+  await page.getByRole('button', { name: 'Add expense' }).click();
+  await expect(page.locator('.drawer [name=category_id] option', { hasText: 'Cleaning' })).toHaveCount(1);
+  await page.locator('.drawer').getByRole('button', { name: 'Cancel' }).click();
+});
+
 test('cash book: add an expense, count the drawer, reopen the day', async ({ page }) => {
   await login(page, 'admin');
   await page.locator('.sidebar').getByRole('link', { name: 'Cash book' }).click();
@@ -73,11 +88,12 @@ test('cash book: add an expense, count the drawer, reopen the day', async ({ pag
   await page.getByRole('button', { name: 'Add expense' }).click();
   const drawer = page.locator('.drawer');
   await drawer.locator('[name=amount]').fill('120');
-  await drawer.locator('[name=note]').fill('Tea');
+  await drawer.locator('[name=category_id]').selectOption({ label: 'Snacks' });
+  await drawer.locator('[name=note]').fill('Vada pav');
   await drawer.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.toast')).toContainText('Expense saved');
   const expenses = page.locator('.card', { has: page.getByRole('heading', { name: 'Expenses', exact: true }) });
-  await expect(expenses).toContainText('Tea / snacks · Tea');
+  await expect(expenses).toContainText('Snacks · Vada pav');
   await expect(expenses).toContainText('₹120.00');
 
   // First count: say what was in the drawer this morning; the expected cash follows it.

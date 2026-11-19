@@ -570,10 +570,35 @@ CREATE TABLE payment_allocations (
   CONSTRAINT fk_pa_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE expense_categories (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name_en VARCHAR(80) NOT NULL,
+  name_mr VARCHAR(80) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NULL,
+  updated_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO expense_categories (id, name_en, name_mr, sort_order, active, created_at, updated_at) VALUES
+(1, 'Tea', 'चहा', 1, 1, NOW(), NOW()),
+(2, 'Snacks', 'नाश्ता', 2, 1, NOW(), NOW()),
+(3, 'Water', 'पाणी', 3, 1, NOW(), NOW()),
+(4, 'Tools', 'हत्यारे', 4, 1, NOW(), NOW()),
+(5, 'Machinery', 'मशिनरी', 5, 1, NOW(), NOW()),
+(6, 'Racks', 'रॅक', 6, 1, NOW(), NOW()),
+(7, 'Rent', 'भाडे', 7, 1, NOW(), NOW()),
+(8, 'Electricity', 'वीज बिल', 8, 1, NOW(), NOW()),
+(9, 'Fuel', 'पेट्रोल / डिझेल', 9, 1, NOW(), NOW()),
+(10, 'Staff salary', 'कर्मचारी पगार', 10, 1, NOW(), NOW()),
+(11, 'Shop repairs', 'दुकान दुरुस्ती', 11, 1, NOW(), NOW()),
+(12, 'Transport / courier', 'वाहतूक / कुरिअर', 12, 1, NOW(), NOW()),
+(13, 'Other', 'इतर', 13, 1, NOW(), NOW());
+
 CREATE TABLE expenses (
   id INT AUTO_INCREMENT PRIMARY KEY,
   spent_on DATE NOT NULL,
-  category VARCHAR(20) NOT NULL,
+  category_id INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,
   mode VARCHAR(10) NOT NULL DEFAULT 'cash',
   note VARCHAR(255) NULL,
@@ -581,6 +606,7 @@ CREATE TABLE expenses (
   created_at DATETIME NULL,
   updated_at DATETIME NULL,
   KEY ix_exp_date (spent_on),
+  CONSTRAINT fk_exp_category FOREIGN KEY (category_id) REFERENCES expense_categories(id),
   CONSTRAINT fk_exp_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -685,6 +711,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('004_purchase_cancel.sq
 INSERT INTO schema_migrations (name, applied_at) VALUES ('005_sale_returns.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('006_cash_book.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('007_purchase_mrp.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('008_expense_categories.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

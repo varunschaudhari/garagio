@@ -67,3 +67,23 @@ test('bills: MRP and the rate after discount, on screen and on the printed bills
     $plain = status(200, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'desk'));
     eq(200.0, $plain['lines'][0]['rate'], 'no discount: rate = MRP');
 });
+
+test('cash book: the owner keeps the list of expense types; older apps still send the old codes', function () {
+    $list = status(200, get('/expense-categories', 'desk'))['items'];
+    eq(['Tea', 'Snacks', 'Water', 'Tools', 'Machinery', 'Racks'], array_slice(array_column($list, 'name_en'), 0, 6), "the shop's own list first");
+    eq(403, post('/expense-categories', ['name_en' => 'Party'], 'desk')['status'], 'only the owner changes the list');
+    $c = status(200, post('/expense-categories', ['name_en' => 'Cleaning', 'name_mr' => 'साफसफाई', 'sort_order' => 20], 'admin'))['item'];
+    $e = status(200, post('/expenses', ['category_id' => $c['id'], 'amount' => 80, 'note' => 'Phenyl'], 'desk'))['item'];
+    eq('Cleaning', $e['category_en']);
+    eq('साफसफाई', $e['category_mr']);
+    $old = status(200, post('/expenses', ['category' => 'fuel', 'amount' => 50], 'desk'))['item'];
+    eq('Fuel', $old['category_en'], 'old app code mapped');
+    eq(422, post('/expenses', ['category_id' => 99999, 'amount' => 10], 'desk')['status']);
+    status(200, put('/expense-categories/' . $c['id'], ['active' => false], 'admin'));
+    ok(!in_array('Cleaning', array_column(status(200, get('/expense-categories', 'desk'))['items'], 'name_en'), true), 'hidden from the pick list');
+    ok(in_array('Cleaning', array_column(status(200, get('/expense-categories?all=1', 'admin'))['items'], 'name_en'), true));
+    $day = status(200, get('/cash/day', 'desk'));
+    ok(in_array('Cleaning', array_column($day['expenses'], 'category_en'), true), 'old entries keep their name');
+    status(200, del('/expenses/' . $e['id'], 'desk'));
+    status(200, del('/expenses/' . $old['id'], 'desk'));
+});

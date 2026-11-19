@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Plus, Trash2, Undo2 } from 'lucide-react-native';
+import { Check, Eye, EyeOff, Pencil, Plus, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,15 +8,24 @@ import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Button, Card, Divider, Field, IconButton, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { date, datetime, money } from '@/format';
+import { nm } from '@/i18n';
 import { useSession } from '@/store/session';
 import { space, useTheme } from '@/theme';
 
 type Mode = 'cash' | 'upi' | 'bank';
-const CATS = ['tea_snacks', 'fuel', 'electricity', 'rent', 'tools', 'salary', 'repairs', 'transport', 'other'] as const;
+interface ExpenseCategory {
+  id: number;
+  name_en: string;
+  name_mr: string | null;
+  sort_order: number;
+  active: number;
+}
 
 interface Expense {
   id: number;
-  category: string;
+  category_id: number;
+  category_en: string;
+  category_mr: string | null;
   amount: number;
   mode: Mode;
   note: string | null;
@@ -70,7 +79,9 @@ export default function CashScreen() {
   const day = isoToday();
   const q = useQuery({ queryKey: ['cash-day', day], queryFn: () => api.get<CashDay>('/cash/day', { date: day }) });
   const [sheet, setSheet] = useState(false);
-  const [cat, setCat] = useState<(typeof CATS)[number]>('tea_snacks');
+  const cats = useQuery({ queryKey: ['expense-categories'], queryFn: () => api.get<{ items: ExpenseCategory[] }>('/expense-categories').then((r) => r.items) });
+  const [cat, setCat] = useState<number | null>(null);
+  const [editCats, setEditCats] = useState(false);
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState<Mode>('cash');
   const [note, setNote] = useState('');
@@ -187,7 +198,7 @@ export default function CashScreen() {
             d.expenses.map((e) => (
               <View key={e.id} style={[styles.kv, { gap: space[2] }]}>
                 <View style={{ flex: 1 }}>
-                  <Txt weight="semibold">{t(`cash.cat.${e.category}`)}{e.note ? ` · ${e.note}` : ''}</Txt>
+                  <Txt weight="semibold">{nm(e, 'category')}{e.note ? ` · ${e.note}` : ''}</Txt>
                   <Txt size="sm" muted>{t(`pay.${e.mode}`)} · {e.user_name ?? ''}</Txt>
                 </View>
                 <Txt tabular weight="semibold">{money(e.amount)}</Txt>
@@ -209,7 +220,8 @@ export default function CashScreen() {
           ) : (
             <Txt size="sm" muted>{t('cash.no_expenses')}</Txt>
           )}
-          {!cl ? <Button title={t('cash.add_expense')} icon={Plus} variant="secondary" onPress={() => { setAmount(''); setNote(''); setSheet(true); }} needsOnline /> : null}
+          {!cl ? <Button title={t('cash.add_expense')} icon={Plus} variant="secondary" onPress={() => { setAmount(''); setNote(''); setCat(cats.data?.[0]?.id ?? null); setSheet(true); }} needsOnline /> : null}
+          {owner ? <Button title={t('cash.edit_categories')} icon={Pencil} variant="ghost" small onPress={() => setEditCats(true)} /> : null}
         </Card>
       </ScrollView>
 
@@ -217,8 +229,8 @@ export default function CashScreen() {
         <Sheet visible onClose={() => setSheet(false)} title={t('cash.add_expense')}>
           <Txt size="sm" weight="semibold">{t('cash.category')}</Txt>
           <View style={styles.chips}>
-            {CATS.map((k) => (
-              <Button key={k} title={t(`cash.cat.${k}`)} small variant={cat === k ? 'primary' : 'secondary'} onPress={() => setCat(k)} />
+            {(cats.data ?? []).map((k) => (
+              <Button key={k.id} title={nm(k)} small variant={cat === k.id ? 'primary' : 'secondary'} onPress={() => setCat(k.id)} />
             ))}
           </View>
           <Field label={`${t('common.amount')} (₹)`} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoFocus required />
@@ -228,11 +240,11 @@ export default function CashScreen() {
             title={t('common.save')}
             icon={Check}
             loading={busy}
-            disabled={!(num(amount) > 0)}
+            disabled={!(num(amount) > 0) || !cat}
             needsOnline
             onPress={() =>
               void run(async () => {
-                await api.post('/expenses', { spent_on: day, category: cat, amount: num(amount), mode, note: note.trim() });
+                await api.post('/expenses', { spent_on: day, category_id: cat, amount: num(amount), mode, note: note.trim() });
                 setSheet(false);
                 toast(t('cash.expense_saved'));
                 refresh();
@@ -241,7 +253,69 @@ export default function CashScreen() {
           />
         </Sheet>
       ) : null}
+      {editCats ? <CategoriesSheet onClose={() => setEditCats(false)} /> : null}
     </KeyboardAvoidingView>
+  );
+}
+
+/** Owner: the list of things money is spent on - add, rename, hide. */
+function CategoriesSheet({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+  const { c } = useTheme();
+  const qc = useQueryClient();
+  const all = useQuery({ queryKey: ['expense-categories', 'all'], queryFn: () => api.get<{ items: ExpenseCategory[] }>('/expense-categories', { all: 1 }).then((r) => r.items) });
+  const [editing, setEditing] = useState<ExpenseCategory | null>(null);
+  const [en, setEn] = useState('');
+  const [mr, setMr] = useState('');
+  const [busy, setBusy] = useState(false);
+  const save = async (fn: () => Promise<unknown>) => {
+    setBusy(true);
+    try {
+      await fn();
+      await qc.invalidateQueries({ queryKey: ['expense-categories'] });
+      setEditing(null);
+      setEn('');
+      setMr('');
+      toast(t('common.saved'));
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const items = all.data ?? [];
+  return (
+    <Sheet visible onClose={onClose} title={t('settings.expense_categories')}>
+      {items.map((k) => (
+        <View key={k.id} style={[styles.kv, { gap: space[2] }]}>
+          <Txt weight="semibold" color={k.active ? 'text' : 'muted'} style={{ flex: 1 }}>
+            {nm(k)}
+          </Txt>
+          <IconButton icon={Pencil} label={t('common.edit')} color={c.muted} onPress={() => { setEditing(k); setEn(k.name_en); setMr(k.name_mr ?? ''); }} />
+          <IconButton
+            icon={k.active ? Eye : EyeOff}
+            label={t(k.active ? 'cash.hide_category' : 'cash.show_category')}
+            color={k.active ? c.primaryText : c.muted}
+            onPress={() => void save(() => api.put(`/expense-categories/${k.id}`, { active: !k.active }))}
+          />
+        </View>
+      ))}
+      <Divider />
+      <Txt size="sm" weight="semibold">{editing ? t('common.edit') + ': ' + nm(editing) : t('settings.new_expense_category')}</Txt>
+      <Field label={t('common.name_mr')} value={mr} onChangeText={setMr} />
+      <Field label={t('common.name_en')} value={en} onChangeText={setEn} />
+      <Button
+        title={t('common.save')}
+        icon={Check}
+        loading={busy}
+        disabled={!en.trim() && !mr.trim()}
+        needsOnline
+        onPress={() => {
+          const body = { name_en: en.trim() || mr.trim(), name_mr: mr.trim() };
+          void save(() => (editing ? api.put(`/expense-categories/${editing.id}`, body) : api.post('/expense-categories', { ...body, sort_order: items.length + 1 })));
+        }}
+      />
+    </Sheet>
   );
 }
 

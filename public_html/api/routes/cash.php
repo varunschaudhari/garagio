@@ -8,7 +8,11 @@ declare(strict_types=1);
  * in the drawer (counted − taken out to the bank / owner) is the next day's opening.
  */
 
-const EXPENSE_CATEGORIES = ['rent', 'electricity', 'tea_snacks', 'fuel', 'tools', 'salary', 'repairs', 'transport', 'other'];
+/** Category codes sent by phone apps before the owner could change the list (app 1.0.4 and older) → ids. */
+const LEGACY_EXPENSE_CATEGORIES = ['tea_snacks' => 1, 'tools' => 4, 'rent' => 7, 'electricity' => 8, 'fuel' => 9, 'salary' => 10, 'repairs' => 11, 'transport' => 12, 'other' => 13];
+
+const EXPENSE_SELECT = 'SELECT e.*, c.name_en AS category_en, c.name_mr AS category_mr, u.name AS user_name
+    FROM expenses e JOIN expense_categories c ON c.id = e.category_id LEFT JOIN users u ON u.id = e.user_id';
 
 function cash_date(?string $raw): string
 {
@@ -59,7 +63,7 @@ function cash_day(string $date): array
         'cash_out' => $cashOut,
         'expected' => r2($opening + $cashIn - $cashOut),
         'other_modes' => $other,
-        'expenses' => rows('SELECT e.*, u.name AS user_name FROM expenses e LEFT JOIN users u ON u.id = e.user_id WHERE e.spent_on = ? ORDER BY e.id', [$date]),
+        'expenses' => rows(EXPENSE_SELECT . ' WHERE e.spent_on = ? ORDER BY e.id', [$date]),
         'expenses_total' => $sum('SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE spent_on = ?'),
         'close' => row('SELECT c.*, u.name AS user_name FROM cash_closes c LEFT JOIN users u ON u.id = c.user_id WHERE c.close_date = ?', [$date]),
     ];
@@ -77,27 +81,33 @@ route('GET', '/expenses', function () {
         $where[] = 'e.spent_on <= ?';
         $params[] = $to;
     }
-    if (($cat = qp('category')) && in_array($cat, EXPENSE_CATEGORIES, true)) {
-        $where[] = 'e.category = ?';
+    if ($cat = qp_int('category_id')) {
+        $where[] = 'e.category_id = ?';
         $params[] = $cat;
     }
     $w = $where ? 'WHERE ' . implode(' AND ', $where) : '';
     return [
-        'items' => rows("SELECT e.*, u.name AS user_name FROM expenses e LEFT JOIN users u ON u.id = e.user_id $w ORDER BY e.spent_on DESC, e.id DESC LIMIT $limit OFFSET $offset", $params),
+        'items' => rows(EXPENSE_SELECT . " $w ORDER BY e.spent_on DESC, e.id DESC LIMIT $limit OFFSET $offset", $params),
         'total' => (int) val("SELECT COUNT(*) FROM expenses e $w", $params),
         'sum_total' => r2((float) val("SELECT COALESCE(SUM(e.amount), 0) FROM expenses e $w", $params)),
-        'categories' => EXPENSE_CATEGORIES,
     ];
 }, ['perm' => 'cash_book']);
 
 route('POST', '/expenses', function () {
-    $in = clean(body(), [
+    $body = body();
+    if (empty($body['category_id']) && is_string($body['category'] ?? null) && isset(LEGACY_EXPENSE_CATEGORIES[$body['category']])) {
+        $body['category_id'] = LEGACY_EXPENSE_CATEGORIES[$body['category']];
+    }
+    $in = clean($body, [
         'spent_on' => 'date',
-        'category' => 'enum:' . implode(',', EXPENSE_CATEGORIES) . '|req',
+        'category_id' => 'int|req',
         'amount' => 'num|req|min:0.01|max:10000000',
         'mode' => 'enum:cash,upi,bank|def:cash',
         'note' => 'str|max:255',
     ]);
+    if (!val('SELECT id FROM expense_categories WHERE id = ?', [$in['category_id']])) {
+        fail(422, 'validation_failed', 'Choose what the money was for', ['category_id' => 'invalid_choice']);
+    }
     $in['spent_on'] = cash_date($in['spent_on'] ?? null);
     $id = tx(function () use ($in) {
         if (day_closed($in['spent_on'])) {
@@ -105,17 +115,17 @@ route('POST', '/expenses', function () {
         }
         return insert('expenses', $in + ['user_id' => uid()]);
     });
-    return ['item' => row('SELECT * FROM expenses WHERE id = ?', [$id])];
+    return ['item' => row(EXPENSE_SELECT . ' WHERE e.id = ?', [$id])];
 }, ['perm' => 'cash_book']);
 
 route('DELETE', '/expenses/{id}', function ($p) {
     tx(function () use ($p) {
-        $e = row('SELECT * FROM expenses WHERE id = ? FOR UPDATE', [(int) $p['id']]) ?? not_found('Expense');
+        $e = row(EXPENSE_SELECT . ' WHERE e.id = ? FOR UPDATE', [(int) $p['id']]) ?? not_found('Expense');
         if (day_closed($e['spent_on'])) {
             fail(409, 'day_closed', 'This day\'s cash is already counted; reopen it first');
         }
         q('DELETE FROM expenses WHERE id = ?', [$e['id']]);
-        audit('expense_delete', 'expense', (int) $e['id'], ['date' => $e['spent_on'], 'category' => $e['category'], 'amount' => (float) $e['amount'], 'note' => $e['note']], null);
+        audit('expense_delete', 'expense', (int) $e['id'], ['date' => $e['spent_on'], 'category' => $e['category_en'], 'amount' => (float) $e['amount'], 'note' => $e['note']], null);
     });
     return ['ok' => true];
 }, ['perm' => 'cash_book']);

@@ -462,3 +462,7 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     the Rate = one unit after its discounts (line + share of a bill discount), on screen, on the A4 bill and on the
     thermal receipt ("2 × 180.00", with "MRP 200.00 −10%" underneath when discounted). Labour lines have no MRP.
     Discounts stay owner-only (give_discount).
+24. **Expense types (19 Nov 2026):** the fixed expense categories of decision 21 became a list the owner keeps
+    (Settings → Expense types on the web, "Change the list" in the phone's cash book): add, rename, hide. It starts with
+    the shop's own list (tea, snacks, water, tools, machinery, racks, then rent, electricity, fuel, salary, shop repairs,
+    transport, other). expenses.category_id; the old codes (tea_snacks, fuel, …) are still accepted from older phone apps.

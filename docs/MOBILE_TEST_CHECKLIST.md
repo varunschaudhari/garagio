@@ -124,6 +124,7 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Owner: Money tab shows today's sales and customer dues; "Cancel bill" asks for a reason; a counter-sale cancel puts stock back.
 - [ ] Owner → More: New job, Customers, Parts requests, Purchase bills and My profile each open their own page with a back arrow (not the dashboard). Dashboard purchase / low-stock cards open purchase bills / parts.
 - [ ] Cash book (Bills tab button, or More → Cash book): add a tea expense in cash – "Should be in the drawer" goes down; a UPI expense does not change it.
+- [ ] Owner: "Change the list of expense types" in the cash book – add "Cleaning", rename it, hide it; the add-expense sheet shows only the visible types. Front desk does not see the button.
 - [ ] Count the cash: the difference shows as you type ("Short by …" / "Extra …"); after saving, expenses can no longer be deleted; only the owner sees "Reopen".
 - [ ] "Return items" on a final bill: enter a qty, the return value and "give back" amount appear; saving prints the return note on the 80 mm printer; the line shows "1 returned"; "Cancel bill" is gone.
 - [ ] Counter sale: add parts by search or QR, choose a customer or walk-in, pay, finalise → bill opens.

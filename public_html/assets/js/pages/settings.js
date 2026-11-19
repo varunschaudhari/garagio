@@ -10,7 +10,7 @@ import { openDrawer } from '../ui/drawer.js';
 import { toast, toastError } from '../ui/toast.js';
 import { drawSystem } from './settings-system.js';
 
-const TABS = ['shop', 'billing', 'numbering', 'workflow', 'labour_rates', 'locations', 'categories', 'app', 'backup', 'system'];
+const TABS = ['shop', 'billing', 'numbering', 'workflow', 'labour_rates', 'locations', 'categories', 'expense_categories', 'app', 'backup', 'system'];
 
 export default async function settingsPage(ctx) {
   ctx.setTitle(t('settings.title'));
@@ -107,6 +107,7 @@ export default async function settingsPage(ctx) {
     labour_rates: { path: '/labour-rates', newKey: 'settings.new_rate', amount: true },
     locations: { path: '/locations', newKey: 'settings.new_location', sort: true },
     categories: { path: '/categories', newKey: 'settings.new_category' },
+    expense_categories: { path: '/expense-categories', newKey: 'settings.new_expense_category', sort: true },
   };
 
   const drawMaster = async (key) => {

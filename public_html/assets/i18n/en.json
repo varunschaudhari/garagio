@@ -328,7 +328,9 @@
     "bill_prefix": "Bill prefix (before GST registration)",
     "bill_prefix_hint": "Plain bills look like BIL/26-27/00001.",
     "upi_placeholder": "e.g. name@okaxis",
-    "upi_hint": "The shop’s UPI ID from PhonePe / Google Pay / Paytm (profile → UPI ID). Bills with money due then show a scan-to-pay QR. Empty = no QR."
+    "upi_hint": "The shop’s UPI ID from PhonePe / Google Pay / Paytm (profile → UPI ID). Bills with money due then show a scan-to-pay QR. Empty = no QR.",
+    "expense_categories": "Expense types",
+    "new_expense_category": "New expense type"
   },
   "users": {
     "title": "Users",
@@ -1299,16 +1301,8 @@
     "delete_q": "Delete this expense?",
     "history": "Last counts",
     "none": "No counts yet.",
-    "cat": {
-      "rent": "Rent",
-      "electricity": "Electricity",
-      "tea_snacks": "Tea / snacks",
-      "fuel": "Fuel",
-      "tools": "Tools",
-      "salary": "Staff salary",
-      "repairs": "Shop repairs",
-      "transport": "Transport / courier",
-      "other": "Other"
-    }
+    "edit_categories": "Change the list of expense types",
+    "hide_category": "Hide from the list",
+    "show_category": "Show in the list"
   }
 }
