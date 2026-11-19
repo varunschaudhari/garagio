@@ -9,6 +9,7 @@ import { toast, toastError } from '../ui/toast.js';
 import { openPartForm } from './part-form.js';
 import { openSupplierForm } from './suppliers.js';
 import { uploadBillPhoto } from '../ui/bill-photo.js';
+import { readSheetRows } from './parts-import.js';
 
 const GST_RATES = [0, 5, 12, 18, 28, 40];
 const FIELDS = ['part', 'qty', 'mrp', 'price', 'disc', 'gst'];
@@ -85,8 +86,10 @@ export default async function purchaseNew(ctx) {
         <div class="card-head">
           <h3>${t('purchases.items')}</h3>
           <span class="small muted hide-sm">${t('purchases.grid_hint')}</span>
+          <label class="btn btn-secondary btn-sm" title="${t('purchases.import_help')}">${icon('upload', 16)}${t('purchases.import_excel')}<input type="file" id="pur-import" accept=".xlsx,.xls,.csv" class="sr-only"></label>
           <button type="button" class="btn btn-secondary btn-sm" data-act="new-part">${icon('package-plus', 16)}${t('purchases.new_part')}</button>
         </div>
+        <div id="pur-import-note" class="banner warning hidden" style="margin:12px 16px 0"></div>
         <div id="pur-interstate" class="banner info hidden" style="margin:12px 16px 0">${icon('info')}<span>${t('purchases.interstate_note')}</span></div>
         <div class="table-wrap">
           <table class="table purchase-grid">
@@ -144,13 +147,15 @@ export default async function purchaseNew(ctx) {
   /* ------------------------------------------------------------ rows */
   const rowOf = (key) => st.rows.find((r) => r.key === key);
 
-  const partLabel = (p) => (p ? `${p.part_no} · ${nm(p)}` : '');
+  // A part that is not in the list yet (from a supplier's Excel) has no id: it is added when the bill is saved.
+  const partLabel = (p) => (p ? `${p.id ? p.part_no : p.part_no || t('purchases.new_tag')} · ${nm(p)}` : '');
+  const partSub = (p) => (!p ? '' : p.id ? `${t('purchases.in_stock')}: ${qty(p.current_stock)} ${p.unit}` : t('purchases.new_part_note'));
 
   const setPart = (row, p) => {
     row.part = p;
     const tr = tbody.querySelector(`tr[data-key="${row.key}"]`);
     $('[data-f="part"]', tr).value = partLabel(p);
-    $('[data-sub]', tr).textContent = p ? `${t('purchases.in_stock')}: ${qty(p.current_stock)} ${p.unit}` : '';
+    $('[data-sub]', tr).textContent = partSub(p);
     if (p) {
       row.mrp = Number(p.selling_price) ? String(Number(p.selling_price)) : row.mrp;
       startPrice(row);
@@ -220,7 +225,7 @@ export default async function purchaseNew(ctx) {
     price_mode: st.priceMode,
     other_charges: $('#pur-other', ctx.el)?.value.trim() || 0,
     notes: $('#pur-notes', ctx.el).value.trim(),
-    items: validRows().map((r) => ({ part_id: r.part.id, qty: r.qty, price: r.price || 0, disc_pct: r.disc || 0, gst_rate: r.gst, mrp: r.mrp })),
+    items: validRows().map((r) => ({ ...(r.part.id ? { part_id: r.part.id } : { new_part: r.part.newPart }), qty: r.qty, price: r.price || 0, disc_pct: r.disc || 0, gst_rate: r.gst, mrp: r.mrp })),
     ...(old ? { replaces_id: old.id } : {}),
   });
 
@@ -345,6 +350,53 @@ export default async function purchaseNew(ctx) {
     const nextTr = tr.nextElementSibling;
     if (nextTr) $('[data-f="part"]', nextTr).focus();
     else addRow();
+  });
+
+  // The supplier's bill as Excel: its lines fill the grid (parts not in the list yet are added on save).
+  on(ctx.el, 'change', '#pur-import', async (e, inp) => {
+    const file = inp.files[0];
+    inp.value = '';
+    if (!file) return;
+    try {
+      const rows = await readSheetRows(file);
+      if (!rows.length) return toast(t('parts.import_empty'), 'error');
+      const res = await api.post('/purchases/import-lines', { rows });
+      if (!ctx.alive()) return;
+      for (const l of res.lines) {
+        const empty = st.rows.find((r) => !r.part && !r.qty);
+        const row = empty || addRow(false);
+        const tr = tbody.querySelector(`tr[data-key="${row.key}"]`);
+        const p = l.part || { id: null, newPart: l.new_part, part_no: l.new_part.part_no, name_en: l.new_part.name_en, name_mr: l.new_part.name_mr, unit: l.new_part.unit, current_stock: 0 };
+        const mrp = l.mrp ?? (p.id ? Number(p.selling_price) : null);
+        const price = l.price ?? (st.priceMode === 'mrp' ? mrp : p.last_purchase_price ?? null);
+        Object.assign(row, {
+          part: p,
+          qty: String(l.qty),
+          mrp: mrp ? String(mrp) : '',
+          price: price !== null && price !== undefined ? String(price) : '',
+          disc: l.disc_pct ? String(l.disc_pct) : '',
+          gst: String(Number(l.gst_rate)),
+        });
+        row.follow = st.priceMode === 'mrp' && row.price === row.mrp;
+        $('[data-f="part"]', tr).value = partLabel(p);
+        $('[data-sub]', tr).textContent = partSub(p);
+        for (const f of ['qty', 'mrp', 'price', 'disc', 'gst']) $(`[data-f="${f}"]`, tr).value = row[f];
+      }
+      numberRows();
+      dirty = true;
+      refresh();
+      const fresh = res.lines.filter((l) => !l.part).length;
+      toast(t('purchases.imported', { n: res.lines.length, file: file.name }));
+      const notes = [];
+      if (fresh) notes.push(t('purchases.import_new_parts', { n: fresh }));
+      if (res.errors.length) notes.push(t('purchases.import_skipped', { list: res.errors.map((x) => x.name).join(', ') }));
+      if (res.unused_columns.length) notes.push(t('parts.import_unused', { list: res.unused_columns.join(', ') }));
+      const box = $('#pur-import-note', ctx.el);
+      box.textContent = notes.join(' · ');
+      box.classList.toggle('hidden', !notes.length);
+    } catch (err) {
+      toastError(err);
+    }
   });
 
   on(ctx.el, 'click', '[data-act="add-row"]', () => addRow());

@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, useFocusEffect } from 'expo-router';
-import { Check, Minus, Plus, ScanLine, Search, Trash2, UserRound, X } from 'lucide-react-native';
+import { Check, Minus, Pencil, Plus, ScanLine, Search, Trash2, UserRound, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { useBillingMutation, useCustomers } from '@/api/queries';
 import { emptyPayments, PaymentEntry, paymentsBody, type Payments } from '@/components/bills';
+import { MrpSheet } from '@/components/mrpSheet';
 import { PartPicker } from '@/components/pickers';
 import { Sheet } from '@/components/sheet';
 import { toast } from '@/components/toast';
@@ -14,6 +15,7 @@ import { Button, Card, Field, IconButton, OfflineBanner, Txt } from '@/component
 import { money, qty } from '@/format';
 import { errorText, nm } from '@/i18n';
 import { useScan } from '@/store/scan';
+import { can, useSession } from '@/store/session';
 import { radius, size, space, touch, useTheme } from '@/theme';
 import type { Customer, Invoice, Part } from '@/types';
 
@@ -34,6 +36,8 @@ export default function CounterSale() {
   const [pickCust, setPickCust] = useState(false);
   const [custText, setCustText] = useState('');
   const [pay, setPay] = useState<Payments>(emptyPayments());
+  const canMrp = can(useSession((s) => s.user), 'change_mrp');
+  const [mrpFor, setMrpFor] = useState<Part | null>(null);
   const customers = useCustomers(custText.trim());
   const create = useBillingMutation((body: unknown) => api.post<{ item: Invoice }>('/invoices', body));
   const finalize = useBillingMutation((v: { id: number; body: unknown }) => api.post<{ item: Invoice }>(`/invoices/${v.id}/finalize`, v.body));
@@ -56,7 +60,7 @@ export default function CounterSale() {
 
   const items = useMemo(() => lines.map((l) => ({ part_id: l.part.id, qty: l.qty })), [lines]);
   const preview = useQuery({
-    queryKey: ['counter-preview', JSON.stringify(items), customer?.id],
+    queryKey: ['counter-preview', JSON.stringify(items), lines.map((l) => l.part.selling_price).join(','), customer?.id],
     queryFn: () => api.post<{ totals: { grand_total: number; taxable_total: number } | null }>('/invoices/preview', { items, customer_id: customer?.id }),
     enabled: items.length > 0,
     placeholderData: (p) => p,
@@ -95,6 +99,7 @@ export default function CounterSale() {
                 <Txt weight="semibold">{nm(l.part)}</Txt>
                 <Txt size="sm" muted>{l.part.part_no} · {t('inv.mrp')} {money(l.part.selling_price)} · {t('purchases.in_stock')} {qty(l.part.current_stock)}</Txt>
               </View>
+              {canMrp ? <IconButton icon={Pencil} label={t('billing.change_mrp')} color={c.muted} onPress={() => setMrpFor(l.part)} /> : null}
               <IconButton icon={Trash2} label={t('common.delete')} color={c.dangerText} onPress={() => setLines((ls) => ls.filter((x) => x.part.id !== l.part.id))} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[3] }}>
@@ -137,6 +142,18 @@ export default function CounterSale() {
       </ScrollView>
 
       <PartPicker visible={pickPart} onClose={() => setPickPart(false)} onPick={(p) => { add(p); setPickPart(false); }} />
+      {mrpFor ? (
+        <MrpSheet
+          partId={mrpFor.id}
+          name={nm(mrpFor)}
+          price={mrpFor.selling_price}
+          onClose={() => setMrpFor(null)}
+          onDone={(res) => {
+            setLines((ls) => ls.map((x) => (x.part.id === res.item.id ? { ...x, part: { ...x.part, selling_price: res.item.selling_price } } : x)));
+            setMrpFor(null);
+          }}
+        />
+      ) : null}
       <Sheet visible={pickCust} onClose={() => setPickCust(false)} title={t('billing.customer')} full>
         <View style={{ paddingHorizontal: space[4], paddingBottom: space[2] }}>
           <View style={[styles.search, { borderColor: c.borderStrong }]}>

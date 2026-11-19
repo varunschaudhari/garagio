@@ -17,7 +17,7 @@ change their password can only call `/auth/*` until they do.
 Roles: **O** owner · **I** inventory manager · **D** front desk · **M** mechanic (own jobs only).
 Many routes are gated by a **permission** instead (the role gives the default, the owner can tick / untick per person):
 `see_money`, `see_costs`, `make_bills`, `give_discount`, `cancel_bills`, `jobs`, `customers`, `edit_parts`, `purchases`,
-`issue_parts`, `reports`. `GET /auth/me` returns `user.perms`. Owners always have all of them.
+`issue_parts`, `reports`, `cash_book`, `change_mrp`. `GET /auth/me` returns `user.perms`. Owners always have all of them.
 
 ## Auth & settings
 | Method & path | Roles | Notes |
@@ -42,6 +42,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `POST /parts` · `PUT /parts/{id}` | O I | `opening_stock`, `opening_cost`; stock is never typed |
 | `GET /parts/{id}/ledger` | all | movements with `balance_after`, `balanced` flag |
 | `POST /parts/{id}/adjust` | O I | `{qty (±), reason}` – audited |
+| `POST /parts/{id}/mrp` | change_mrp | `{mrp, invoice_id?}` – new selling price (audited); with a draft `invoice_id` the draft is rebuilt (job parts take the price); returns `{item, invoice}` |
 | `POST /parts/import` | O I | `{rows:[{heading: cell}]}` - headings matched loosely (Part No, Part Name, MRP, Rate, Qty, GST, Marathi too); upsert by part no., or by name when there is none (else automatic `P00001…`); returns `created, updated, auto_numbered, errors, unused_columns` |
 | `GET /parts/import-sample` | O I | sample .xlsx (Parts + How to fill) |
 | `GET /parts/labels` | all | HTML QR sheet; `mode=part|rack, location, rack, ids, copies` |
@@ -55,6 +56,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET/POST /suppliers`, `GET/PUT /suppliers/{id}` | O I | balance = payable; `contact_person` |
 | `GET /suppliers/{id}/ledger` · `POST /suppliers/{id}/payments` | O I | |
 | `POST /purchases/preview` · `GET/POST /purchases` · `GET /purchases/{id}` | O I | `price_mode`: `net` (default, prices without GST) or `mrp` (prices with GST, less the discount); line `mrp` → part selling price (needs edit_parts); inline `new_part`; credit/cash/upi/bank; list `status=cancelled` or `status=all` (default hides cancelled); POST `replaces_id` = correct an earlier bill |
+| `POST /purchases/import-lines` | O I | `{rows:[{heading: cell}]}` from the supplier's Excel → `{lines:[{part \| new_part, qty, price, disc_pct, gst_rate, mrp}], errors, unused_columns}`; nothing saved; send `new_part` lines with POST /purchases (empty `part_no` → automatic) |
 | `POST/GET/DELETE /purchases/{id}/photo` | O I | photo of the supplier's paper bill (multipart `photo`) |
 | `POST /purchases/{id}/cancel` | O I | `{reason}`; stock back out at purchase cost (409 `insufficient_stock` if used); payments stay as supplier advance |
 

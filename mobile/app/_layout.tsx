@@ -15,12 +15,15 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/queries';
 import { ToastHost } from '@/components/toast';
 import { setI18nLang } from '@/i18n';
 import { useSession } from '@/store/session';
 import { useTheme } from '@/theme';
+
+/** Height of Android's navigation bar (the tab bar and the stock count footer handle it themselves). */
+const NAV_BAR = initialWindowMetrics?.insets.bottom ?? 0;
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -66,21 +69,22 @@ export default function RootLayout() {
               headerTintColor: c.text,
               headerTitleStyle: { fontFamily: font('semibold'), fontSize: 20 },
               headerShadowVisible: false,
-              contentStyle: { backgroundColor: c.bg },
+              // The app draws behind Android's navigation bar: keep every screen's last button above it.
+              contentStyle: { backgroundColor: c.bg, paddingBottom: NAV_BAR },
             }}
           >
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="setup" options={{ headerShown: false }} />
             <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="update" options={{ headerShown: false }} />
-            <Stack.Screen name="(app)" options={{ headerShown: false }} />
+            <Stack.Screen name="(app)" options={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }} />
             <Stack.Screen name="password" options={{ title: t('auth.change_password') }} />
-            <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+            <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', headerShown: false, contentStyle: { backgroundColor: c.bg } }} />
             <Stack.Screen name="part/[id]" options={{ title: t('parts.part') }} />
             <Stack.Screen name="part/edit" options={{ title: t('parts.new') }} />
             <Stack.Screen name="parts-import" options={{ title: t('parts.import_title') }} />
             <Stack.Screen name="parts" options={{ title: t('parts.title') }} />
-            <Stack.Screen name="count" options={{ title: t('stock.count_title') }} />
+            <Stack.Screen name="count" options={{ title: t('stock.count_title'), contentStyle: { backgroundColor: c.bg } }} />
             <Stack.Screen name="purchase/index" options={{ title: t('purchases.title') }} />
             <Stack.Screen name="purchase/new" options={{ title: t('purchases.new') }} />
             <Stack.Screen name="purchase/[id]" options={{ title: t('purchases.bill') }} />

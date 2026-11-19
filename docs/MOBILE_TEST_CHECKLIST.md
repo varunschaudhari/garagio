@@ -70,6 +70,8 @@ Marathi and English** unless the line says otherwise. Automated checks (`npm run
 
 - [ ] Inventory manager has a Purchases tab; the owner reaches Purchases, Suppliers and Reorder from More.
 - [ ] New purchase bill: pick a supplier from the search sheet; supplier balance shows under the name. "New supplier" in the search sheet adds one and picks it.
+- [ ] "Import from Excel" on a new purchase bill: choose the supplier's .xlsx / .csv; lines appear (known parts with stock, unknown ones with a "NEW" chip); the yellow note lists new parts and rows left out; saving adds the new parts.
+- [ ] On every screen opened from a tab (purchase bill, part form, cash book, bill …) the last button sits fully above Android's navigation bar (try 3-button and gesture navigation).
 - [ ] Bill date: tapping opens the calendar (no future days); today is filled in; no "invalid date".
 - [ ] Suppliers screen: "New supplier"; a supplier's page has "Edit supplier" (contact person, phone, GSTIN, opening balance, address).
 - [ ] Add parts from the search sheet and by scanning a QR label; MRP fills from the selling price, discount from the last purchase.
@@ -123,6 +125,7 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Finalise with no payment for a non-trusted or walk-in customer → refused with a clear message; for a trusted customer within limit → saved as unpaid.
 - [ ] Job screen shows "Next service due: <date> or <km> km, whichever comes first"; the pencil opens a sheet (DD-MM-YYYY + km); a wrong date is refused; saving updates the line. Mechanics do not see the pencil.
 - [ ] The printed receipt of a job bill ends with the next service date and km.
+- [ ] Owner: counter sale and draft bill lines have a pencil "Change MRP"; the new MRP shows at once and the total changes; the part's MRP is the new one afterwards. Front desk sees the pencil only after the owner ticks "Change a part's MRP".
 - [ ] Bill lines read "2 × rate"; a discounted part line adds "MRP … −10%"; the printed receipt shows the same.
 - [ ] Final bill: "Print receipt" opens the Android print screen; the thermal printer prints a 58 / 80 mm receipt in the customer's language (`docs/PRINTER_SETUP.md`).
 - [ ] "Share PDF" opens the share sheet with the A4 PDF; sharing to WhatsApp attaches it (Marathi + English bill).

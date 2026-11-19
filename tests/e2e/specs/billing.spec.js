@@ -112,3 +112,17 @@ test('cash book: add an expense, count the drawer, reopen the day', async ({ pag
   await expect(page.locator('.toast', { hasText: 'Day reopened' })).toBeVisible();
   await expect(page.locator('#close-form')).toBeVisible();
 });
+
+test('counter sale: the owner changes a part MRP right on the bill', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('/#/invoices/counter');
+  await page.locator('#cs-code').fill('GASK-SIL');
+  await page.locator('#cs-code').press('Enter');
+  await expect(page.locator('#cs-lines')).toContainText('GASK-SIL');
+  await page.locator('[data-mrp="0"]').click();
+  await page.locator('#prompt-in').fill('333');
+  await page.locator('.modal').getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.locator('.toast', { hasText: 'MRP changed' })).toBeVisible();
+  await expect(page.locator('#cs-lines')).toContainText('₹333.00');
+  await expect(page.locator('#cs-totals')).toContainText('₹333.00');
+});

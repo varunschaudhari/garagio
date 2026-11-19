@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Check, Plus, ScanLine, Store, Trash2 } from 'lucide-react-native';
+import { Check, FileSpreadsheet, Plus, ScanLine, Store, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -11,7 +11,8 @@ import { DateField, isoDay } from '@/components/dateField';
 import { PartPicker, SupplierPicker } from '@/components/pickers';
 import { SupplierFormSheet } from '@/components/supplierForm';
 import { toast, toastError } from '@/components/toast';
-import { Banner, Button, Card, Field, IconButton, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { Banner, Button, Card, Chip, Field, IconButton, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { pickSheet, SheetReadError } from '@/excel';
 import { money, qty } from '@/format';
 import { errorText, nm } from '@/i18n';
 import { useScan } from '@/store/scan';
@@ -21,9 +22,30 @@ import type { Part, PayMode, PriceMode, Purchase, PurchasePreview, Supplier } fr
 const GST = [0, 5, 12, 18, 28, 40];
 const MODES: PayMode[] = ['credit', 'cash', 'upi', 'bank'];
 
+/** A part from the supplier's Excel that is not in the list yet: added when the bill is saved. */
+interface NewPart {
+  part_no: string;
+  name_en: string;
+  name_mr: string | null;
+  hsn: string | null;
+  unit: string;
+  gst_rate: number;
+}
+
+interface ImportLine {
+  part: Part | null;
+  new_part: NewPart | null;
+  qty: number;
+  price: number | null;
+  disc_pct: number;
+  gst_rate: number;
+  mrp: number | null;
+}
+
 interface Line {
   key: number;
   part: Part;
+  newPart?: NewPart;
   qty: string;
   mrp: string;
   price: string;
@@ -144,6 +166,50 @@ export default function NewPurchase() {
     [priceMode]
   );
 
+  // The supplier's bill as Excel: its lines are added here; parts not in the list yet are added on save.
+  const [importing, setImporting] = useState(false);
+  const [importNote, setImportNote] = useState('');
+  const importExcel = async () => {
+    setImporting(true);
+    try {
+      const sheet = await pickSheet();
+      if (!sheet) return;
+      if (!sheet.rows.length) return toast(t('parts.import_empty'), 'error');
+      const res = await api.post<{ lines: ImportLine[]; errors: { row: number; name: string }[]; unused_columns: string[] }>('/purchases/import-lines', { rows: sheet.rows });
+      const added: Line[] = res.lines.map((l) => {
+        const part: Part = l.part ?? ({
+          id: 0, part_no: l.new_part?.part_no || t('purchases.new_tag'), name_en: l.new_part?.name_en ?? '', name_mr: l.new_part?.name_mr ?? null,
+          unit: l.new_part?.unit ?? 'pcs', hsn: l.new_part?.hsn ?? null, gst_rate: l.gst_rate, selling_price: 0, current_stock: 0, min_stock: 0,
+          category_id: null, category_en: null, category_mr: null, location_id: null, location_en: null, location_mr: null, rack: null,
+          brand: null, compatible_models: null, is_low: 0, active: 1,
+        } as Part);
+        const mrp = l.mrp ?? (l.part ? Number(l.part.selling_price) : null);
+        const price = l.price ?? (priceMode === 'mrp' ? mrp : (l.part?.last_purchase_price ?? null));
+        const mrpS = mrp ? String(mrp) : '';
+        const priceS = price !== null && price !== undefined ? String(price) : '';
+        return {
+          key: ++lineSeq, part, newPart: l.new_part ?? undefined, qty: String(l.qty), mrp: mrpS, price: priceS,
+          disc: l.disc_pct ? String(l.disc_pct) : '', gst: Number(l.gst_rate), follow: priceMode === 'mrp' && priceS === mrpS,
+        };
+      });
+      setLines((ls) => [...ls, ...added]);
+      const fresh = res.lines.filter((l) => !l.part).length;
+      toast(t('purchases.imported', { n: res.lines.length, file: sheet.name }));
+      setImportNote(
+        [
+          fresh ? t('purchases.import_new_parts', { n: fresh }) : '',
+          res.errors.length ? t('purchases.import_skipped', { list: res.errors.map((x) => x.name).join(', ') }) : '',
+          res.unused_columns.length ? t('parts.import_unused', { list: res.unused_columns.join(', ') }) : '',
+        ].filter(Boolean).join(' · ')
+      );
+    } catch (e) {
+      if (e instanceof SheetReadError) toast(t('parts.import_read_error'), 'error');
+      else toastError(e);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const changePriceMode = (m: PriceMode) => {
     setPriceMode(m);
     setLines((ls) => ls.map((l) => startPrice(l, m)));
@@ -176,7 +242,7 @@ export default function NewPurchase() {
       supplier_id: supplier?.id,
       other_charges: other || 0,
       price_mode: priceMode,
-      items: valid.map((l) => ({ part_id: l.part.id, qty: l.qty, price: l.price || 0, disc_pct: l.disc || 0, gst_rate: l.gst, mrp: l.mrp })),
+      items: valid.map((l) => ({ ...(l.newPart ? { new_part: l.newPart } : { part_id: l.part.id }), qty: l.qty, price: l.price || 0, disc_pct: l.disc || 0, gst_rate: l.gst, mrp: l.mrp })),
     }),
     [supplier, other, valid, priceMode]
   );
@@ -296,9 +362,16 @@ export default function NewPurchase() {
                   <Txt weight="semibold" numberOfLines={2}>
                     {i + 1}. {nm(l.part)}
                   </Txt>
-                  <Txt size="sm" muted>
-                    {l.part.part_no} · {t('purchases.in_stock')} {qty(l.part.current_stock)}
-                  </Txt>
+                  {l.newPart ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2], flexWrap: 'wrap' }}>
+                      <Chip label={t('purchases.new_tag')} tone="warning" />
+                      <Txt size="sm" muted style={{ flex: 1 }}>{t('purchases.new_part_note')}</Txt>
+                    </View>
+                  ) : (
+                    <Txt size="sm" muted>
+                      {l.part.part_no} · {t('purchases.in_stock')} {qty(l.part.current_stock)}
+                    </Txt>
+                  )}
                 </View>
                 <IconButton icon={Trash2} label={t('purchases.remove_line')} color={c.dangerText} onPress={() => setLines((ls) => ls.filter((x) => x.key !== l.key))} />
               </View>
@@ -346,6 +419,8 @@ export default function NewPurchase() {
           <Button title={t('purchases.add_line')} icon={Plus} variant="secondary" onPress={() => setPickPart(true)} style={{ flex: 1 }} />
           <Button title={t('mobile.scan')} icon={ScanLine} variant="secondary" onPress={() => router.push({ pathname: '/scan', params: { mode: 'pick' } })} />
         </View>
+        <Button title={t('purchases.import_excel')} icon={FileSpreadsheet} variant="secondary" onPress={() => void importExcel()} loading={importing} needsOnline />
+        {importNote ? <Banner tone="warning" text={importNote} /> : null}
 
         <Card style={{ gap: space[2] }}>
           <Row label={t('purchases.taxable')} value={money(tot?.taxable_total)} />

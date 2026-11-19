@@ -80,6 +80,42 @@ function xlsx_build(array $sheets): string
     return zip_store($files);
 }
 
+/** "Part No." → "part_no", "पार्ट नं." → "पार्ट_नं" (headings of a sheet people made themselves). */
+function import_heading(string $h): string
+{
+    return trim((string) preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '_', mb_strtolower(trim($h))), '_');
+}
+
+/**
+ * One sheet row (heading => cell) → our fields, by $aliases (field => accepted headings). Number fields lose ₹, Rs,
+ * %, commas and spaces. Headings that match nothing are collected in $unused.
+ */
+function import_map_row(array $raw, array $aliases, array $numbers, array &$unused): array
+{
+    $map = [];
+    foreach ($aliases as $field => $names) {
+        foreach ($names as $n) {
+            $map[$n] = $field;
+        }
+    }
+    $out = [];
+    foreach ($raw as $heading => $value) {
+        $field = $map[import_heading((string) $heading)] ?? null;
+        if ($field === null) {
+            $unused[(string) $heading] = true;
+            continue;
+        }
+        $v = is_scalar($value) ? trim((string) $value) : '';
+        if (in_array($field, $numbers, true)) {
+            $v = (string) preg_replace('/[^0-9.\-]/', '', (string) preg_replace('/rs\.?/i', '', $v));
+        }
+        if ($v !== '' && !isset($out[$field])) {
+            $out[$field] = $v;
+        }
+    }
+    return $out;
+}
+
 /** 0 → A, 25 → Z, 26 → AA */
 function xlsx_col(int $i): string
 {

@@ -391,7 +391,8 @@
       "purchases": "खरेदी बिले, सप्लायर आणि सप्लायर पेमेंट",
       "issue_parts": "पार्ट्स मागणी देणे व मंजूर करणे, परत घेणे",
       "reports": "रिपोर्ट उघडणे (प्रत्येक रिपोर्टला त्याच्या माहितीची परवानगी लागते)",
-      "cash_book": "दुकान खर्च आणि दिवसअखेर रोख मोजणी"
+      "cash_book": "दुकान खर्च आणि दिवसअखेर रोख मोजणी",
+      "change_mrp": "पार्टची MRP बदलणे (बिल करतानाही)"
     }
   },
   "status": {
@@ -634,7 +635,14 @@
     "rate_excl": "दर (GST शिवाय)",
     "mrp": "MRP",
     "mrp_hint": "इथे टाकलेली MRP हीच पार्टची विक्री किंमत होते.",
-    "contact": "संपर्क"
+    "contact": "संपर्क",
+    "import_excel": "Excel मधून आणा",
+    "import_help": "सप्लायरचे Excel बिल: Part No / Item Code, Part Name / Particulars, Qty, Rate, Disc %, GST %, MRP असे कॉलम.",
+    "imported": "{{file}} मधून {{n}} ओळी आल्या. तपासून सेव्ह करा.",
+    "import_new_parts": "{{n}} पार्ट्स अजून यादीत नाहीत: सेव्ह केल्यावर जोडले जातील. त्यांची MRP तपासा.",
+    "import_skipped": "नग नसल्याने सोडले: {{list}}",
+    "new_tag": "नवीन",
+    "new_part_note": "नवीन पार्ट – बिल सेव्ह केल्यावर यादीत जोडला जाईल"
   },
   "reorder": {
     "title": "पुन्हा मागवायची यादी",
@@ -1060,7 +1068,10 @@
     "returned_qty": "{{qty}} परत",
     "refunded_amount": "{{amount}} परत दिले",
     "entry_return": "माल परत",
-    "entry_refund": "पैसे परत दिले"
+    "entry_refund": "पैसे परत दिले",
+    "change_mrp": "MRP बदला",
+    "change_mrp_note": "{{part}} ची नवी MRP. ही या बिलावर आणि पुढील बिलांवर लागेल.",
+    "mrp_changed": "MRP बदलली."
   },
   "reminders": {
     "title": "आठवणी",

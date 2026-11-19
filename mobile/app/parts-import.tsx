@@ -1,19 +1,18 @@
 import { useQueryClient } from '@tanstack/react-query';
-import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { FileDown, FileSpreadsheet, Upload } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
-import * as XLSX from 'xlsx';
 import { api, apiUrl } from '@/api/client';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, OfflineBanner, Txt } from '@/components/ui';
+import { pickSheet, SheetReadError, type SheetRow } from '@/excel';
 import { useSession } from '@/store/session';
 import { space } from '@/theme';
 
-type Row = Record<string, string>;
+type Row = SheetRow;
 interface ImportResult {
   created: number;
   updated: number;
@@ -39,22 +38,6 @@ const FIELD_LABEL: Record<string, string> = {
   unit: 'parts.unit',
   rack: 'parts.rack',
 };
-
-/** Every filled cell of the first sheet under its own heading; the server matches the headings. */
-function readRows(base64: string): Row[] {
-  const wb = XLSX.read(base64, { type: 'base64' });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '', raw: false });
-  return raw
-    .map((r) => {
-      const o: Row = {};
-      for (const [k, v] of Object.entries(r)) {
-        if (!k.startsWith('__EMPTY') && String(v).trim() !== '') o[k.trim()] = String(v).trim();
-      }
-      return o;
-    })
-    .filter((o) => Object.keys(o).length > 0);
-}
 
 /** Parts from the shop's Excel sheet (owner / inventory manager), with a sample file to start from. */
 export default function PartsImport() {
@@ -86,24 +69,14 @@ export default function PartsImport() {
   const pick = async () => {
     setBusy('pick');
     try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: [XLSX_MIME, 'application/vnd.ms-excel', 'text/csv', 'text/comma-separated-values', 'application/octet-stream'],
-        copyToCacheDirectory: true,
-      });
-      if (res.canceled || !res.assets[0]) return;
-      const asset = res.assets[0];
-      let rows: Row[];
-      try {
-        rows = readRows(await new File(asset.uri).base64());
-      } catch {
-        toast(t('parts.import_read_error'), 'error');
-        return;
-      }
+      const picked = await pickSheet();
+      if (!picked) return;
       setResult(null);
-      setFile({ name: asset.name, rows });
-      if (!rows.length) toast(t('parts.import_empty'), 'error');
+      setFile(picked);
+      if (!picked.rows.length) toast(t('parts.import_empty'), 'error');
     } catch (e) {
-      toastError(e);
+      if (e instanceof SheetReadError) toast(t('parts.import_read_error'), 'error');
+      else toastError(e);
     } finally {
       setBusy('');
     }

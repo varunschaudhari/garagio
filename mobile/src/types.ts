@@ -14,7 +14,7 @@ export interface User {
   perms?: Partial<Record<Perm, boolean>>;
 }
 
-export type Perm = 'see_money' | 'see_costs' | 'make_bills' | 'give_discount' | 'cancel_bills' | 'jobs' | 'customers' | 'edit_parts' | 'purchases' | 'issue_parts' | 'reports' | 'cash_book';
+export type Perm = 'see_money' | 'see_costs' | 'make_bills' | 'give_discount' | 'change_mrp' | 'cancel_bills' | 'jobs' | 'customers' | 'edit_parts' | 'purchases' | 'issue_parts' | 'reports' | 'cash_book';
 
 export interface PublicInfo {
   app: string;

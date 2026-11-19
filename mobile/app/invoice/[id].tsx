@@ -1,12 +1,13 @@
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Printer, Trash2, Undo2 } from 'lucide-react-native';
+import { Ban, Bike, Check, FileText, HandCoins, MessageCircle, Pencil, Printer, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { useBillingMutation, useInvoice } from '@/api/queries';
 import { BillChip, emptyPayments, PaymentEntry, paymentsBody, printReceipt, shareInvoicePdf, type Payments } from '@/components/bills';
+import { MrpSheet } from '@/components/mrpSheet';
 import { printReturn, ReturnSheet } from '@/components/returns';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
@@ -36,6 +37,8 @@ export default function InvoiceScreen() {
   const lang = useSession((s) => s.lang);
   const owner = can(user, 'give_discount'); // discounts on the draft
   const canCancel = can(user, 'cancel_bills');
+  const canMrp = can(user, 'change_mrp');
+  const [mrpFor, setMrpFor] = useState<{ partId: number; name: string; price: number } | null>(null);
   const [pay, setPay] = useState<Payments>(emptyPayments());
   const [sheet, setSheet] = useState<'pay' | 'cancel' | null>(null);
   const [returning, setReturning] = useState(false);
@@ -126,6 +129,16 @@ export default function InvoiceScreen() {
                     {Math.abs(Number(it.rate) - Number(it.unit_price)) >= 0.005 ? ` · ${it.item_type === 'part' ? t('inv.mrp') + ' ' : ''}${money(it.unit_price)}${Number(it.disc_pct) ? ` −${qty(it.disc_pct)}%` : ''}` : ''} · GST {qty(it.gst_rate)}%
                   </Txt>
                   {it.returned_qty ? <Txt size="sm" weight="semibold" color="warningText">{t('billing.returned_qty', { qty: qty(it.returned_qty) })}</Txt> : null}
+                  {draft && canMrp && it.item_type === 'part' && it.part_id ? (
+                    <Button
+                      title={t('billing.change_mrp')}
+                      icon={Pencil}
+                      variant="ghost"
+                      small
+                      onPress={() => setMrpFor({ partId: it.part_id as number, name: lang === 'mr' && it.description_mr ? it.description_mr : it.description_en, price: Number(it.unit_price) })}
+                      style={{ alignSelf: 'flex-start' }}
+                    />
+                  ) : null}
                 </View>
                 {draft && owner ? (
                   <TextInput
@@ -231,6 +244,17 @@ export default function InvoiceScreen() {
       </ScrollView>
 
       {returning ? <ReturnSheet inv={i} lang={lang} onClose={() => setReturning(false)} /> : null}
+      {mrpFor ? (
+        <MrpSheet
+          {...mrpFor}
+          invoiceId={invId}
+          onClose={() => setMrpFor(null)}
+          onDone={() => {
+            setMrpFor(null);
+            void inv.refetch();
+          }}
+        />
+      ) : null}
       {sheet ? (
         <Sheet visible onClose={() => setSheet(null)} title={sheet === 'pay' ? t('billing.record_payment') : t('billing.cancel')}>
           <Field label={sheet === 'pay' ? `${t('common.amount')} (₹)` : t('billing.cancel_reason')} value={text} onChangeText={setText} keyboardType={sheet === 'pay' ? 'decimal-pad' : 'default'} autoFocus />

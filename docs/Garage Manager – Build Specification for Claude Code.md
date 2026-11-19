@@ -488,3 +488,11 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     number gets an automatic P00001… (or updates the part with the same name), and GET /parts/import-sample gives a
     sample .xlsx with a "How to fill" sheet. The shop phone printed on bills became 8669116229 (migration 011, only if it
     was still the old number).
+29. **Shop requests of 19 Nov 2026, second batch:** (a) a purchase bill can be filled from the supplier's Excel / CSV
+    (POST /purchases/import-lines: headings matched loosely - Item Code, Particulars, Qty, Rate, Disc %, GST % or CGST %,
+    MRP; parts matched by number, then name; unknown parts become new parts saved with the bill, numbered P00001… when
+    the sheet has no number; rows without qty are left out and listed). (b) Phone screens keep their content above
+    Android's navigation bar (the app draws edge to edge, so the last button was half hidden). (c) MRPs change: a
+    "Change MRP" pencil on counter-sale and draft-bill lines sets the part's selling price (audited) for this bill and
+    later ones; on a job bill the job's parts take it too. New tick change_mrp (owner + store keeper by default; the
+    owner can give it to the front desk). Discounts stay owner-only.

@@ -41,6 +41,87 @@ function purchase_ex_price(float $price, float $rate, bool $inclusive): float
     return $inclusive ? round($price / (1 + $rate / 100), 2) : $price;
 }
 
+/* A supplier's bill sent as Excel: its lines go into the purchase form (nothing is saved here). */
+const PURCHASE_IMPORT_ALIASES = [
+    'part_no' => ['part_no', 'part_number', 'partno', 'part_code', 'code', 'item_code', 'sku', 'पार्ट_नं', 'पार्ट_नंबर', 'पार्ट_क्रमांक', 'पार्ट_क्र'],
+    'name_en' => ['name_en', 'name', 'part_name', 'item_name', 'item', 'description', 'particulars', 'product', 'product_name', 'spare_part', 'spare_part_name', 'english_name', 'पार्टचे_नाव', 'पार्ट_नाव', 'नाव', 'तपशील'],
+    'name_mr' => ['name_mr', 'marathi_name', 'name_marathi', 'name_in_marathi', 'marathi', 'मराठी_नाव', 'मराठी'],
+    'qty' => ['qty', 'quantity', 'pcs', 'nos', 'purchase_qty', 'billed_qty', 'नग', 'संख्या'],
+    'price' => ['price', 'rate', 'purchase_rate', 'purchase_price', 'unit_price', 'cost', 'cost_price', 'dealer_price', 'दर', 'खरेदी_दर', 'खरेदी_किंमत'],
+    'disc_pct' => ['disc', 'discount', 'disc_pct', 'discount_pct', 'discount_percent', 'सूट'],
+    'gst_rate' => ['gst', 'gst_rate', 'gst_pct', 'gst_percent', 'tax', 'tax_rate', 'igst', 'igst_pct', 'जीएसटी'],
+    'gst_half' => ['cgst', 'cgst_pct', 'cgst_rate', 'sgst', 'sgst_pct', 'sgst_rate'],
+    'mrp' => ['mrp', 'sale_price', 'selling_price', 'sales_price', 'एमआरपी', 'विक्री_किंमत'],
+    'hsn' => ['hsn', 'hsn_code', 'hsn_sac'],
+    'unit' => ['unit', 'uom', 'units'],
+];
+const PURCHASE_IMPORT_NUMBERS = ['qty', 'price', 'disc_pct', 'gst_rate', 'gst_half', 'mrp'];
+
+/** The part a supplier's line is about: by part number, else by name (English or Marathi). */
+function purchase_import_part(array $r): ?array
+{
+    if (!empty($r['part_no'])) {
+        $p = row(PART_SELECT . ' WHERE p.part_no = ?', [strtoupper((string) preg_replace('/\s+/', '', (string) $r['part_no']))]);
+        if ($p) {
+            return $p;
+        }
+    }
+    foreach (['name_en', 'name_mr'] as $f) {
+        if (!empty($r[$f])) {
+            $name = mb_strtolower(trim((string) $r[$f]));
+            $p = row(PART_SELECT . ' WHERE LOWER(p.name_en) = ? OR LOWER(p.name_mr) = ? ORDER BY p.active DESC LIMIT 1', [$name, $name]);
+            if ($p) {
+                return $p;
+            }
+        }
+    }
+    return null;
+}
+
+route('POST', '/purchases/import-lines', function () {
+    $rowsIn = body()['rows'] ?? null;
+    if (!is_array($rowsIn) || !$rowsIn) {
+        fail(422, 'validation_failed', 'No rows to import', ['rows' => 'required']);
+    }
+    if (count($rowsIn) > 300) {
+        fail(422, 'validation_failed', 'Too many lines on one bill', ['rows' => 'too_long']);
+    }
+    $lines = [];
+    $errors = [];
+    $unused = [];
+    foreach (array_values($rowsIn) as $i => $raw) {
+        $r = is_array($raw) ? import_map_row($raw, PURCHASE_IMPORT_ALIASES, PURCHASE_IMPORT_NUMBERS, $unused) : [];
+        if (empty($r['part_no']) && empty($r['name_en']) && empty($r['name_mr'])) {
+            continue; // totals, notes, empty rows
+        }
+        $label = (string) ($r['name_en'] ?? $r['name_mr'] ?? $r['part_no']);
+        if ((float) ($r['qty'] ?? 0) <= 0) {
+            $errors[] = ['row' => $i + 2, 'name' => $label, 'code' => 'qty_missing'];
+            continue;
+        }
+        $part = purchase_import_part($r);
+        $gst = isset($r['gst_rate']) ? (float) $r['gst_rate'] : (isset($r['gst_half']) ? 2 * (float) $r['gst_half'] : null);
+        $gst ??= $part ? (float) $part['gst_rate'] : (float) setting_num('default_part_gst_rate');
+        $lines[] = [
+            'part' => $part,
+            'new_part' => $part ? null : [
+                'part_no' => strtoupper((string) preg_replace('/\s+/', '', (string) ($r['part_no'] ?? ''))),
+                'name_en' => (string) ($r['name_en'] ?? $r['name_mr']),
+                'name_mr' => $r['name_mr'] ?? null,
+                'hsn' => $r['hsn'] ?? null,
+                'unit' => $r['unit'] ?? 'pcs',
+                'gst_rate' => $gst,
+            ],
+            'qty' => (float) $r['qty'],
+            'price' => isset($r['price']) ? (float) $r['price'] : null,
+            'disc_pct' => (float) ($r['disc_pct'] ?? 0),
+            'gst_rate' => $gst,
+            'mrp' => isset($r['mrp']) ? (float) $r['mrp'] : null,
+        ];
+    }
+    return ['lines' => $lines, 'errors' => $errors, 'unused_columns' => array_keys($unused)];
+}, ['perm' => 'purchases']);
+
 /** Validate the header + items and compute every line and total (no writes). */
 function purchase_calc(array $body, bool $forSave): array
 {
@@ -274,6 +355,10 @@ route('POST', '/purchases', function () {
                 // New part created inline from the purchase screen; the line's MRP is its selling price.
                 if ($l['mrp'] !== null && !isset($l['new_part']['selling_price'])) {
                     $l['new_part']['selling_price'] = $l['mrp'];
+                }
+                // From a supplier's Excel without part numbers: the next automatic number.
+                if (trim((string) ($l['new_part']['part_no'] ?? '')) === '') {
+                    $l['new_part']['part_no'] = next_auto_part_no();
                 }
                 try {
                     $np = clean($l['new_part'], PART_RULES);

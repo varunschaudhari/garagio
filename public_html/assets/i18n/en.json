@@ -391,7 +391,8 @@
       "purchases": "Purchase bills, suppliers and supplier payments",
       "issue_parts": "Issue and approve parts requests, returns",
       "reports": "Open reports (each report also needs its data permission)",
-      "cash_book": "Shop expenses and the end-of-day cash count"
+      "cash_book": "Shop expenses and the end-of-day cash count",
+      "change_mrp": "Change a part's MRP (also while billing)"
     }
   },
   "status": {
@@ -634,7 +635,14 @@
     "rate_excl": "Rate without GST",
     "mrp": "MRP",
     "mrp_hint": "The MRP you enter becomes the part's selling price.",
-    "contact": "Contact"
+    "contact": "Contact",
+    "import_excel": "Import from Excel",
+    "import_help": "The supplier's bill as Excel: columns like Part No / Item Code, Part Name / Particulars, Qty, Rate, Disc %, GST %, MRP.",
+    "imported": "{{n}} lines added from {{file}}. Check them and save.",
+    "import_new_parts": "{{n}} parts are not in your list yet: they are added when you save. Check their MRP.",
+    "import_skipped": "Left out (no qty): {{list}}",
+    "new_tag": "NEW",
+    "new_part_note": "New part – added to the parts list when the bill is saved"
   },
   "reorder": {
     "title": "Reorder list",
@@ -1060,7 +1068,10 @@
     "returned_qty": "{{qty}} returned",
     "refunded_amount": "{{amount}} given back",
     "entry_return": "Return",
-    "entry_refund": "Money given back"
+    "entry_refund": "Money given back",
+    "change_mrp": "Change MRP",
+    "change_mrp_note": "New MRP for {{part}}. It is used on this bill and on later bills.",
+    "mrp_changed": "MRP changed."
   },
   "reminders": {
     "title": "Reminders",

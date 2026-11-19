@@ -209,40 +209,10 @@ const PART_IMPORT_ALIASES = [
 ];
 const PART_IMPORT_NUMBERS = ['selling_price', 'last_purchase_price', 'last_purchase_disc_pct', 'gst_rate', 'opening_stock', 'opening_cost', 'min_stock'];
 
-/** "Part No." → "part_no", "पार्ट नं." → "पार्ट_नं" */
-function import_heading(string $h): string
-{
-    return trim((string) preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '_', mb_strtolower(trim($h))), '_');
-}
-
 /** One sheet row (heading => cell) → part fields; headings that match nothing are collected in $unused. */
 function import_part_row(array $raw, array &$unused): array
 {
-    static $map = null;
-    if ($map === null) {
-        $map = [];
-        foreach (PART_IMPORT_ALIASES as $field => $names) {
-            foreach ($names as $n) {
-                $map[$n] = $field;
-            }
-        }
-    }
-    $out = [];
-    foreach ($raw as $heading => $value) {
-        $field = $map[import_heading((string) $heading)] ?? null;
-        if ($field === null) {
-            $unused[(string) $heading] = true;
-            continue;
-        }
-        $v = is_scalar($value) ? trim((string) $value) : '';
-        if (in_array($field, PART_IMPORT_NUMBERS, true)) {
-            $v = (string) preg_replace('/[^0-9.\-]/', '', (string) preg_replace('/rs\.?/i', '', $v));
-        }
-        if ($v !== '' && !isset($out[$field])) {
-            $out[$field] = $v;
-        }
-    }
-    return $out;
+    return import_map_row($raw, PART_IMPORT_ALIASES, PART_IMPORT_NUMBERS, $unused);
 }
 
 /** Next free automatic part number: P00001, P00002 … */
@@ -272,6 +242,42 @@ route('GET', '/parts/import-sample', function () {
         'Cache-Control' => 'no-store',
     ]);
 }, ['perm' => 'edit_parts']);
+
+/*
+ * MRPs change: a new MRP from the bill screen (counter sale or a draft bill). It becomes the part's selling price
+ * (audited); with invoice_id the draft is worked out again, and a job's parts take the new price too.
+ */
+route('POST', '/parts/{id}/mrp', function ($p) {
+    $in = clean(body(), ['mrp' => 'num|req|min:0.01|max:10000000', 'invoice_id' => 'int']);
+    $id = (int) $p['id'];
+    if (!empty($in['invoice_id']) && !can('make_bills')) {
+        fail(403, 'forbidden', 'You may not change bills');
+    }
+    tx(function () use ($id, $in) {
+        $part = row('SELECT id, selling_price FROM parts WHERE id = ? FOR UPDATE', [$id]) ?? not_found('Part');
+        $inv = null;
+        if (!empty($in['invoice_id'])) {
+            $inv = row('SELECT * FROM invoices WHERE id = ? FOR UPDATE', [$in['invoice_id']]) ?? not_found('Invoice');
+            if ($inv['status'] !== 'draft') {
+                fail(409, 'invoice_final', 'Only a draft bill can be changed');
+            }
+        }
+        if (abs((float) $part['selling_price'] - (float) $in['mrp']) >= 0.005) {
+            q('UPDATE parts SET selling_price = ?, updated_at = ? WHERE id = ?', [$in['mrp'], now(), $id]);
+            audit('price_change', 'part', $id, ['selling_price' => (float) $part['selling_price']], ['selling_price' => (float) $in['mrp'], 'invoice_id' => $in['invoice_id'] ?? null]);
+        }
+        if ($inv) {
+            if ($inv['inv_type'] === 'job') {
+                q('UPDATE job_parts SET unit_price = ?, updated_at = ? WHERE job_card_id = ? AND part_id = ?', [$in['mrp'], now(), $inv['job_card_id'], $id]);
+            }
+            rebuild_draft((int) $inv['id']);
+        }
+    });
+    return [
+        'item' => strip_cost(row(PART_SELECT . ' WHERE p.id = ?', [$id])),
+        'invoice' => !empty($in['invoice_id']) ? invoice_view((int) $in['invoice_id']) : null,
+    ];
+}, ['perm' => 'change_mrp']);
 
 route('GET', '/parts/{id}', function ($p) {
     $part = part_by_id((int) $p['id']);

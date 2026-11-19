@@ -69,6 +69,7 @@ export async function openWhatsAppFor(getUrl) {
 export default async function invoicePage(ctx) {
   const id = Number(ctx.params.id);
   const owner = can('give_discount'); // discounts on the draft
+  const canMrp = can('change_mrp');
   const canCancel = can('cancel_bills');
   let inv;
   setHTML(ctx.el, skeletonRows(6));
@@ -107,7 +108,7 @@ export default async function invoicePage(ctx) {
             <thead><tr><th>${t('inv.description')}</th><th class="num">${t('inv.qty')}</th><th class="num">${t('inv.mrp')}</th><th class="num">${t('inv.disc')}</th><th class="num">${t('inv.rate')}</th><th class="num">${t('inv.gst')}</th><th class="num">${t('inv.amount')}</th></tr></thead>
             <tbody>${i.items.map((it) => html`<tr>
               <td><div class="t-title">${it.description_en}${Number(it.returned_qty) ? html` <span class="chip warning">${t('billing.returned_qty', { qty: qty(it.returned_qty) })}</span>` : ''}</div><div class="t-sub">${it.part_no ? html`<strong>${it.part_no}</strong> · ` : ''}${it.description_mr || ''}${it.hsn ? ' · ' + it.hsn : ''}</div></td>
-              <td class="num">${qty(it.qty)}</td><td class="num">${it.item_type === 'part' ? money(it.unit_price) : ''}</td>
+              <td class="num">${qty(it.qty)}</td><td class="num">${it.item_type === 'part' ? money(it.unit_price) : ''}${draft && canMrp && it.item_type === 'part' && it.part_id ? html` <button type="button" class="btn btn-ghost btn-icon btn-sm" data-mrp="${it.part_id}" data-name="${it.description_en}" data-price="${it.unit_price}" aria-label="${t('billing.change_mrp')}" title="${t('billing.change_mrp')}">${icon('pencil', 14)}</button>` : ''}</td>
               <td class="num">${lineDisc(it)}</td><td class="num">${money(it.rate)}</td><td class="num">${qty(it.gst_rate)}%</td><td class="num strong">${money(it.line_total)}</td>
             </tr>`)}</tbody>
           </table></div>
@@ -177,6 +178,17 @@ export default async function invoicePage(ctx) {
         toast(errorText(err), 'error', 6000);
       }
     });
+  });
+  on(ctx.el, 'click', '[data-mrp]', async (e, b) => {
+    const v = await promptDialog({ title: t('billing.change_mrp'), message: t('billing.change_mrp_note', { part: b.dataset.name }), label: t('inv.mrp') + ' (₹)', value: String(Number(b.dataset.price)) });
+    if (v === null) return;
+    try {
+      const res = await api.post(`/parts/${b.dataset.mrp}/mrp`, { mrp: v.replace(',', '.'), invoice_id: id });
+      toast(t('billing.mrp_changed'));
+      draw(res.invoice);
+    } catch (err) {
+      toastError(err);
+    }
   });
   on(ctx.el, 'click', '[data-act="print"]', () => openApiHtml(`/invoices/${id}/html`).catch(toastError));
   on(ctx.el, 'click', '[data-act="receipt"]', () => openApiHtml(`/invoices/${id}/receipt`).catch(toastError));

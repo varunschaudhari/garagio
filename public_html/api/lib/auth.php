@@ -160,6 +160,7 @@ const PERMISSIONS = [
     'see_costs' => [ROLE_OWNER, ROLE_INVENTORY],    // purchase prices, average cost, stock value, profit
     'make_bills' => [ROLE_OWNER, ROLE_DESK],        // bills, counter sales, payments, receipts
     'give_discount' => [ROLE_OWNER],                // discounts on bills
+    'change_mrp' => [ROLE_OWNER, ROLE_INVENTORY],   // change a part's MRP (also from the bill screen)
     'cancel_bills' => [ROLE_OWNER],                 // cancel a final bill
     'jobs' => [ROLE_OWNER, ROLE_DESK],              // new jobs, estimates, approve jobs
     'customers' => [ROLE_OWNER, ROLE_DESK],         // customer list, phone numbers, dues, reminders

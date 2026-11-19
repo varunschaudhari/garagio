@@ -18,7 +18,8 @@ function loadXlsx() {
   return xlsxLoading;
 }
 
-async function parseFile(file) {
+/** Rows of the first sheet of an Excel / CSV file: every filled cell under its own heading. */
+export async function readSheetRows(file) {
   const XLSX = await loadXlsx();
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
@@ -77,7 +78,7 @@ export function openImport() {
         const file = e.target.files[0];
         if (!file) return;
         try {
-          rows = await parseFile(file);
+          rows = await readSheetRows(file);
           $('#imp-count', root).textContent = rows.length ? t('parts.import_rows', { n: rows.length, file: file.name }) : t('parts.import_empty');
           runBtn.disabled = !rows.length;
         } catch {

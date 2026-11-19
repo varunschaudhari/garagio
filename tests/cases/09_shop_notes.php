@@ -212,3 +212,56 @@ test('parts import: the shop\'s own sheet headings (Part No, Part Name, MRP, Rat
     }
     eq(403, get('/parts/import-sample', 'desk')['status']);
 });
+
+test('purchase bill from the supplier\'s Excel: lines matched by part no. or name, new parts by name get a number on save', function () {
+    $sid = (int) tval('SELECT id FROM suppliers ORDER BY id LIMIT 1');
+    $res = status(200, post('/purchases/import-lines', ['rows' => [
+        ['Item Code' => 'brk-line', 'Particulars' => 'Brake lines 1m', 'Qty' => '10', 'Rate' => '85.00', 'Disc %' => '5', 'CGST %' => '9', 'MRP' => '150'],
+        ['Particulars' => 'clutch PLATE', 'Qty' => '4', 'Rate' => '₹185', 'GST' => '18%', 'Remarks' => 'x'],
+        ['Particulars' => 'Air filter Pulsar', 'Qty' => '2', 'Rate' => '210', 'MRP' => '260', 'HSN' => '84213100'],
+        ['Particulars' => 'Horn relay', 'Rate' => '90'],
+        ['Particulars' => '', 'Amount' => '3,450'],
+    ]], 'stock'));
+    eq(3, count($res['lines']));
+    eq('BRK-LINE', $res['lines'][0]['part']['part_no'], 'by part number');
+    eq(18.0, $res['lines'][0]['gst_rate'], 'CGST 9% → GST 18%');
+    eq(150.0, $res['lines'][0]['mrp']);
+    eq('Clutch plate', $res['lines'][1]['part']['name_en'], 'by name, any case');
+    eq(185.0, $res['lines'][1]['price']);
+    eq(null, $res['lines'][2]['part']);
+    eq(['part_no' => '', 'name_en' => 'Air filter Pulsar', 'name_mr' => null, 'hsn' => '84213100', 'unit' => 'pcs', 'gst_rate' => 18], $res['lines'][2]['new_part']);
+    eq([['row' => 5, 'name' => 'Horn relay', 'code' => 'qty_missing']], $res['errors']);
+    eq(['Remarks', 'Amount'], $res['unused_columns']);
+    eq(403, post('/purchases/import-lines', ['rows' => [['Particulars' => 'x', 'Qty' => 1]]], 'desk')['status']);
+
+    $l = $res['lines'][2];
+    $bill = status(200, post('/purchases', ['supplier_id' => $sid, 'bill_no' => 'XL-1', 'bill_date' => date('Y-m-d'), 'payment_mode' => 'credit', 'price_mode' => 'net',
+        'items' => [['new_part' => $l['new_part'], 'qty' => $l['qty'], 'price' => $l['price'], 'gst_rate' => $l['gst_rate'], 'mrp' => $l['mrp']]]], 'stock'))['item'];
+    $no = $bill['items'][0]['part_no'];
+    ok((bool) preg_match('/^P\d{5}$/', $no), "automatic part number $no");
+    eq(260.0, (float) tval('SELECT selling_price FROM parts WHERE part_no = ?', [$no]), 'MRP is the new part\'s selling price');
+    eq(2.0, (float) tval('SELECT current_stock FROM parts WHERE part_no = ?', [$no]));
+});
+
+test('bills: MRP changed from the bill screen - counter preview and a draft job bill use it; desk needs the tick', function () {
+    $pid = (int) tval("SELECT id FROM parts WHERE part_no = 'MRP-SALE'");
+    eq(403, post("/parts/$pid/mrp", ['mrp' => 210], 'desk')['status'], 'front desk: not by default');
+    $r = status(200, post("/parts/$pid/mrp", ['mrp' => 210], 'admin'));
+    eq(210.0, (float) $r['item']['selling_price']);
+    eq(210.0, status(200, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'desk'))['lines'][0]['unit_price']);
+    ok((int) tval("SELECT COUNT(*) FROM audit_log WHERE action = 'price_change' AND entity_id = ?", [$pid]) >= 1, 'audited');
+
+    // A draft counter bill follows the new MRP and keeps its discount.
+    $inv = status(200, post('/invoices', ['items' => [['part_id' => $pid, 'qty' => 2, 'disc_pct' => 10]]], 'admin'))['item'];
+    $after = status(200, post("/parts/$pid/mrp", ['mrp' => 220, 'invoice_id' => $inv['id']], 'admin'))['invoice'];
+    eq(220.0, (float) $after['items'][0]['unit_price']);
+    eq(10.0, (float) $after['items'][0]['disc_pct']);
+    eq(198.0, $after['items'][0]['rate']);
+    status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $after['grand_total']]]], 'admin'));
+    eq('invoice_final', post("/parts/$pid/mrp", ['mrp' => 230, 'invoice_id' => $inv['id']], 'admin')['json']['code']);
+
+    // The owner gives the front desk the tick.
+    $desk = (int) tval("SELECT id FROM users WHERE username = 'desk'");
+    status(200, put("/users/$desk", ['permissions' => ['change_mrp' => true]], 'admin'));
+    status(200, post("/parts/$pid/mrp", ['mrp' => 225], 'desk'));
+});

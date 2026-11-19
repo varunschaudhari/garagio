@@ -6,13 +6,15 @@ import { icon } from '../ui/icons.js';
 import { money, qty } from '../format.js';
 import { combo } from '../ui/combo.js';
 import { busy } from '../ui/form.js';
-import { toast } from '../ui/toast.js';
+import { toast, toastError } from '../ui/toast.js';
+import { promptDialog } from '../ui/modal.js';
 import { paymentPanel, bindPaymentPanel } from './invoice.js';
 
 /** Counter sale (POS): walk-in or known customer, parts by barcode / search, pay and print. */
 export default async function counterSale(ctx) {
   ctx.setTitle(t('billing.new_counter'));
   const owner = can('give_discount');
+  const canMrp = can('change_mrp');
   const st = { lines: [], customer: null, total: 0, billDisc: 0 };
   let dirty = false;
   ctx.setLeaveGuard(() => (dirty && st.lines.length ? t('stock.unsaved') : null));
@@ -54,7 +56,7 @@ export default async function counterSale(ctx) {
         <tbody>${st.lines.map((l, i) => html`<tr>
           <td><div class="t-title">${nm(l.part)}</div><div class="t-sub">${l.part.part_no} · ${t('purchases.in_stock')} ${qty(l.part.current_stock)}${l.part.rack ? ' · ' + l.part.rack : ''}</div></td>
           <td class="num"><input class="input num" data-q="${i}" value="${qty(l.qty)}" inputmode="decimal" style="width:70px" aria-label="${t('common.qty')}"></td>
-          <td class="num">${money(l.part.selling_price)}</td>
+          <td class="num">${money(l.part.selling_price)}${canMrp ? html` <button type="button" class="btn btn-ghost btn-icon btn-sm" data-mrp="${i}" aria-label="${t('billing.change_mrp')}" title="${t('billing.change_mrp')}">${icon('pencil', 14)}</button>` : ''}</td>
           ${owner ? html`<td class="num"><input class="input num" data-d="${i}" value="${l.disc || ''}" inputmode="decimal" style="width:64px" aria-label="${t('inv.disc')}"></td>` : ''}
           <td class="num" data-rate="${i}"></td>
           <td class="num strong" data-amt="${i}"></td>
@@ -155,6 +157,20 @@ export default async function counterSale(ctx) {
   on(linesBox, 'input', '[data-q]', (e, inp) => { st.lines[Number(inp.dataset.q)].qty = Number(inp.value.replace(',', '.')) || 0; refresh(); });
   on(linesBox, 'input', '[data-d]', (e, inp) => { st.lines[Number(inp.dataset.d)].disc = Number(inp.value.replace(',', '.')) || 0; refresh(); });
   on(linesBox, 'click', '[data-rm]', (e, b) => { st.lines.splice(Number(b.dataset.rm), 1); drawLines(); });
+  // MRPs change: the new MRP is used now and on later bills.
+  on(linesBox, 'click', '[data-mrp]', async (e, b) => {
+    const l = st.lines[Number(b.dataset.mrp)];
+    const v = await promptDialog({ title: t('billing.change_mrp'), message: t('billing.change_mrp_note', { part: nm(l.part) }), label: t('inv.mrp') + ' (₹)', value: String(Number(l.part.selling_price)) });
+    if (v === null) return;
+    try {
+      const res = await api.post(`/parts/${l.part.id}/mrp`, { mrp: v.replace(',', '.') });
+      l.part = { ...l.part, selling_price: res.item.selling_price };
+      toast(t('billing.mrp_changed'));
+      drawLines();
+    } catch (err) {
+      toastError(err);
+    }
+  });
   on(ctx.el, 'input', '#cs-bd', (e, inp) => { st.billDisc = Number(inp.value.replace(',', '.')) || 0; refresh(); });
 
   on(ctx.el, 'submit', '#cs-form', async (e, form) => {

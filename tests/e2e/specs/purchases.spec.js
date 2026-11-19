@@ -150,3 +150,26 @@ test('photo of the paper bill on a purchase bill: add, then remove', async ({ pa
   await page.locator('.modal').getByRole('button', { name: 'Delete' }).click();
   await expect(page.locator('#bill-photo')).toContainText('No photo yet');
 });
+
+test("purchase bill from the supplier's Excel: known part matched, a new part added on save", async ({ page }) => {
+  await login(page, 'stock');
+  await page.goto('/#/purchases/new');
+  await page.locator('#pur-supplier').fill('Shree');
+  await expect(page.locator('.combo-item').first()).toBeVisible();
+  await page.locator('#pur-supplier').press('Enter');
+  await page.locator('#pur-bill').fill('XL-E2E');
+  await page.locator('#pur-price-mode').selectOption('net');
+  const csv = 'Item Code,Particulars,Qty,Rate,GST %,MRP\nSP-CPR7EA9,Spark plug,5,85,18,150\n,Air filter X200,2,210,18,260\n,Total,,,,\n';
+  await page.locator('#pur-import').setInputFiles({ name: 'supplier-bill.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await expect(page.locator('.toast', { hasText: '2 lines added' })).toBeVisible();
+  const rows = page.locator('#pur-rows tr');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0).locator('[data-f="part"]')).toHaveValue(/SP-CPR7EA9/);
+  await expect(rows.nth(1).locator('[data-f="part"]')).toHaveValue('NEW · Air filter X200');
+  await expect(page.locator('#pur-import-note')).toContainText('1 parts are not in your list yet');
+  // 5 × 85 + 2 × 210 = 845 taxable, + 18% = 997.10 → ₹997
+  await expect(page.locator('#pur-totals')).toContainText('₹997.00');
+  await page.getByRole('button', { name: 'Save bill' }).click();
+  await expect(page.locator('.toast', { hasText: 'Bill saved' })).toBeVisible();
+  await expect(page.locator('.table')).toContainText('Air filter X200');
+});
