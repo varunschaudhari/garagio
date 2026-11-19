@@ -65,6 +65,14 @@ export default function PurchaseView() {
           <Txt muted>
             {b.bill_no} · {date(b.bill_date)}
           </Txt>
+          {b.supplier_contact || b.supplier_phone ? (
+            <Txt size="sm" muted>
+              {t('purchases.contact')}: {[b.supplier_contact, b.supplier_phone].filter(Boolean).join(' · ')}
+            </Txt>
+          ) : null}
+          <Txt size="sm" muted>
+            {t(b.price_mode === 'mrp' ? 'purchases.mode_mrp_short' : 'purchases.mode_net_short')}
+          </Txt>
           {cancelled ? <Chip label={t('purchases.cancelled')} tone="danger" /> : <Chip label={t(`pay.${b.payment_mode}`)} tone={b.payment_mode === 'credit' ? 'warning' : 'success'} />}
         </Card>
         {cancelled ? <Banner tone="danger" text={t('purchases.cancelled_by', { date: datetime(b.cancelled_at ?? ''), name: b.cancelled_by_name ?? '—', reason: b.cancel_reason ?? '' })} /> : null}
@@ -82,7 +90,7 @@ export default function PurchaseView() {
                   </Txt>
                   <Txt size="sm" muted>
                     {it.part_no} · {qty(it.qty)} {it.unit} × {money(it.price)}
-                    {it.disc_pct ? ` − ${qty(it.disc_pct)}%` : ''} · GST {qty(it.gst_rate)}%
+                    {it.disc_pct ? ` − ${qty(it.disc_pct)}%` : ''} · GST {qty(it.gst_rate)}%{Number(it.mrp) ? ` · ${t('purchases.mrp')} ${money(it.mrp)}` : ''}
                   </Txt>
                 </View>
                 <Txt weight="bold" tabular>

@@ -13,14 +13,18 @@ test('enter a credit purchase bill with the keyboard grid, then pay part of it',
   await page.locator('#pur-supplier').press('Enter');
   await expect(page.locator('#pur-bill')).toBeFocused();
   await page.locator('#pur-bill').fill('E2E-1');
+  // This supplier bills without GST (GST added on top).
+  await page.locator('#pur-price-mode').selectOption('net');
 
-  // Grid: part → qty → price → disc → GST → next line
+  // Grid: part → qty → MRP → price → disc → GST → next line
   const row = page.locator('#pur-rows tr').first();
   await row.locator('[data-f="part"]').fill('SP-CPR');
   await expect(row.locator('.combo-item').first()).toBeVisible();
   await row.locator('[data-f="part"]').press('Enter');
   await expect(row.locator('[data-f="qty"]')).toBeFocused();
   await page.keyboard.type('5');
+  await page.keyboard.press('Enter');
+  await expect(row.locator('[data-f="mrp"]')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(row.locator('[data-f="price"]')).toBeFocused();
   await page.keyboard.type('90');
@@ -48,6 +52,27 @@ test('enter a credit purchase bill with the keyboard grid, then pay part of it',
   await page.locator('.drawer').getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.toast')).toContainText('Payment recorded');
   await expect(page.locator('dl')).toContainText('₹278.00');
+});
+
+test('MRP bill: 10 × MRP 185 less 22% = ₹1,443 with GST inside; the rate follows the MRP', async ({ page }) => {
+  await login(page, 'stock');
+  await page.goto('/#/purchases/new');
+  await expect(page.locator('#pur-price-mode')).toHaveValue('mrp');
+  await page.locator('#pur-supplier').fill('Shree');
+  await expect(page.locator('.combo-item').first()).toBeVisible();
+  await page.locator('#pur-supplier').press('Enter');
+  const row = page.locator('#pur-rows tr').first();
+  await row.locator('[data-f="part"]').fill('SP-CPR');
+  await expect(row.locator('.combo-item').first()).toBeVisible();
+  await row.locator('[data-f="part"]').press('Enter');
+  await row.locator('[data-f="qty"]').fill('10');
+  await row.locator('[data-f="mrp"]').fill('185');
+  await expect(row.locator('[data-f="price"]')).toHaveValue('185');
+  await row.locator('[data-f="disc"]').fill('22');
+  await expect(row.locator('[data-out="total"]')).toHaveText('₹1,443.00');
+  await expect(row.locator('[data-out="taxable"]')).toHaveText('₹1,222.88');
+  await expect(page.locator('#pur-totals')).toContainText('₹1,443.00');
+  await expect(page.locator('#pur-rate-head')).toHaveText('Rate with GST');
 });
 
 test('supplier ledger shows the bill and the payment with a running balance', async ({ page }) => {

@@ -51,7 +51,7 @@ export default async function supplierPage(ctx) {
           <a href="#/suppliers" class="small muted">${icon('arrow-left', 14)} ${t('suppliers.title')}</a>
           <h1 style="margin-top:6px">${s.name} ${!s.active ? html`<span class="chip">${t('common.inactive')}</span>` : ''}</h1>
           <div class="sub">
-            ${s.phone ? html`<a href="tel:${s.phone}">${s.phone}</a> · ` : ''}${s.gstin || ''}${s.gstin ? ' · ' : ''}${s.state_code} ${s.state_name}
+            ${s.contact_person ? s.contact_person + ' · ' : ''}${s.phone ? html`<a href="tel:${s.phone}">${s.phone}</a> · ` : ''}${s.gstin || ''}${s.gstin ? ' · ' : ''}${s.state_code} ${s.state_name}
             ${s.state_code !== '27' ? html` <span class="chip info">${t('suppliers.interstate')}</span>` : ''}
           </div>
         </div>

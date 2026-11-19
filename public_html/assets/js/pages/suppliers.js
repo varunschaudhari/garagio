@@ -25,6 +25,7 @@ export async function openSupplierForm(s = null) {
     title: isNew ? t('suppliers.new') : t('suppliers.edit'),
     body: html`<div class="form-grid">
       ${field({ name: 'name', label: t('suppliers.name'), value: v.name, required: true, span2: true })}
+      ${field({ name: 'contact_person', label: t('suppliers.contact_person'), value: v.contact_person })}
       ${field({ name: 'phone', label: t('common.phone'), value: v.phone, type: 'tel', inputmode: 'tel' })}
       ${field({ name: 'gstin', label: t('suppliers.gstin'), value: v.gstin, placeholder: '27ABCDE1234F1Z5' })}
       ${field({ name: 'state_code', label: t('suppliers.state'), type: 'select', value: v.state_code || '27', options: Object.entries(st).map(([c, n]) => ({ value: c, label: `${c} · ${n}` })) })}
@@ -72,7 +73,7 @@ export default async function suppliers(ctx) {
     $('#sup-payable', ctx.el).textContent = `${t('suppliers.payable_total')}: ${money(data.payable_total)}`;
     setHTML(list, html`${dataTable({
       columns: [
-        { key: 'name', label: t('suppliers.name'), primary: true, render: (s) => html`<div class="t-title">${s.name}</div><div class="t-sub">${s.phone || ''}${s.gstin ? ' · ' + s.gstin : ''}</div>` },
+        { key: 'name', label: t('suppliers.name'), primary: true, render: (s) => html`<div class="t-title">${s.name}</div><div class="t-sub">${[s.contact_person, s.phone, s.gstin].filter(Boolean).join(' · ')}</div>` },
         { key: 'state', label: t('suppliers.state'), render: (s) => s.state_code },
         { key: 'balance', label: t('suppliers.balance'), num: true, render: (s) => html`<span class="strong" style="${s.balance > 0 ? 'color:var(--danger-text)' : ''}">${money(s.balance)}</span>` },
       ],

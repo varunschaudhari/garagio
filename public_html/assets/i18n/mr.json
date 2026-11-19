@@ -532,7 +532,8 @@
     "interstate": "दुसरे राज्य (IGST)",
     "none": "सप्लायर नाही",
     "against_bill": "या बिलासाठी",
-    "advance_note": "बाकीपेक्षा जास्त दिल्यास सप्लायरकडे ॲडव्हान्स राहील."
+    "advance_note": "बाकीपेक्षा जास्त दिल्यास सप्लायरकडे ॲडव्हान्स राहील.",
+    "contact_person": "संपर्क व्यक्ती"
   },
   "purchases": {
     "title": "खरेदी बिले",
@@ -592,7 +593,17 @@
     "corrected": "बिल दुरुस्त झाले.",
     "status_active": "चालू बिले",
     "status_cancelled": "रद्द बिले",
-    "status_all": "सर्व बिले"
+    "status_all": "सर्व बिले",
+    "price_mode": "या बिलावरील दर",
+    "mode_mrp": "MRP / GST सह, सूट वजा",
+    "mode_net": "GST शिवाय (GST वरून जोडला जातो)",
+    "mode_mrp_short": "दर GST सह (MRP वजा सूट)",
+    "mode_net_short": "दर GST शिवाय",
+    "rate_incl": "दर (GST सह)",
+    "rate_excl": "दर (GST शिवाय)",
+    "mrp": "MRP",
+    "mrp_hint": "इथे टाकलेली MRP हीच पार्टची विक्री किंमत होते.",
+    "contact": "संपर्क"
   },
   "reorder": {
     "title": "पुन्हा मागवायची यादी",

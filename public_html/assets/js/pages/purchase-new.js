@@ -10,7 +10,7 @@ import { openPartForm } from './part-form.js';
 import { openSupplierForm } from './suppliers.js';
 
 const GST_RATES = [0, 5, 12, 18, 28, 40];
-const FIELDS = ['part', 'qty', 'price', 'disc', 'gst'];
+const FIELDS = ['part', 'qty', 'mrp', 'price', 'disc', 'gst'];
 
 let rowSeq = 0;
 
@@ -29,8 +29,10 @@ export default async function purchaseNew(ctx) {
   }
   const heading = old ? t('purchases.correct_title', { bill: old.bill_no }) : t('purchases.new');
   ctx.setTitle(heading);
-  const st = { supplier: null, rows: [], interstate: false };
+  // priceMode 'mrp': the supplier's rate includes GST (usually the MRP) less a discount; 'net': rate without GST.
+  const st = { supplier: null, rows: [], interstate: false, priceMode: old?.price_mode || 'mrp' };
   let dirty = false;
+  const rateLabel = () => t(st.priceMode === 'mrp' ? 'purchases.rate_incl' : 'purchases.rate_excl');
   ctx.setLeaveGuard(() => (dirty ? t('stock.unsaved') : null));
 
   setHTML(ctx.el, html`
@@ -65,6 +67,12 @@ export default async function purchaseNew(ctx) {
               ${['credit', 'cash', 'upi', 'bank'].map((m) => html`<option value="${m}">${t('pay.' + m)}</option>`)}
             </select>
           </div>
+          <div class="field">
+            <label for="pur-price-mode">${t('purchases.price_mode')}</label>
+            <select id="pur-price-mode" class="select" name="price_mode">
+              ${['mrp', 'net'].map((m) => html`<option value="${m}" ${m === st.priceMode ? 'selected' : ''}>${t('purchases.mode_' + m)}</option>`)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -79,14 +87,15 @@ export default async function purchaseNew(ctx) {
           <table class="table purchase-grid">
             <thead><tr>
               <th style="width:36px">#</th><th style="min-width:260px">${t('purchases.part')}</th>
-              <th class="num" style="width:90px">${t('purchases.qty')}</th><th class="num" style="width:120px">${t('purchases.price')}</th>
+              <th class="num" style="width:90px">${t('purchases.qty')}</th><th class="num" style="width:110px" title="${t('purchases.mrp_hint')}">${t('purchases.mrp')}</th>
+              <th class="num" style="width:120px" id="pur-rate-head">${rateLabel()}</th>
               <th class="num" style="width:90px">${t('purchases.disc')}</th><th style="width:96px">${t('purchases.gst')}</th>
               <th class="num">${t('purchases.taxable')}</th><th class="num">${t('purchases.total')}</th><th style="width:44px"></th>
             </tr></thead>
             <tbody id="pur-rows"></tbody>
           </table>
         </div>
-        <div class="card-foot" style="justify-content:flex-start"><button type="button" class="btn btn-ghost btn-sm" data-act="add-row">${icon('plus', 16)}${t('purchases.add_line')}</button></div>
+        <div class="card-foot" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><button type="button" class="btn btn-ghost btn-sm" data-act="add-row">${icon('plus', 16)}${t('purchases.add_line')}</button><span class="small muted">${t('purchases.mrp_hint')}</span></div>
       </div>
 
       <div class="grid-2" style="align-items:start">
@@ -108,7 +117,7 @@ export default async function purchaseNew(ctx) {
   const setSupplier = (s) => {
     st.supplier = s;
     supInput.value = s ? s.name : '';
-    $('#sup-hint', ctx.el).textContent = s ? `${s.gstin || s.state_code} · ${t('suppliers.balance')} ${money(s.balance)}` : '';
+    $('#sup-hint', ctx.el).textContent = s ? [s.contact_person, s.phone, s.gstin || s.state_code, `${t('suppliers.balance')} ${money(s.balance)}`].filter(Boolean).join(' · ') : '';
     $('#f-supplier', ctx.el).classList.remove('invalid');
     refresh();
   };
@@ -138,12 +147,11 @@ export default async function purchaseNew(ctx) {
     $('[data-f="part"]', tr).value = partLabel(p);
     $('[data-sub]', tr).textContent = p ? `${t('purchases.in_stock')}: ${qty(p.current_stock)} ${p.unit}` : '';
     if (p) {
-      row.price = p.last_purchase_price ? String(p.last_purchase_price) : row.price;
+      row.mrp = Number(p.selling_price) ? String(Number(p.selling_price)) : row.mrp;
+      startPrice(row);
       row.disc = p.last_purchase_disc_pct ? String(p.last_purchase_disc_pct) : row.disc;
       row.gst = String(Number(p.gst_rate));
-      $('[data-f="price"]', tr).value = row.price;
-      $('[data-f="disc"]', tr).value = row.disc;
-      $('[data-f="gst"]', tr).value = row.gst;
+      for (const f of ['mrp', 'price', 'disc', 'gst']) $(`[data-f="${f}"]`, tr).value = row[f];
       if (!row.qty) {
         row.qty = '1';
         $('[data-f="qty"]', tr).value = '1';
@@ -153,14 +161,26 @@ export default async function purchaseNew(ctx) {
     refresh();
   };
 
+  // MRP bills: the rate follows the MRP until someone types a different rate.
+  const startPrice = (row) => {
+    if (st.priceMode === 'mrp') {
+      row.price = row.mrp;
+      row.follow = true;
+    } else {
+      row.price = row.part?.last_purchase_price ? String(row.part.last_purchase_price) : '';
+      row.follow = false;
+    }
+  };
+
   const addRow = (focus = true) => {
-    const row = { key: ++rowSeq, part: null, qty: '', price: '', disc: '', gst: '18' };
+    const row = { key: ++rowSeq, part: null, qty: '', mrp: '', price: '', disc: '', gst: '18', follow: true };
     st.rows.push(row);
     const tr = el(html`<table><tbody><tr data-key="${row.key}">
       <td class="muted num" data-n></td>
       <td><div style="position:relative"><input class="input" data-f="part" placeholder="${t('purchases.search_part')}" aria-label="${t('purchases.part')}"></div><div class="small muted" data-sub></div></td>
       <td><input class="input num" data-f="qty" inputmode="decimal" aria-label="${t('purchases.qty')}"></td>
-      <td><input class="input num" data-f="price" inputmode="decimal" aria-label="${t('purchases.price')}"></td>
+      <td><input class="input num" data-f="mrp" inputmode="decimal" aria-label="${t('purchases.mrp')}"></td>
+      <td><input class="input num" data-f="price" inputmode="decimal" aria-label="${rateLabel()}"></td>
       <td><input class="input num" data-f="disc" inputmode="decimal" aria-label="${t('purchases.disc')}"></td>
       <td><select class="select" data-f="gst" aria-label="${t('purchases.gst')}">${GST_RATES.map((g) => html`<option value="${g}" ${g === 18 ? 'selected' : ''}>${g}%</option>`)}</select></td>
       <td class="num" data-out="taxable"></td>
@@ -170,7 +190,7 @@ export default async function purchaseNew(ctx) {
     tbody.appendChild(tr);
     combo($('[data-f="part"]', tr), {
       fetch: async (q) => (await api.get('/parts', { q, per_page: 8 })).items,
-      render: (p) => html`<div style="flex:1;min-width:0"><div class="strong ellipsis">${p.part_no} · ${nm(p)}</div><div class="small muted">${t('purchases.in_stock')} ${qty(p.current_stock)} · ${p.rack || ''}</div></div><div class="small num">${money(p.last_purchase_price)}</div>`,
+      render: (p) => html`<div style="flex:1;min-width:0"><div class="strong ellipsis">${p.part_no} · ${nm(p)}</div><div class="small muted">${t('purchases.in_stock')} ${qty(p.current_stock)} · ${p.rack || ''}</div></div><div class="small num">${t('purchases.mrp')} ${money(p.selling_price)}</div>`,
       onSelect: (p) => {
         setPart(row, p);
         const q = $('[data-f="qty"]', tr);
@@ -192,9 +212,10 @@ export default async function purchaseNew(ctx) {
     bill_no: $('#pur-bill', ctx.el).value.trim(),
     bill_date: $('#pur-date', ctx.el).value,
     payment_mode: $('#pur-mode', ctx.el).value,
+    price_mode: st.priceMode,
     other_charges: $('#pur-other', ctx.el)?.value.trim() || 0,
     notes: $('#pur-notes', ctx.el).value.trim(),
-    items: validRows().map((r) => ({ part_id: r.part.id, qty: r.qty, price: r.price || 0, disc_pct: r.disc || 0, gst_rate: r.gst })),
+    items: validRows().map((r) => ({ part_id: r.part.id, qty: r.qty, price: r.price || 0, disc_pct: r.disc || 0, gst_rate: r.gst, mrp: r.mrp })),
     ...(old ? { replaces_id: old.id } : {}),
   });
 
@@ -264,12 +285,30 @@ export default async function purchaseNew(ctx) {
       return;
     }
     row[f] = inp.value.trim().replace(',', '.');
+    if (f === 'price') row.follow = st.priceMode === 'mrp' && row.price === row.mrp;
+    if (f === 'mrp' && row.follow) {
+      row.price = row.mrp;
+      $('[data-f="price"]', inp.closest('tr')).value = row.price;
+    }
     inp.closest('td').classList.remove('cell-invalid');
     dirty = true;
     refresh();
   });
   on(tbody, 'change', 'select[data-f="gst"]', (e, s) => {
     rowOf(Number(s.closest('tr').dataset.key)).gst = s.value;
+    refresh();
+  });
+  on(ctx.el, 'change', '#pur-price-mode', (e, s) => {
+    st.priceMode = s.value;
+    $('#pur-rate-head', ctx.el).textContent = rateLabel();
+    for (const row of st.rows) {
+      const tr = tbody.querySelector(`tr[data-key="${row.key}"]`);
+      $('[data-f="price"]', tr).setAttribute('aria-label', rateLabel());
+      if (!row.part) continue;
+      startPrice(row);
+      $('[data-f="price"]', tr).value = row.price;
+    }
+    dirty = true;
     refresh();
   });
   on(ctx.el, 'input', '#pur-other', (e, inp) => {
@@ -365,7 +404,7 @@ export default async function purchaseNew(ctx) {
           if (!r) continue;
           const tr = tbody.querySelector(`tr[data-key="${r.key}"]`);
           for (const f of Object.keys(v || {})) {
-            const map = { qty: 'qty', price: 'price', disc_pct: 'disc', gst_rate: 'gst', part_id: 'part' };
+            const map = { qty: 'qty', price: 'price', mrp: 'mrp', disc_pct: 'disc', gst_rate: 'gst', part_id: 'part' };
             const cell = map[f] && $(`[data-f="${map[f]}"]`, tr)?.closest('td');
             if (cell) cell.classList.add('cell-invalid');
             marked = true;
@@ -391,9 +430,11 @@ export default async function purchaseNew(ctx) {
     for (const it of old.items) {
       const row = addRow(false);
       const tr = tbody.querySelector(`tr[data-key="${row.key}"]`);
-      Object.assign(row, { part: { id: it.part_id, part_no: it.part_no, name_en: it.name_en, name_mr: it.name_mr, unit: it.unit }, qty: String(Number(it.qty)), price: String(Number(it.price)), disc: Number(it.disc_pct) ? String(Number(it.disc_pct)) : '', gst: String(Number(it.gst_rate)) });
+      const mrp = Number(it.mrp) ? String(Number(it.mrp)) : '';
+      Object.assign(row, { part: { id: it.part_id, part_no: it.part_no, name_en: it.name_en, name_mr: it.name_mr, unit: it.unit }, qty: String(Number(it.qty)), mrp, price: String(Number(it.price)), disc: Number(it.disc_pct) ? String(Number(it.disc_pct)) : '', gst: String(Number(it.gst_rate)) });
+      row.follow = st.priceMode === 'mrp' && row.price === mrp;
       $('[data-f="part"]', tr).value = partLabel(row.part);
-      for (const f of ['qty', 'price', 'disc', 'gst']) $(`[data-f="${f}"]`, tr).value = row[f];
+      for (const f of ['qty', 'mrp', 'price', 'disc', 'gst']) $(`[data-f="${f}"]`, tr).value = row[f];
     }
     refresh();
     $('#pur-bill', ctx.el).focus();

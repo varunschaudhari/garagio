@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 const SUPPLIER_RULES = [
     'name' => 'str|req|max:120',
+    'contact_person' => 'str|max:100',
     'phone' => 'phone',
     'gstin' => 'gstin',
     'state_code' => 'state',
@@ -47,8 +48,8 @@ route('GET', '/suppliers', function () {
     }
     if (($term = qp('q')) !== null && $term !== '') {
         $like = like($term);
-        $where[] = '(s.name LIKE ? OR s.phone LIKE ? OR s.gstin LIKE ?)';
-        array_push($params, $like, $like, $like);
+        $where[] = '(s.name LIKE ? OR s.contact_person LIKE ? OR s.phone LIKE ? OR s.gstin LIKE ?)';
+        array_push($params, $like, $like, $like, $like);
     }
     if (qp('due')) {
         $where[] = '(' . SUPPLIER_BALANCE_SQL . ') > 0.004';

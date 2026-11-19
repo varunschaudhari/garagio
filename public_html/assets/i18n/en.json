@@ -532,7 +532,8 @@
     "interstate": "Other state (IGST)",
     "none": "No supplier",
     "against_bill": "Against bill",
-    "advance_note": "Paying more than the balance leaves an advance with the supplier."
+    "advance_note": "Paying more than the balance leaves an advance with the supplier.",
+    "contact_person": "Contact person"
   },
   "purchases": {
     "title": "Purchase bills",
@@ -592,7 +593,17 @@
     "corrected": "Bill corrected.",
     "status_active": "Active bills",
     "status_cancelled": "Cancelled bills",
-    "status_all": "All bills"
+    "status_all": "All bills",
+    "price_mode": "Prices on this bill",
+    "mode_mrp": "MRP / with GST, less discount",
+    "mode_net": "Without GST (GST added on top)",
+    "mode_mrp_short": "Prices with GST (MRP less discount)",
+    "mode_net_short": "Prices without GST",
+    "rate_incl": "Rate with GST",
+    "rate_excl": "Rate without GST",
+    "mrp": "MRP",
+    "mrp_hint": "The MRP you enter becomes the part's selling price.",
+    "contact": "Contact"
   },
   "reorder": {
     "title": "Reorder list",

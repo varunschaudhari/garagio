@@ -114,6 +114,7 @@ export type PayMode = 'cash' | 'upi' | 'bank' | 'card' | 'credit';
 export interface Supplier {
   id: number;
   name: string;
+  contact_person: string | null;
   phone: string | null;
   gstin: string | null;
   state_code: string;
@@ -158,6 +159,7 @@ export interface PurchaseItem {
   qty: number;
   price: number;
   disc_pct: number;
+  mrp: number | null;
   net_cost: number;
   gst_rate: number;
   taxable: number;
@@ -165,8 +167,13 @@ export interface PurchaseItem {
   line_total: number;
 }
 
+export type PriceMode = 'mrp' | 'net';
+
 export interface Purchase extends PurchaseListItem {
   is_interstate: number;
+  price_mode: PriceMode;
+  supplier_contact: string | null;
+  supplier_phone: string | null;
   taxable_total: number;
   cgst: number;
   sgst: number;
@@ -199,6 +206,7 @@ export interface BillTotals {
 
 export interface PurchasePreview {
   interstate: boolean;
+  price_mode: PriceMode;
   lines: { part_id: number; taxable: number; tax_amount: number; line_total: number }[];
   totals: BillTotals;
 }

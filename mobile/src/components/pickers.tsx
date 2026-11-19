@@ -67,7 +67,7 @@ export function SupplierPicker({ visible, onClose, onPick }: { visible: boolean;
               <View style={{ flex: 1 }}>
                 <Txt weight="semibold">{item.name}</Txt>
                 <Txt size="sm" muted>
-                  {item.phone ?? ''} {item.gstin ?? ''}
+                  {[item.contact_person, item.phone, item.gstin].filter(Boolean).join(' · ')}
                 </Txt>
               </View>
               <Txt weight="semibold" tabular color={item.balance > 0 ? 'dangerText' : 'muted'}>

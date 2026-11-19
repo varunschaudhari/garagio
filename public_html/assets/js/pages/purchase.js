@@ -27,6 +27,8 @@ export default async function purchasePage(ctx) {
           <a href="#/purchases" class="small muted">${icon('arrow-left', 14)} ${t('purchases.title')}</a>
           <h1 style="margin-top:6px">${t('purchases.bill')} ${p.bill_no} ${cancelled ? html`<span class="chip danger">${t('purchases.cancelled')}</span>` : modeChip(p.payment_mode)}</h1>
           <div class="sub"><a href="#/suppliers/${p.supplier_id}">${p.supplier_name}</a> · ${date(p.bill_date)}${p.supplier_gstin ? ' · ' + p.supplier_gstin : ''}</div>
+          ${p.supplier_contact || p.supplier_phone ? html`<div class="small muted">${t('purchases.contact')}: ${p.supplier_contact || ''}${p.supplier_contact && p.supplier_phone ? ' · ' : ''}${p.supplier_phone ? html`<a href="tel:${p.supplier_phone}">${p.supplier_phone}</a>` : ''}</div>` : ''}
+          <div class="small muted">${t(p.price_mode === 'mrp' ? 'purchases.mode_mrp_short' : 'purchases.mode_net_short')}</div>
         </div>
         ${cancelled ? '' : html`<button class="btn btn-ghost" data-act="cancel">${icon('ban')}${t('purchases.cancel')}</button>
           <a class="btn btn-secondary" href="#/purchases/new?replace=${p.id}">${icon('pencil')}${t('purchases.correct')}</a>`}
@@ -39,7 +41,8 @@ export default async function purchasePage(ctx) {
           columns: [
             { key: 'part', label: t('purchases.part'), primary: true, render: (i) => html`<a class="t-title" href="#/parts/${i.part_id}">${nm(i)}</a><div class="t-sub">${i.part_no}${i.hsn ? ' · HSN ' + i.hsn : ''}</div>` },
             { key: 'qty', label: t('purchases.qty'), num: true, render: (i) => `${qty(i.qty)} ${i.unit}` },
-            { key: 'price', label: t('purchases.price'), num: true, render: (i) => money(i.price) },
+            { key: 'mrp', label: t('purchases.mrp'), num: true, render: (i) => (Number(i.mrp) ? money(i.mrp) : '—') },
+            { key: 'price', label: t(p.price_mode === 'mrp' ? 'purchases.rate_incl' : 'purchases.rate_excl'), num: true, render: (i) => money(i.price) },
             { key: 'disc', label: t('purchases.disc'), num: true, render: (i) => qty(i.disc_pct) },
             { key: 'net', label: t('purchases.net_cost'), num: true, render: (i) => money(i.net_cost) },
             { key: 'gst', label: t('purchases.gst'), num: true, render: (i) => qty(i.gst_rate) + '%' },

@@ -13,7 +13,7 @@ import { money, qty } from '@/format';
 import { errorText, nm } from '@/i18n';
 import { useScan } from '@/store/scan';
 import { radius, size, space, useTheme } from '@/theme';
-import type { Part, PayMode, Purchase, PurchasePreview, Supplier } from '@/types';
+import type { Part, PayMode, PriceMode, Purchase, PurchasePreview, Supplier } from '@/types';
 
 const GST = [0, 5, 12, 18, 28, 40];
 const MODES: PayMode[] = ['credit', 'cash', 'upi', 'bank'];
@@ -22,9 +22,17 @@ interface Line {
   key: number;
   part: Part;
   qty: string;
+  mrp: string;
   price: string;
   disc: string;
   gst: number;
+  /** MRP bills: the rate follows the MRP until someone types a different rate. */
+  follow: boolean;
+}
+
+/** The rate a line starts with: the MRP on MRP bills, the last price without GST on net bills. */
+function startPrice(l: Line, mode: PriceMode): Line {
+  return mode === 'mrp' ? { ...l, price: l.mrp, follow: true } : { ...l, price: l.part.last_purchase_price ? String(l.part.last_purchase_price) : '', follow: false };
 }
 
 let lineSeq = 0;
@@ -75,6 +83,7 @@ export default function NewPurchase() {
   const [billNo, setBillNo] = useState('');
   const [billDate, setBillDate] = useState(todayDMY());
   const [mode, setMode] = useState<PayMode>('credit');
+  const [priceMode, setPriceMode] = useState<PriceMode>('mrp');
   const [other, setOther] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [pickSupplier, setPickSupplier] = useState(false);
@@ -98,16 +107,23 @@ export default function NewPurchase() {
       setBillNo(p.bill_no);
       setBillDate(p.bill_date.split('-').reverse().join('-'));
       setMode(p.payment_mode);
+      setPriceMode(p.price_mode);
       setOther(Number(p.other_charges) ? String(p.other_charges) : '');
       setLines(
-        p.items.map((it, i) => ({
-          key: ++lineSeq,
-          part: parts[i],
-          qty: String(Number(it.qty)),
-          price: String(Number(it.price)),
-          disc: Number(it.disc_pct) ? String(Number(it.disc_pct)) : '',
-          gst: Number(it.gst_rate),
-        }))
+        p.items.map((it, i) => {
+          const mrp = Number(it.mrp) ? String(Number(it.mrp)) : '';
+          const price = String(Number(it.price));
+          return {
+            key: ++lineSeq,
+            part: parts[i],
+            qty: String(Number(it.qty)),
+            mrp,
+            price,
+            disc: Number(it.disc_pct) ? String(Number(it.disc_pct)) : '',
+            gst: Number(it.gst_rate),
+            follow: p.price_mode === 'mrp' && price === mrp,
+          };
+        })
       );
     })().catch(toastError);
     return () => {
@@ -120,19 +136,27 @@ export default function NewPurchase() {
     api.get<{ item: Supplier }>(`/suppliers/${Number(params.supplier)}`).then((r) => setSupplier(r.item)).catch(() => {});
   }, [params.supplier]);
 
-  const addPart = useCallback((p: Part) => {
-    setLines((ls) => [
-      ...ls,
-      {
+  const addPart = useCallback(
+    (p: Part) => {
+      const line: Line = {
         key: ++lineSeq,
         part: p,
         qty: '1',
-        price: p.last_purchase_price ? String(p.last_purchase_price) : '',
+        mrp: Number(p.selling_price) ? String(Number(p.selling_price)) : '',
+        price: '',
         disc: p.last_purchase_disc_pct ? String(p.last_purchase_disc_pct) : '',
         gst: Number(p.gst_rate),
-      },
-    ]);
-  }, []);
+        follow: true,
+      };
+      setLines((ls) => [...ls, startPrice(line, priceMode)]);
+    },
+    [priceMode]
+  );
+
+  const changePriceMode = (m: PriceMode) => {
+    setPriceMode(m);
+    setLines((ls) => ls.map((l) => startPrice(l, m)));
+  };
 
   // A part scanned with the camera (mode=pick) arrives when this screen is focused again.
   useFocusEffect(
@@ -160,9 +184,10 @@ export default function NewPurchase() {
     () => ({
       supplier_id: supplier?.id,
       other_charges: other || 0,
-      items: valid.map((l) => ({ part_id: l.part.id, qty: l.qty, price: l.price || 0, disc_pct: l.disc || 0, gst_rate: l.gst })),
+      price_mode: priceMode,
+      items: valid.map((l) => ({ part_id: l.part.id, qty: l.qty, price: l.price || 0, disc_pct: l.disc || 0, gst_rate: l.gst, mrp: l.mrp })),
     }),
-    [supplier, other, valid]
+    [supplier, other, valid, priceMode]
   );
 
   const preview = useQuery({
@@ -237,7 +262,7 @@ export default function NewPurchase() {
                 </Txt>
                 {supplier ? (
                   <Txt size="sm" muted>
-                    {supplier.gstin || supplier.state_code} · {t('suppliers.balance')} {money(supplier.balance)}
+                    {[supplier.contact_person, supplier.phone, supplier.gstin || supplier.state_code, `${t('suppliers.balance')} ${money(supplier.balance)}`].filter(Boolean).join(' · ')}
                   </Txt>
                 ) : null}
               </View>
@@ -255,6 +280,15 @@ export default function NewPurchase() {
               {t('purchases.payment_mode')}
             </Txt>
             <Segmented<PayMode> value={mode} onChange={setMode} options={MODES.map((m) => ({ value: m, label: t(`pay.${m}`) }))} />
+          </View>
+          <View style={{ gap: 6 }}>
+            <Txt size="sm" weight="semibold">
+              {t('purchases.price_mode')}
+            </Txt>
+            <Segmented<PriceMode> value={priceMode} onChange={changePriceMode} options={(['mrp', 'net'] as const).map((m) => ({ value: m, label: t(`purchases.mode_${m}`) }))} />
+            <Txt size="xs" muted>
+              {t('purchases.mrp_hint')}
+            </Txt>
           </View>
         </Card>
 
@@ -278,7 +312,14 @@ export default function NewPurchase() {
               </View>
               <View style={{ flexDirection: 'row', gap: space[2] }}>
                 <SmallInput label={t('purchases.qty')} value={l.qty} onChange={(v) => update(l.key, { qty: v })} invalid={bad && !(num(l.qty) > 0)} />
-                <SmallInput label={t('purchases.price')} value={l.price} onChange={(v) => update(l.key, { price: v })} />
+                <SmallInput label={t('purchases.mrp')} value={l.mrp} onChange={(v) => update(l.key, l.follow ? { mrp: v, price: v } : { mrp: v })} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: space[2] }}>
+                <SmallInput
+                  label={t(priceMode === 'mrp' ? 'purchases.rate_incl' : 'purchases.rate_excl')}
+                  value={l.price}
+                  onChange={(v) => update(l.key, { price: v, follow: priceMode === 'mrp' && v === l.mrp })}
+                />
                 <SmallInput label={t('purchases.disc')} value={l.disc} onChange={(v) => update(l.key, { disc: v })} />
               </View>
               <View style={styles.gstRow}>

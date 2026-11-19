@@ -68,7 +68,9 @@ Marathi and English** unless the line says otherwise. Automated checks (`npm run
 
 - [ ] Inventory manager has a Purchases tab; the owner reaches Purchases, Suppliers and Reorder from More.
 - [ ] New purchase bill: pick a supplier from the search sheet; supplier balance shows under the name.
-- [ ] Add parts from the search sheet and by scanning a QR label; price and discount fill from the last purchase.
+- [ ] Add parts from the search sheet and by scanning a QR label; MRP fills from the selling price, discount from the last purchase.
+- [ ] "Prices on this bill" = MRP: 10 × MRP 185, 22% → line total ₹1,443.00; the rate follows the MRP until you change it. Switch to "Without GST": the rate becomes the last purchase price and GST is added on top.
+- [ ] The supplier's contact person and phone show under the supplier name and on the saved bill.
 - [ ] Changing qty, price, discount or GST updates the line total and bill totals (from the server).
 - [ ] An other-state supplier (e.g. Deccan Lubricants) shows the IGST note and an IGST line.
 - [ ] Saving with a bill number already used for that supplier shows the error under "Bill no.".

@@ -131,6 +131,7 @@ CREATE TABLE stock_counts (
 CREATE TABLE suppliers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
+  contact_person VARCHAR(100) NULL,
   phone VARCHAR(15) NULL,
   gstin VARCHAR(15) NULL,
   state_code VARCHAR(2) NOT NULL DEFAULT '27',
@@ -148,6 +149,7 @@ CREATE TABLE purchases (
   bill_no VARCHAR(40) NOT NULL,
   bill_date DATE NOT NULL,
   is_interstate TINYINT(1) NOT NULL DEFAULT 0,
+  price_mode VARCHAR(4) NOT NULL DEFAULT 'net',
   taxable_total DECIMAL(12,2) NOT NULL DEFAULT 0,
   cgst DECIMAL(12,2) NOT NULL DEFAULT 0,
   sgst DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -178,6 +180,7 @@ CREATE TABLE purchase_items (
   qty DECIMAL(10,2) NOT NULL,
   price DECIMAL(12,2) NOT NULL,
   disc_pct DECIMAL(5,2) NOT NULL DEFAULT 0,
+  mrp DECIMAL(12,2) NULL,
   net_cost DECIMAL(12,4) NOT NULL,
   gst_rate DECIMAL(5,2) NOT NULL,
   taxable DECIMAL(12,2) NOT NULL,
@@ -681,6 +684,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('003_job_misc_parts.sql
 INSERT INTO schema_migrations (name, applied_at) VALUES ('004_purchase_cancel.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('005_sale_returns.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('006_cash_book.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('007_purchase_mrp.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

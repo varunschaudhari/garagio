@@ -452,3 +452,9 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     expenses − mechanic pay (mechanic pay is treated as cash, on the day it is entered). The first count asks for the
     opening; after that the opening is the previous count minus what was taken out. A counted day is locked (no expense
     changes) until the owner reopens it. Profit = sales − parts cost − mechanic pay − expenses.
+22. **Purchase bills the shop's way (19 Nov 2026, from the shop's notes):** each bill is entered either as "MRP / with
+    GST, less discount" (the screens' default: 10 × MRP 185 − 22% = 1443, GST worked out from inside the price) or
+    "without GST" (GST added on top, as before; still the API default so older phone apps keep working). Each line may
+    carry the MRP; saving makes it the part's selling price (audited as a price change; only for people with the
+    edit_parts tick). parts.last_purchase_price stays without GST in both modes. Suppliers get a contact person, shown
+    with the phone on the purchase bill.

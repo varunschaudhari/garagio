@@ -2,9 +2,12 @@
 declare(strict_types=1);
 
 /*
- * Purchase bills. Supplier prices are ex-GST; GST is added per line (input tax).
- * Saving a bill adds stock at the net cost (price − discount), updates the part's last purchase
- * price / discount and weighted-average cost, and - unless bought on credit - records the payment.
+ * Purchase bills, entered one of two ways (price_mode, per bill):
+ *   mrp - the supplier's price includes GST (usually the MRP) less a trade discount: 10 × 185 − 22% = 1443;
+ *   net - the price is without GST and GST is added per line (input tax).
+ * Saving a bill adds stock at the net cost (price − discount, without GST once the shop is registered),
+ * updates the part's last purchase price (kept without GST) / discount, the weighted-average cost and the
+ * selling price (from the line's MRP), and - unless bought on credit - records the payment.
  */
 
 const PURCHASE_ITEM_RULES = [
@@ -13,7 +16,30 @@ const PURCHASE_ITEM_RULES = [
     'price' => 'num|req|min:0|max:10000000',
     'disc_pct' => 'num|min:0|max:100|def:0',
     'gst_rate' => 'num|min:0|max:40',
+    'mrp' => 'num|min:0|max:10000000',
 ];
+
+/**
+ * What one unit costs the shop after the discount: without GST once registered (the GST comes back as input
+ * credit), with GST while not registered (it is part of the cost).
+ */
+function purchase_net_cost(float $price, float $discPct, float $rate, bool $inclusive): float
+{
+    $net = net_cost($price, $discPct);
+    if ($inclusive && gst_registered()) {
+        return round($net / (1 + $rate / 100), 4);
+    }
+    if (!$inclusive && !gst_registered()) {
+        return round($net * (1 + $rate / 100), 4);
+    }
+    return $net;
+}
+
+/** parts.last_purchase_price is always without GST (before the discount). */
+function purchase_ex_price(float $price, float $rate, bool $inclusive): float
+{
+    return $inclusive ? round($price / (1 + $rate / 100), 2) : $price;
+}
 
 /** Validate the header + items and compute every line and total (no writes). */
 function purchase_calc(array $body, bool $forSave): array
@@ -24,8 +50,10 @@ function purchase_calc(array $body, bool $forSave): array
         'bill_date' => $forSave ? 'date|req' : 'date',
         'payment_mode' => $forSave ? 'enum:cash,upi,bank,credit|req' : 'enum:cash,upi,bank,credit',
         'other_charges' => 'num|min:-1000000|max:1000000|def:0',
+        'price_mode' => 'enum:mrp,net|def:net',
         'notes' => 'str|max:255',
     ]);
+    $inclusive = $hdr['price_mode'] === 'mrp';
     $supplier = row('SELECT * FROM suppliers WHERE id = ?', [$hdr['supplier_id']]);
     if (!$supplier) {
         fail(422, 'validation_failed', 'Choose a supplier', ['supplier_id' => 'invalid_choice']);
@@ -67,6 +95,7 @@ function purchase_calc(array $body, bool $forSave): array
                 'unit_price' => (float) $it['price'],
                 'disc_pct' => (float) $it['disc_pct'],
                 'gst_rate' => (float) $rate,
+                'mrp' => isset($it['mrp']) && (float) $it['mrp'] > 0 ? (float) $it['mrp'] : null,
             ];
         } catch (ApiError $e) {
             $errors["items.$i"] = $e->fields ?: ['_' => $e->getMessage()];
@@ -77,16 +106,12 @@ function purchase_calc(array $body, bool $forSave): array
     }
 
     $interstate = supplier_interstate($supplier['gstin'], $supplier['state_code']);
-    $bill = gst_bill($lines, false, $interstate, 0, (float) $hdr['other_charges']);
+    $bill = gst_bill($lines, $inclusive, $interstate, 0, (float) $hdr['other_charges']);
     foreach ($bill['lines'] as &$l) {
-        $l['net_cost'] = net_cost($l['unit_price'], $l['disc_pct']);
-        if (!gst_registered()) {
-            // No input-tax credit without registration: the supplier's GST is part of what the part costs us.
-            $l['net_cost'] = round($l['net_cost'] * (1 + $l['gst_rate'] / 100), 4);
-        }
+        $l['net_cost'] = purchase_net_cost($l['unit_price'], $l['disc_pct'], $l['gst_rate'], $inclusive);
     }
     unset($l);
-    return ['header' => $hdr, 'supplier' => $supplier, 'interstate' => $interstate] + $bill;
+    return ['header' => $hdr, 'supplier' => $supplier, 'interstate' => $interstate, 'inclusive' => $inclusive] + $bill;
 }
 
 /** Strip internal keys for the preview response. */
@@ -94,7 +119,8 @@ function purchase_preview_view(array $calc): array
 {
     return [
         'interstate' => $calc['interstate'],
-        'lines' => array_map(static fn ($l) => pick($l, ['part_id', 'part_no', 'name_en', 'name_mr', 'qty', 'unit_price', 'disc_pct', 'gst_rate', 'net_cost', 'gross', 'disc_amount', 'taxable', 'cgst', 'sgst', 'igst', 'tax_amount', 'line_total']), $calc['lines']),
+        'price_mode' => $calc['header']['price_mode'],
+        'lines' => array_map(static fn ($l) => pick($l, ['part_id', 'part_no', 'name_en', 'name_mr', 'qty', 'unit_price', 'disc_pct', 'mrp', 'gst_rate', 'net_cost', 'gross', 'disc_amount', 'taxable', 'cgst', 'sgst', 'igst', 'tax_amount', 'line_total']), $calc['lines']),
         'totals' => $calc['totals'],
         'by_rate' => $calc['by_rate'],
     ];
@@ -103,7 +129,7 @@ function purchase_preview_view(array $calc): array
 function purchase_by_id(int $id): array
 {
     $p = row(
-        'SELECT p.*, s.name AS supplier_name, s.phone AS supplier_phone, s.gstin AS supplier_gstin, s.state_code AS supplier_state, u.name AS user_name
+        'SELECT p.*, s.name AS supplier_name, s.contact_person AS supplier_contact, s.phone AS supplier_phone, s.gstin AS supplier_gstin, s.state_code AS supplier_state, u.name AS user_name
          FROM purchases p JOIN suppliers s ON s.id = p.supplier_id LEFT JOIN users u ON u.id = p.user_id WHERE p.id = ?',
         [$id]
     ) ?? not_found('Purchase bill');
@@ -191,12 +217,13 @@ function cancel_purchase(array $p, string $reason, ?int $replacedBy = null): voi
     foreach (rows('SELECT * FROM purchase_items WHERE purchase_id = ? ORDER BY id', [$p['id']]) as $it) {
         stock_move((int) $it['part_id'], -(float) $it['qty'], 'purchase_cancel', 'purchase', (int) $p['id'], (float) $it['net_cost'], 'Cancelled bill ' . $p['bill_no']);
         $prev = row(
-            "SELECT pi.price, pi.disc_pct FROM purchase_items pi JOIN purchases pu ON pu.id = pi.purchase_id
+            "SELECT pi.price, pi.disc_pct, pi.gst_rate, pu.price_mode FROM purchase_items pi JOIN purchases pu ON pu.id = pi.purchase_id
              WHERE pi.part_id = ? AND pu.status = 'final' AND pu.id <> ? ORDER BY pu.bill_date DESC, pu.id DESC LIMIT 1",
             [$it['part_id'], $p['id']]
         );
         if ($prev) {
-            q('UPDATE parts SET last_purchase_price = ?, last_purchase_disc_pct = ?, updated_at = ? WHERE id = ?', [$prev['price'], $prev['disc_pct'], now(), $it['part_id']]);
+            $price = purchase_ex_price((float) $prev['price'], (float) $prev['gst_rate'], $prev['price_mode'] === 'mrp');
+            q('UPDATE parts SET last_purchase_price = ?, last_purchase_disc_pct = ?, updated_at = ? WHERE id = ?', [$price, $prev['disc_pct'], now(), $it['part_id']]);
         }
     }
     update_row('purchases', (int) $p['id'], ['status' => 'cancelled', 'cancel_reason' => $reason, 'cancelled_by' => uid(), 'cancelled_at' => now(), 'replaced_by' => $replacedBy]);
@@ -229,6 +256,7 @@ route('POST', '/purchases', function () {
             'bill_no' => $h['bill_no'],
             'bill_date' => $h['bill_date'],
             'is_interstate' => $calc['interstate'] ? 1 : 0,
+            'price_mode' => $h['price_mode'],
             'taxable_total' => $t['taxable_total'],
             'cgst' => $t['cgst'],
             'sgst' => $t['sgst'],
@@ -243,7 +271,10 @@ route('POST', '/purchases', function () {
         foreach ($calc['lines'] as $i => $l) {
             $partId = $l['part_id'];
             if (!$partId) {
-                // New part created inline from the purchase screen.
+                // New part created inline from the purchase screen; the line's MRP is its selling price.
+                if ($l['mrp'] !== null && !isset($l['new_part']['selling_price'])) {
+                    $l['new_part']['selling_price'] = $l['mrp'];
+                }
                 try {
                     $np = clean($l['new_part'], PART_RULES);
                 } catch (ApiError $e) {
@@ -261,6 +292,7 @@ route('POST', '/purchases', function () {
                 'qty' => $l['qty'],
                 'price' => $l['unit_price'],
                 'disc_pct' => $l['disc_pct'],
+                'mrp' => $l['mrp'],
                 'net_cost' => $l['net_cost'],
                 'gst_rate' => $l['gst_rate'],
                 'taxable' => $l['taxable'],
@@ -271,7 +303,15 @@ route('POST', '/purchases', function () {
                 'line_total' => $l['line_total'],
             ]);
             stock_move($partId, $l['qty'], 'purchase', 'purchase', $pid, $l['net_cost'], 'Bill ' . $h['bill_no']);
-            q('UPDATE parts SET last_purchase_price = ?, last_purchase_disc_pct = ?, updated_at = ? WHERE id = ?', [$l['unit_price'], $l['disc_pct'], now(), $partId]);
+            q('UPDATE parts SET last_purchase_price = ?, last_purchase_disc_pct = ?, updated_at = ? WHERE id = ?', [purchase_ex_price($l['unit_price'], $l['gst_rate'], $calc['inclusive']), $l['disc_pct'], now(), $partId]);
+            // The MRP printed on the supplier's bill is what we sell at (for people who may edit part prices).
+            if ($l['mrp'] !== null && can('edit_parts')) {
+                $was = (float) val('SELECT selling_price FROM parts WHERE id = ?', [$partId]);
+                if (abs($was - $l['mrp']) >= 0.005) {
+                    q('UPDATE parts SET selling_price = ?, updated_at = ? WHERE id = ?', [$l['mrp'], now(), $partId]);
+                    audit('price_change', 'part', $partId, ['selling_price' => $was], ['selling_price' => $l['mrp'], 'purchase_bill' => $h['bill_no']]);
+                }
+            }
         }
         $alreadyPaid = 0.0;
         if ($old) {
