@@ -135,3 +135,18 @@ test('mechanic cannot open purchases', async ({ page }) => {
   await page.goto('/#/purchases');
   await expect(page.locator('.empty')).toContainText('तुम्हाला याची परवानगी नाही.');
 });
+
+test('photo of the paper bill on a purchase bill: add, then remove', async ({ page }) => {
+  await login(page, 'stock');
+  // The bills above ended up cancelled; a photo can still be kept with a cancelled bill.
+  await page.goto('/#/purchases?status=all');
+  await page.locator('tr', { hasText: 'E2E-1' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Photo of the bill' })).toBeVisible();
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await page.locator('[data-bill-file]').setInputFiles({ name: 'bill.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('.toast', { hasText: 'Photo saved' })).toBeVisible();
+  await expect(page.locator('[data-bill-img]')).toHaveAttribute('src', /^blob:/);
+  await page.getByRole('button', { name: 'Remove photo' }).click();
+  await page.locator('.modal').getByRole('button', { name: 'Delete' }).click();
+  await expect(page.locator('#bill-photo')).toContainText('No photo yet');
+});

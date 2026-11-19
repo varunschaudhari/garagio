@@ -11,7 +11,6 @@ const JOB_RULES = [
 ];
 
 const PHOTO_MAX = 4;
-const PHOTO_MAX_BYTES = 6 * 1024 * 1024;
 
 function check_mechanic(?int $id): void
 {
@@ -188,7 +187,7 @@ route('POST', '/jobs/scan-card', function () {
     if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         fail(422, 'validation_failed', 'Choose a photo', ['photo' => 'required']);
     }
-    if ($f['size'] > PHOTO_MAX_BYTES) {
+    if ($f['size'] > IMAGE_MAX_BYTES) {
         fail(422, 'validation_failed', 'Photo is too large (max 6 MB)', ['photo' => 'too_long']);
     }
     $info = @getimagesize($f['tmp_name']);
@@ -376,31 +375,7 @@ route('POST', '/jobs/{id}/photos', function ($p) {
     if ((int) val('SELECT COUNT(*) FROM job_photos WHERE job_card_id = ?', [$j['id']]) >= PHOTO_MAX) {
         fail(409, 'too_many_photos', 'Up to ' . PHOTO_MAX . ' photos per job');
     }
-    $f = $_FILES['photo'] ?? null;
-    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-        fail(422, 'validation_failed', 'Choose a photo', ['photo' => 'required']);
-    }
-    if ($f['size'] > PHOTO_MAX_BYTES) {
-        fail(422, 'validation_failed', 'Photo is too large (max 6 MB)', ['photo' => 'too_long']);
-    }
-    $info = @getimagesize($f['tmp_name']);
-    $ext = match ($info[2] ?? 0) {
-        IMAGETYPE_JPEG => 'jpg',
-        IMAGETYPE_PNG => 'png',
-        IMAGETYPE_WEBP => 'webp',
-        default => null,
-    };
-    if (!$ext) {
-        fail(422, 'validation_failed', 'Only JPEG, PNG or WebP photos', ['photo' => 'invalid']);
-    }
-    $dir = photo_dir((int) $j['id']);
-    if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
-        fail(500, 'storage_error', 'Cannot save the photo on the server');
-    }
-    $name = bin2hex(random_bytes(12)) . '.' . $ext;
-    if (!move_uploaded_file($f['tmp_name'], "$dir/$name") && !rename($f['tmp_name'], "$dir/$name")) {
-        fail(500, 'storage_error', 'Cannot save the photo on the server');
-    }
+    $name = save_uploaded_image(photo_dir((int) $j['id']));
     insert('job_photos', ['job_card_id' => $j['id'], 'path' => $j['id'] . '/' . $name, 'user_id' => uid()]);
     return ['item' => job_detail((int) $j['id'])];
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC]]);
@@ -409,16 +384,7 @@ route('GET', '/jobs/{id}/photos/{pid}', function ($p) {
     $j = job_row((int) $p['id']);
     job_access($j);
     $ph = row('SELECT * FROM job_photos WHERE id = ? AND job_card_id = ?', [(int) $p['pid'], $j['id']]) ?? not_found('Photo');
-    $file = API_DIR . '/storage/photos/' . $ph['path'];
-    if (!is_file($file)) {
-        not_found('Photo');
-    }
-    $type = match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) {
-        'png' => 'image/png',
-        'webp' => 'image/webp',
-        default => 'image/jpeg',
-    };
-    return new RawResponse((string) file_get_contents($file), $type, 200, ['Cache-Control' => 'private, max-age=86400']);
+    return image_response(API_DIR . '/storage/photos/' . $ph['path']);
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC, ROLE_INVENTORY]]);
 
 route('DELETE', '/jobs/{id}/photos/{pid}', function ($p) {

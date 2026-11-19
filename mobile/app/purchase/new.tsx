@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { api, ApiError } from '@/api/client';
 import { useSavePurchase } from '@/api/queries';
+import { BillPhotoPicker, uploadBillPhoto } from '@/components/billPhoto';
 import { PartPicker, SupplierPicker } from '@/components/pickers';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Field, IconButton, OfflineBanner, Segmented, Txt } from '@/components/ui';
@@ -84,6 +85,7 @@ export default function NewPurchase() {
   const [billDate, setBillDate] = useState(todayDMY());
   const [mode, setMode] = useState<PayMode>('credit');
   const [priceMode, setPriceMode] = useState<PriceMode>('mrp');
+  const [photo, setPhoto] = useState<string | null>(null);
   const [other, setOther] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [pickSupplier, setPickSupplier] = useState(false);
@@ -216,6 +218,7 @@ export default function NewPurchase() {
     try {
       const res = await save.mutateAsync({ ...payload, bill_no: billNo.trim(), bill_date: iso, payment_mode: mode, ...(old ? { replaces_id: old.id, notes: old.notes ?? '' } : {}) });
       toast(old ? t('purchases.corrected') : t('purchases.saved'));
+      if (photo) await uploadBillPhoto(`/purchases/${res.item.id}/photo`, photo).catch(toastError);
       router.replace(`/purchase/${res.item.id}`);
     } catch (err) {
       if (err instanceof ApiError && err.code === 'duplicate_bill') {
@@ -290,6 +293,7 @@ export default function NewPurchase() {
               {t('purchases.mrp_hint')}
             </Txt>
           </View>
+          <BillPhotoPicker uri={photo} onChange={setPhoto} />
         </Card>
 
         {preview.data?.interstate ? <Banner text={t('purchases.interstate_note')} /> : null}

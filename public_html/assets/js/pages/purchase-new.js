@@ -8,6 +8,7 @@ import { busy } from '../ui/form.js';
 import { toast, toastError } from '../ui/toast.js';
 import { openPartForm } from './part-form.js';
 import { openSupplierForm } from './suppliers.js';
+import { uploadBillPhoto } from '../ui/bill-photo.js';
 
 const GST_RATES = [0, 5, 12, 18, 28, 40];
 const FIELDS = ['part', 'qty', 'mrp', 'price', 'disc', 'gst'];
@@ -66,6 +67,10 @@ export default async function purchaseNew(ctx) {
             <select id="pur-mode" class="select" name="payment_mode">
               ${['credit', 'cash', 'upi', 'bank'].map((m) => html`<option value="${m}">${t('pay.' + m)}</option>`)}
             </select>
+          </div>
+          <div class="field">
+            <label for="pur-photo">${t('bills.photo')}</label>
+            <input id="pur-photo" class="input" type="file" accept="image/*">
           </div>
           <div class="field">
             <label for="pur-price-mode">${t('purchases.price_mode')}</label>
@@ -386,6 +391,8 @@ export default async function purchaseNew(ctx) {
         const res = await api.post('/purchases', body);
         dirty = false;
         toast(old ? t('purchases.corrected') : t('purchases.saved'));
+        const photo = $('#pur-photo', ctx.el).files[0];
+        if (photo) await uploadBillPhoto(`/purchases/${res.item.id}/photo`, photo).catch(toastError);
         location.hash = '#/purchases/' + res.item.id;
       } catch (err) {
         if (err.code === 'duplicate_bill') {

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
 import { useCancelPurchase, usePurchase } from '@/api/queries';
+import { BillPhotoCard } from '@/components/billPhoto';
 import { SupplierPaymentSheet } from '@/components/pickers';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
@@ -127,6 +128,8 @@ export default function PurchaseView() {
             ))}
           </Card>
         ) : null}
+
+        <BillPhotoCard path={`/purchases/${b.id}/photo`} version={b.photo} canEdit onChanged={() => void p.refetch()} />
 
         {due > 0 && supplier.data ? <Button title={t('suppliers.record_payment')} icon={HandCoins} onPress={() => setPaying(true)} needsOnline /> : null}
         {!cancelled ? (

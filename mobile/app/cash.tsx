@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Eye, EyeOff, Pencil, Plus, Trash2, Undo2 } from 'lucide-react-native';
+import { Camera, Check, Eye, EyeOff, Image as ImageIcon, Pencil, Plus, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
+import { BillPhotoPicker, BillPhotoViewer, pickBillPhoto, uploadBillPhoto } from '@/components/billPhoto';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Button, Card, Divider, Field, IconButton, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
@@ -26,6 +27,7 @@ interface Expense {
   category_id: number;
   category_en: string;
   category_mr: string | null;
+  photo: string | null;
   amount: number;
   mode: Mode;
   note: string | null;
@@ -82,6 +84,8 @@ export default function CashScreen() {
   const cats = useQuery({ queryKey: ['expense-categories'], queryFn: () => api.get<{ items: ExpenseCategory[] }>('/expense-categories').then((r) => r.items) });
   const [cat, setCat] = useState<number | null>(null);
   const [editCats, setEditCats] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Expense | null>(null);
   const [amount, setAmount] = useState('');
   const [mode, setMode] = useState<Mode>('cash');
   const [note, setNote] = useState('');
@@ -202,6 +206,27 @@ export default function CashScreen() {
                   <Txt size="sm" muted>{t(`pay.${e.mode}`)} · {e.user_name ?? ''}</Txt>
                 </View>
                 <Txt tabular weight="semibold">{money(e.amount)}</Txt>
+                {e.photo ? (
+                  <IconButton icon={ImageIcon} label={t('bills.view_photo')} color={c.primaryText} onPress={() => setViewing(e)} />
+                ) : (
+                  <IconButton
+                    icon={Camera}
+                    label={t('bills.add_photo')}
+                    color={c.muted}
+                    onPress={() =>
+                      Alert.alert(t('bills.add_photo'), '', [
+                        { text: t('common.cancel'), style: 'cancel' },
+                        ...(['library', 'camera'] as const).map((from) => ({
+                          text: t(from === 'camera' ? 'bills.take_photo' : 'bills.from_gallery'),
+                          onPress: () =>
+                            void pickBillPhoto(from).then((uri) =>
+                              uri ? run(async () => { await uploadBillPhoto(`/expenses/${e.id}/photo`, uri); toast(t('bills.photo_saved')); refresh(); }) : undefined
+                            ),
+                        })),
+                      ])
+                    }
+                  />
+                )}
                 {!cl ? (
                   <IconButton
                     icon={Trash2}
@@ -220,7 +245,7 @@ export default function CashScreen() {
           ) : (
             <Txt size="sm" muted>{t('cash.no_expenses')}</Txt>
           )}
-          {!cl ? <Button title={t('cash.add_expense')} icon={Plus} variant="secondary" onPress={() => { setAmount(''); setNote(''); setCat(cats.data?.[0]?.id ?? null); setSheet(true); }} needsOnline /> : null}
+          {!cl ? <Button title={t('cash.add_expense')} icon={Plus} variant="secondary" onPress={() => { setAmount(''); setNote(''); setPhoto(null); setCat(cats.data?.[0]?.id ?? null); setSheet(true); }} needsOnline /> : null}
           {owner ? <Button title={t('cash.edit_categories')} icon={Pencil} variant="ghost" small onPress={() => setEditCats(true)} /> : null}
         </Card>
       </ScrollView>
@@ -236,6 +261,7 @@ export default function CashScreen() {
           <Field label={`${t('common.amount')} (₹)`} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoFocus required />
           <Segmented<Mode> value={mode} onChange={setMode} options={(['cash', 'upi', 'bank'] as const).map((m) => ({ value: m, label: t(`pay.${m}`) }))} />
           <Field label={t('common.notes')} value={note} onChangeText={setNote} />
+          <BillPhotoPicker uri={photo} onChange={setPhoto} />
           <Button
             title={t('common.save')}
             icon={Check}
@@ -244,7 +270,8 @@ export default function CashScreen() {
             needsOnline
             onPress={() =>
               void run(async () => {
-                await api.post('/expenses', { spent_on: day, category_id: cat, amount: num(amount), mode, note: note.trim() });
+                const saved = await api.post<{ item: Expense }>('/expenses', { spent_on: day, category_id: cat, amount: num(amount), mode, note: note.trim() });
+                if (photo) await uploadBillPhoto(`/expenses/${saved.item.id}/photo`, photo).catch(toastError);
                 setSheet(false);
                 toast(t('cash.expense_saved'));
                 refresh();
@@ -254,6 +281,7 @@ export default function CashScreen() {
         </Sheet>
       ) : null}
       {editCats ? <CategoriesSheet onClose={() => setEditCats(false)} /> : null}
+      {viewing?.photo ? <BillPhotoViewer path={`/expenses/${viewing.id}/photo`} version={viewing.photo} onClose={() => setViewing(null)} /> : null}
     </KeyboardAvoidingView>
   );
 }

@@ -125,6 +125,9 @@ route('DELETE', '/expenses/{id}', function ($p) {
             fail(409, 'day_closed', 'This day\'s cash is already counted; reopen it first');
         }
         q('DELETE FROM expenses WHERE id = ?', [$e['id']]);
+        if ($e['photo']) {
+            @unlink(bill_photo_dir('expenses') . '/' . $e['photo']);
+        }
         audit('expense_delete', 'expense', (int) $e['id'], ['date' => $e['spent_on'], 'category' => $e['category_en'], 'amount' => (float) $e['amount'], 'note' => $e['note']], null);
     });
     return ['ok' => true];

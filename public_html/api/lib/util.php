@@ -1,6 +1,54 @@
 <?php
 declare(strict_types=1);
 
+/* ------------------------------------------------------------------ uploaded photos (job photos, bill photos) */
+
+const IMAGE_MAX_BYTES = 6 * 1024 * 1024;
+
+/** Save the image uploaded as $_FILES[$field] in $dir under a random name; returns the file name. */
+function save_uploaded_image(string $dir, string $field = 'photo'): string
+{
+    $f = $_FILES[$field] ?? null;
+    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        fail(422, 'validation_failed', 'Choose a photo', [$field => 'required']);
+    }
+    if ($f['size'] > IMAGE_MAX_BYTES) {
+        fail(422, 'validation_failed', 'Photo is too large (max 6 MB)', [$field => 'too_long']);
+    }
+    $info = @getimagesize($f['tmp_name']);
+    $ext = match ($info[2] ?? 0) {
+        IMAGETYPE_JPEG => 'jpg',
+        IMAGETYPE_PNG => 'png',
+        IMAGETYPE_WEBP => 'webp',
+        default => null,
+    };
+    if (!$ext) {
+        fail(422, 'validation_failed', 'Only JPEG, PNG or WebP photos', [$field => 'invalid']);
+    }
+    if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
+        fail(500, 'storage_error', 'Cannot save the photo on the server');
+    }
+    $name = bin2hex(random_bytes(12)) . '.' . $ext;
+    if (!move_uploaded_file($f['tmp_name'], "$dir/$name") && !rename($f['tmp_name'], "$dir/$name")) {
+        fail(500, 'storage_error', 'Cannot save the photo on the server');
+    }
+    return $name;
+}
+
+/** A stored photo as the response (private, cached by the browser for a day). */
+function image_response(string $file): RawResponse
+{
+    if (!is_file($file)) {
+        not_found('Photo');
+    }
+    $type = match (strtolower(pathinfo($file, PATHINFO_EXTENSION))) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        default => 'image/jpeg',
+    };
+    return new RawResponse((string) file_get_contents($file), $type, 200, ['Cache-Control' => 'private, max-age=86400']);
+}
+
 const ROLE_OWNER = 'owner';
 const ROLE_INVENTORY = 'inventory';
 const ROLE_DESK = 'front_desk';

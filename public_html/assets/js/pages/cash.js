@@ -9,6 +9,7 @@ import { field, busy } from '../ui/form.js';
 import { openDrawer } from '../ui/drawer.js';
 import { confirmDialog } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
+import { uploadBillPhoto, viewBillPhoto, billPhotoInput } from '../ui/bill-photo.js';
 
 const MODES = ['cash', 'upi', 'bank'];
 
@@ -79,6 +80,9 @@ export default async function cashPage(ctx) {
         ${d.expenses.length ? html`<div class="list">${d.expenses.map((e) => html`<div class="list-item">
           <div style="flex:1"><div class="strong">${nm(e, 'category')}${e.note ? ' · ' + e.note : ''}</div><div class="small muted">${t('pay.' + e.mode)} · ${e.user_name || ''}</div></div>
           <div class="num strong">${money(e.amount)}</div>
+          ${e.photo
+            ? html`<button class="btn btn-ghost btn-icon btn-sm" data-photo-view="${e.id}" aria-label="${t('bills.view_photo')}" title="${t('bills.view_photo')}">${icon('image', 16)}</button>`
+            : html`<label class="btn btn-ghost btn-icon btn-sm" aria-label="${t('bills.add_photo')}" title="${t('bills.add_photo')}">${icon('camera', 16)}${billPhotoInput(`data-photo-add="${e.id}"`)}</label>`}
           ${c ? '' : html`<button class="btn btn-ghost btn-icon btn-sm" data-del="${e.id}" aria-label="${t('common.delete')}">${icon('trash-2', 16)}</button>`}
         </div>`)}</div>` : html`<div class="card-body muted">${t('cash.no_expenses')}</div>`}
       </div>
@@ -162,6 +166,18 @@ export default async function cashPage(ctx) {
       toastError(err);
     }
   });
+  on(ctx.el, 'click', '[data-photo-view]', (e, b) => viewBillPhoto(`/expenses/${b.dataset.photoView}/photo`));
+  on(ctx.el, 'change', '[data-photo-add]', async (e, inp) => {
+    const file = inp.files[0];
+    if (!file) return;
+    try {
+      await uploadBillPhoto(`/expenses/${inp.dataset.photoAdd}/photo`, file);
+      toast(t('bills.photo_saved'));
+      load();
+    } catch (err) {
+      toastError(err);
+    }
+  });
   on(ctx.el, 'click', '[data-act="expense"]', async () => {
     let cats;
     try {
@@ -178,8 +194,14 @@ export default async function cashPage(ctx) {
         ${field({ name: 'amount', label: t('common.amount') + ' (₹)', type: 'number', required: true })}
         ${field({ name: 'mode', label: t('suppliers.mode'), type: 'select', value: 'cash', options: MODES.map((m) => ({ value: m, label: t('pay.' + m) })) })}
         ${field({ name: 'note', label: t('common.notes') })}
+        <div class="field"><label for="exp-photo">${t('bills.photo')}</label><input id="exp-photo" class="input" type="file" accept="image/*"></div>
       </div>`,
-      onSubmit: (data) => api.post('/expenses', data),
+      onSubmit: async (data, form) => {
+        const saved = await api.post('/expenses', data);
+        const photo = $('#exp-photo', form).files[0];
+        if (photo) await uploadBillPhoto(`/expenses/${saved.item.id}/photo`, photo).catch(toastError);
+        return saved;
+      },
     });
     if (res) {
       toast(t('cash.expense_saved'));

@@ -97,6 +97,7 @@ route('POST', '/admin/go-live', function () {
     });
 
     remove_dir_contents(API_DIR . '/storage/photos');
+    remove_dir_contents(API_DIR . '/storage/bills');
     settings_all(true);
     audit('go_live_reset', 'system', null, null, ['backup' => $backup, 'parts' => $in['parts'], 'contacts' => $in['contacts'], 'removed' => $result]);
     return ['ok' => true, 'backup' => $backup, 'removed' => $result, 'live_since' => today()];

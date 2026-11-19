@@ -1,4 +1,4 @@
-import { html, setHTML, on } from '../dom.js';
+import { html, setHTML, on, $ } from '../dom.js';
 import { t, nm } from '../i18n.js';
 import { api } from '../api.js';
 import { icon } from '../ui/icons.js';
@@ -8,6 +8,7 @@ import { modeChip } from './purchases.js';
 import { promptDialog } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
 import { openSupplierPayment } from './supplier.js';
+import { billPhotoCard } from '../ui/bill-photo.js';
 
 export default async function purchasePage(ctx) {
   const id = Number(ctx.params.id);
@@ -73,7 +74,17 @@ export default async function purchasePage(ctx) {
             <dt class="strong">${t('purchases.due')}</dt><dd class="num strong" style="color:${due > 0 ? 'var(--danger-text)' : 'var(--success-text)'}">${money(due)}</dd>
           </dl>
         </div>
-      </div>`);
+      </div>
+      <div id="bill-photo" style="margin-top:20px;max-width:640px"></div>`);
+    billPhotoCard($('#bill-photo', ctx.el), {
+      path: `/purchases/${id}/photo`,
+      photo: p.photo,
+      canEdit: true,
+      onChanged: async () => {
+        const s = await draw();
+        if (s) state = s;
+      },
+    });
     return { p, due };
   };
 

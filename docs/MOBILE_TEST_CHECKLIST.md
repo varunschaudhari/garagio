@@ -127,6 +127,8 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Owner → More: New job, Customers, Parts requests, Purchase bills and My profile each open their own page with a back arrow (not the dashboard). Dashboard purchase / low-stock cards open purchase bills / parts.
 - [ ] Cash book (Bills tab button, or More → Cash book): add a tea expense in cash – "Should be in the drawer" goes down; a UPI expense does not change it.
 - [ ] Owner: "Change the list of expense types" in the cash book – add "Cleaning", rename it, hide it; the add-expense sheet shows only the visible types. Front desk does not see the button.
+- [ ] Add an expense with "Take photo": the camera opens; after saving, the expense shows a picture icon that opens the photo full screen. An expense without a photo has a camera icon (camera or gallery).
+- [ ] Purchase bill: "Photo of the bill" on the new bill form and on the saved bill (take / replace / gallery / remove); the photo opens full screen on tap.
 - [ ] Count the cash: the difference shows as you type ("Short by …" / "Extra …"); after saving, expenses can no longer be deleted; only the owner sees "Reopen".
 - [ ] "Return items" on a final bill: enter a qty, the return value and "give back" amount appear; saving prints the return note on the 80 mm printer; the line shows "1 returned"; "Cancel bill" is gone.
 - [ ] Counter sale: add parts by search or QR, choose a customer or walk-in, pay, finalise → bill opens.

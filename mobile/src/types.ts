@@ -172,6 +172,7 @@ export type PriceMode = 'mrp' | 'net';
 export interface Purchase extends PurchaseListItem {
   is_interstate: number;
   price_mode: PriceMode;
+  photo: string | null;
   supplier_contact: string | null;
   supplier_phone: string | null;
   taxable_total: number;

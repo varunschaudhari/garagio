@@ -54,6 +54,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET/POST /suppliers`, `GET/PUT /suppliers/{id}` | O I | balance = payable; `contact_person` |
 | `GET /suppliers/{id}/ledger` · `POST /suppliers/{id}/payments` | O I | |
 | `POST /purchases/preview` · `GET/POST /purchases` · `GET /purchases/{id}` | O I | `price_mode`: `net` (default, prices without GST) or `mrp` (prices with GST, less the discount); line `mrp` → part selling price (needs edit_parts); inline `new_part`; credit/cash/upi/bank; list `status=cancelled` or `status=all` (default hides cancelled); POST `replaces_id` = correct an earlier bill |
+| `POST/GET/DELETE /purchases/{id}/photo` | O I | photo of the supplier's paper bill (multipart `photo`) |
 | `POST /purchases/{id}/cancel` | O I | `{reason}`; stock back out at purchase cost (409 `insufficient_stock` if used); payments stay as supplier advance |
 
 ## Customers, jobs, estimates, requests
@@ -89,6 +90,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | Endpoint | Who | Notes |
 |---|---|---|
 | `GET /expenses?from&to&category_id` · `POST /expenses` · `DELETE /expenses/{id}` | cash_book | `{spent_on, category_id, amount, mode, note}` (old `category` codes still accepted); rows carry `category_en/_mr`; 409 `day_closed` once the day is counted |
+| `POST/GET/DELETE /expenses/{id}/photo` | cash_book | multipart `photo`; one per expense, a new one replaces it |
 | `GET /expense-categories[?all=1]` · `POST` · `PUT /expense-categories/{id}` | any · O | `{name_en, name_mr, sort_order, active}`; hidden types stay on old entries |
 | `GET /cash/day?date=` | cash_book | opening, money in / out by kind, expected, other modes, expenses, the count |
 | `POST /cash/close` · `GET /cash/closes?from&to` | cash_book | `{date, counted, taken_out, note, opening}` (opening only on the first count) |

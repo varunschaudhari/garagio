@@ -59,6 +59,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
   the go-live ledger wipe is `stock_restart_ledger()`, also in `lib/stock.php`.
 - Line discounts go through `clean_discounts()`; unused customer money is applied with `apply_customer_advance()`.
 - Return payloads through `strip_cost()` wherever cost fields (COST_FIELDS) may appear.
+- Uploaded photos: `save_uploaded_image($dir)` / `image_response($file)` (lib/util.php), files under `api/storage/`
+  (photos, bills, scans), never served directly.
 - `audit()` for discounts, invoice cancels, stock adjustments, credit changes, user changes.
 - GST maths only in `lib/gst.php` (`gst_line`, `gst_bill`); never on clients. Anything we *sell* goes through
   `sale_bill()`, which drops GST while setting `gst_registered` is 0 (shop not registered yet; bills `BIL/…`,

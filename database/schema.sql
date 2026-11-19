@@ -160,6 +160,7 @@ CREATE TABLE purchases (
   payment_mode VARCHAR(10) NOT NULL,
   status VARCHAR(10) NOT NULL DEFAULT 'final',
   notes VARCHAR(255) NULL,
+  photo VARCHAR(80) NULL,
   cancel_reason VARCHAR(255) NULL,
   cancelled_by INT NULL,
   cancelled_at DATETIME NULL,
@@ -606,6 +607,7 @@ CREATE TABLE expenses (
   amount DECIMAL(12,2) NOT NULL,
   mode VARCHAR(10) NOT NULL DEFAULT 'cash',
   note VARCHAR(255) NULL,
+  photo VARCHAR(80) NULL,
   user_id INT NULL,
   created_at DATETIME NULL,
   updated_at DATETIME NULL,
@@ -717,6 +719,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('006_cash_book.sql', NO
 INSERT INTO schema_migrations (name, applied_at) VALUES ('007_purchase_mrp.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('008_expense_categories.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('009_next_service.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('010_bill_photos.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

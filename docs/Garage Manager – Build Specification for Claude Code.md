@@ -472,3 +472,7 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     bill and the thermal receipt, is copied to the bike on delivery (and when the bike's latest delivered job changes),
     and then decides the service reminder (due once the date has passed or the estimated km is reached); bikes without
     one keep the old rule (decision 8).
+26. **Bill photos (19 Nov 2026):** an expense and a purchase bill can each keep one photo of the paper bill (camera or
+    gallery; JPEG / PNG / WebP up to 6 MB), added while entering it or later, replaced or removed. Files are kept in
+    api/storage/bills/ (never served directly; not in the SQL backup, like job photos) and removed with the record and
+    on the go-live reset.

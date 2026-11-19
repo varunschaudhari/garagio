@@ -1312,5 +1312,17 @@
     "edit_categories": "Change the list of expense types",
     "hide_category": "Hide from the list",
     "show_category": "Show in the list"
+  },
+  "bills": {
+    "photo": "Photo of the bill",
+    "add_photo": "Add photo of the bill",
+    "replace_photo": "Replace photo",
+    "remove_photo": "Remove photo",
+    "remove_photo_q": "Remove the photo of this bill?",
+    "view_photo": "Open the photo",
+    "no_photo": "No photo yet. Take one of the paper bill so it is never lost.",
+    "photo_saved": "Photo saved.",
+    "take_photo": "Take photo",
+    "from_gallery": "From gallery"
   }
 }

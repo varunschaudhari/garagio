@@ -123,3 +123,50 @@ test('jobs: next service due (date and km) - usual gap by default, front desk ch
     tdb()->prepare('UPDATE vehicles SET next_service_on = ? WHERE reg_no = ?')->execute([date('Y-m-d', strtotime('-1 day')), 'MH19NS1234']);
     eq(1, $due(), 'next service date passed');
 });
+
+/** Upload a tiny PNG (or any bytes) as multipart "photo" to $path. */
+function upload_to(string $path, string $as, ?string $bytes = null): array
+{
+    $file = tempnam(sys_get_temp_dir(), 'gm') . '.png';
+    file_put_contents($file, $bytes ?? base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+    $ch = curl_init($GLOBALS['T_BASE'] . '/api' . $path);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => ['photo' => new CURLFile($file, 'image/png', 'bill.png')],
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . token($as), 'Accept: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+    ]);
+    $out = (string) curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    @unlink($file);
+    return ['status' => $code, 'json' => json_decode($out, true), 'body' => $out];
+}
+
+test('bill photos: a photo of the paper bill on an expense and on a purchase bill; replace, remove, permissions', function () {
+    $dir = dirname(__DIR__, 2) . '/public_html/api/storage/bills';
+    $e = status(200, post('/expenses', ['category_id' => 5, 'amount' => 12000, 'mode' => 'bank', 'note' => 'Air compressor'], 'desk'))['item'];
+    eq(null, $e['photo']);
+    $up = status(200, upload_to("/expenses/{$e['id']}/photo", 'desk'));
+    ok(is_file("$dir/expenses/{$up['photo']}"), 'stored');
+    $g = get("/expenses/{$e['id']}/photo", 'desk');
+    eq(200, $g['status']);
+    eq(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), $g['body']);
+    eq(403, upload_to("/expenses/{$e['id']}/photo", 'stock')['status'], 'store keeper has no cash book');
+    eq(422, upload_to("/expenses/{$e['id']}/photo", 'desk', 'not an image')['status']);
+    $up2 = status(200, upload_to("/expenses/{$e['id']}/photo", 'desk'));
+    ok(!is_file("$dir/expenses/{$up['photo']}"), 'replaced photo removed');
+    $row = array_values(array_filter(status(200, get('/cash/day', 'desk'))['expenses'], static fn ($x) => $x['id'] === $e['id']))[0];
+    eq($up2['photo'], $row['photo'], 'the day lists the photo');
+    status(200, del("/expenses/{$e['id']}", 'desk'));
+    ok(!is_file("$dir/expenses/{$up2['photo']}"), 'deleting the expense removes its photo');
+
+    $pid = (int) tval("SELECT id FROM purchases WHERE status = 'final' ORDER BY id DESC LIMIT 1");
+    eq(403, upload_to("/purchases/$pid/photo", 'desk')['status'], 'front desk cannot touch purchase bills');
+    $pp = status(200, upload_to("/purchases/$pid/photo", 'stock'));
+    eq($pp['photo'], status(200, get("/purchases/$pid", 'stock'))['item']['photo']);
+    eq(200, get("/purchases/$pid/photo", 'admin')['status']);
+    status(200, del("/purchases/$pid/photo", 'stock'));
+    eq(404, get("/purchases/$pid/photo", 'stock')['status']);
+    ok(!is_file("$dir/purchases/{$pp['photo']}"));
+});
