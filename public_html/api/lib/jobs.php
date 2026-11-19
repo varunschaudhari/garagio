@@ -31,6 +31,32 @@ function job_row(int $id): array
 }
 
 /**
+ * When the bike should come back (whichever comes first): what was written on the job card, otherwise the job
+ * date + service_reminder_days and the job's km + service_reminder_km. $j needs created_at, odometer,
+ * next_service_on, next_service_km.
+ */
+function job_next_service(array $j): array
+{
+    $on = $j['next_service_on'] ?? null;
+    $km = $j['next_service_km'] ?? null;
+    $custom = $on !== null || $km !== null;
+    if (!$custom) {
+        $on = date('Y-m-d', strtotime(substr((string) $j['created_at'], 0, 10) . ' +' . (int) setting('service_reminder_days', '90') . ' days'));
+        $km = ($j['odometer'] ?? null) !== null ? (int) $j['odometer'] + (int) setting('service_reminder_km', '3000') : null;
+    }
+    return ['on' => $on, 'km' => $km !== null ? (int) $km : null, 'custom' => $custom];
+}
+
+/** "17-02-2027 or 15400 km, whichever comes first" in one language (bills, WhatsApp). */
+function next_service_text(array $ns, string $lang): string
+{
+    if ($ns['on'] && $ns['km']) {
+        return tr('inv.next_service_both', $lang, ['date' => fmt_date($ns['on']), 'km' => $ns['km']]);
+    }
+    return $ns['on'] ? fmt_date($ns['on']) : ($ns['km'] ? $ns['km'] . ' km' : '');
+}
+
+/**
  * Mechanics may only see and change their own jobs. Inventory managers may read jobs (to issue parts)
  * but not change them.
  */

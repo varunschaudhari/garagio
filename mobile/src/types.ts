@@ -322,7 +322,15 @@ export interface Estimate {
   items: EstimateItem[];
 }
 
+export interface NextService {
+  on: string | null;
+  km: number | null;
+  /** false = the usual gap from Settings */
+  custom: boolean;
+}
+
 export interface JobDetail extends JobListItem {
+  next_service: NextService;
   customer_id: number;
   vehicle_id: number;
   year: number | null;

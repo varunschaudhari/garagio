@@ -105,6 +105,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `POST /invoices/{id}/returns/preview` · `POST /invoices/{id}/returns` | O | `{items: [{invoice_item_id, qty, restock}], reason, refund, refund_mode}`; preview gives `totals`, `max_refund`, `must_refund` (walk-in) |
 | `GET /returns/{id}` · `GET /returns/{id}/receipt?lang=&width=` | O D | return / credit note and its thermal print |
 | `GET /invoices/{id}/html?lang=` | O D | bilingual A4 tax invoice |
+| `PUT /jobs/{id}/next-service` | jobs | `{next_service_on, next_service_km}`; both empty = the usual gap; job and bill carry `next_service {on, km, custom}` |
 | `GET /invoices/{id}/receipt?lang=&width=58\|80` | O D | thermal receipt in one language; width defaults to the `receipt_width` setting |
 | `POST /invoices/{id}/whatsapp` | O D | |
 

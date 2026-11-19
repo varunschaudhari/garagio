@@ -466,3 +466,9 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     (Settings → Expense types on the web, "Change the list" in the phone's cash book): add, rename, hide. It starts with
     the shop's own list (tea, snacks, water, tools, machinery, racks, then rent, electricity, fuel, salary, shop repairs,
     transport, other). expenses.category_id; the old codes (tea_snacks, fuel, …) are still accepted from older phone apps.
+25. **Next service due (19 Nov 2026):** every job card shows when the bike should come back, by date and km, whichever
+    comes first. Until someone with the jobs tick changes it, it is the job date + service_reminder_days and the job's km
+    + service_reminder_km; clearing both goes back to that. It can be changed after delivery too. It prints on the A4
+    bill and the thermal receipt, is copied to the bike on delivery (and when the bike's latest delivered job changes),
+    and then decides the service reminder (due once the date has passed or the estimated km is reached); bikes without
+    one keep the old rule (decision 8).

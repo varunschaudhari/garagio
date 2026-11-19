@@ -19,6 +19,14 @@ test('front desk opens a job card from a phone lookup and gets the estimate appr
   await expect(page.locator('h1')).toContainText('Pending');
   jobUrl = page.url();
 
+  // Next service due: the usual gap from Settings until the front desk changes it.
+  await expect(page.locator('#next-service')).toContainText('67100 km, whichever comes first');
+  await page.locator('[data-act="next-service"]').click();
+  await page.locator('.drawer [name=next_service_km]').fill('66000');
+  await page.locator('.drawer').getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.toast', { hasText: 'Next service saved' })).toBeVisible();
+  await expect(page.locator('#next-service')).toContainText('66000 km, whichever comes first');
+
   // Estimate: labour from the rate list + one part from the catalogue
   await page.getByRole('button', { name: 'Prepare estimate' }).click();
   const d = page.locator('.drawer');

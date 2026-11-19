@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 /*
  * WhatsApp reminder lists (click-to-send in v1).
- * Service: last service ≥ service_reminder_days ago, or estimated km since service ≥ service_reminder_km
+ * Service: the next service written on the bike's last job card (date reached, or estimated km reached), else
+ *   last service ≥ service_reminder_days ago or estimated km since service ≥ service_reminder_km
  *   (km per day estimated from the bike's last two odometer readings - decision 8).
  * Payment: customers with dues whose oldest unpaid bill is older than payment_reminder_days.
  * A customer is not listed again for the same reminder within the waiting period.
@@ -36,7 +37,7 @@ function reminders_due(): array
 
     $service = [];
     $vehicles = rows(
-        "SELECT v.id, v.reg_no, v.make, v.model, v.last_service_on, v.last_service_odometer, c.id AS customer_id, c.name, c.phone, c.language
+        "SELECT v.id, v.reg_no, v.make, v.model, v.last_service_on, v.last_service_odometer, v.next_service_on, v.next_service_km, c.id AS customer_id, c.name, c.phone, c.language
          FROM vehicles v JOIN customers c ON c.id = v.customer_id
          WHERE v.last_service_on IS NOT NULL
            AND NOT EXISTS (SELECT 1 FROM job_cards j WHERE j.vehicle_id = v.id AND j.status NOT IN ('delivered','cancelled'))
@@ -47,7 +48,14 @@ function reminders_due(): array
         $since = (int) floor((strtotime($today) - strtotime($v['last_service_on'])) / 86400);
         $rate = km_per_day((int) $v['id']);
         $estKm = $rate !== null ? (int) round($rate * $since) : null;
-        if ($since < $days && ($estKm === null || $estKm < $kmLimit)) {
+        if ($v['next_service_on'] !== null || $v['next_service_km'] !== null) {
+            $byDate = $v['next_service_on'] !== null && $today >= $v['next_service_on'];
+            $byKm = $v['next_service_km'] !== null && $estKm !== null && $v['last_service_odometer'] !== null
+                && (int) $v['last_service_odometer'] + $estKm >= (int) $v['next_service_km'];
+            if (!$byDate && !$byKm) {
+                continue;
+            }
+        } elseif ($since < $days && ($estKm === null || $estKm < $kmLimit)) {
             continue;
         }
         $lang = $v['language'] ?: 'mr';

@@ -1,22 +1,23 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Ban, Bike, Camera, CircleCheck, FileText, Hourglass, MessageCircle, PackageSearch, Phone, Plus, Receipt, Send, Trash2, Undo2, Wrench, X } from 'lucide-react-native';
+import { Ban, Bike, Camera, CalendarClock, CircleCheck, FileText, Hourglass, MessageCircle, PackageSearch, Pencil, Phone, Plus, Receipt, Send, Trash2, Undo2, Wrench, X } from 'lucide-react-native';
+import type { TFunction } from 'i18next';
 import type { LucideIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api, apiUrl } from '@/api/client';
-import { useJob, useLabourRates, useWorkMutation } from '@/api/queries';
+import { useJob, useLabourRates, useSettings, useWorkMutation } from '@/api/queries';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Chip, Divider, Field, IconButton, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { StatusChip } from '@/components/work';
-import { datetime, money, qty } from '@/format';
+import { date, datetime, money, qty } from '@/format';
 import { nm } from '@/i18n';
 import { useSession, can } from '@/store/session';
 import { radius, space, useTheme } from '@/theme';
-import type { JobDetail, JobStatus } from '@/types';
+import type { JobDetail, JobStatus, NextService } from '@/types';
 
 const STATUS_BTN: Partial<Record<JobStatus, { label: string; icon: LucideIcon; variant: 'primary' | 'secondary' | 'ghost' }>> = {
   in_progress: { label: 'jobs.to_in_progress', icon: Wrench, variant: 'primary' },
@@ -26,7 +27,24 @@ const STATUS_BTN: Partial<Record<JobStatus, { label: string; icon: LucideIcon; v
   cancelled: { label: 'jobs.to_cancelled', icon: Ban, variant: 'ghost' },
 };
 
-type SheetKind = { kind: 'note' | 'cancel' | 'labour' | 'return'; estimateId?: number; jobPartId?: number; left?: number } | null;
+type SheetKind = { kind: 'note' | 'cancel' | 'labour' | 'return' | 'next'; estimateId?: number; jobPartId?: number; left?: number } | null;
+
+/** "17-02-2027 or 15400 km, whichever comes first" */
+function nextServiceText(ns: NextService | undefined, t: TFunction): string {
+  if (!ns) return '—';
+  if (ns.on && ns.km) return t('inv.next_service_both', { date: date(ns.on), km: ns.km });
+  return ns.on ? date(ns.on) : ns.km ? `${ns.km} km` : '—';
+}
+
+/** "17-02-2027" → "2027-02-17"; '' → null; undefined when not a real date. */
+function dmyToIso(s: string): string | null | undefined {
+  if (!s.trim()) return null;
+  const m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(s.trim());
+  if (!m) return undefined;
+  const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  const d = new Date(iso + 'T00:00:00');
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso ? undefined : iso;
+}
 
 export default function JobScreen() {
   const { t } = useTranslation();
@@ -38,6 +56,7 @@ export default function JobScreen() {
   const server = useSession((s) => s.server);
   const token = useSession((s) => s.token);
   const rates = useLabourRates();
+  const settings = useSettings().data;
   const isMech = user?.role === 'mechanic';
   const canEdit = can(user, 'jobs'); // estimates, approve, labour, photos
   const canBill = can(user, 'make_bills');
@@ -46,6 +65,7 @@ export default function JobScreen() {
   const [text, setText] = useState('');
   const [notes, setNotes] = useState<string | null>(null);
   const [rateId, setRateId] = useState<number | null>(null);
+  const [nsKm, setNsKm] = useState('');
 
   const act = useWorkMutation((v: { method?: 'POST' | 'PUT' | 'DELETE'; path: string; body?: unknown }) =>
     v.method === 'PUT' ? api.put<{ item: JobDetail }>(v.path, v.body) : v.method === 'DELETE' ? api.del<{ item: JobDetail }>(v.path) : api.post<{ item: JobDetail }>(v.path, v.body ?? {})
@@ -132,6 +152,24 @@ export default function JobScreen() {
             {j.promised_at ? ` · ${t('jobs.promised')} ${datetime(j.promised_at)}` : ''}
           </Txt>
           {j.complaint ? <Txt>{j.complaint}</Txt> : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
+            <CalendarClock size={18} color={c.muted} />
+            <Txt size="sm" style={{ flex: 1 }}>
+              {t('jobs.next_service')}: <Txt size="sm" weight="semibold">{nextServiceText(j.next_service, t)}</Txt>
+            </Txt>
+            {canEdit && j.status !== 'cancelled' ? (
+              <IconButton
+                icon={Pencil}
+                label={`${t('common.edit')} · ${t('jobs.next_service')}`}
+                color={c.muted}
+                onPress={() => {
+                  setText(j.next_service?.on ? date(j.next_service.on) : '');
+                  setNsKm(j.next_service?.km ? String(j.next_service.km) : '');
+                  setSheet({ kind: 'next' });
+                }}
+              />
+            ) : null}
+          </View>
           {canEdit ? (
             <View style={{ flexDirection: 'row', gap: space[2], marginTop: space[2] }}>
               <Button title={t('jobs.call')} icon={Phone} variant="secondary" small onPress={() => void Linking.openURL(`tel:${j.customer_phone}`)} style={{ flex: 1 }} />
@@ -387,9 +425,16 @@ export default function JobScreen() {
         <Sheet
           visible
           onClose={() => setSheet(null)}
-          title={t(sheet.kind === 'note' ? 'estimates.approve_call' : sheet.kind === 'cancel' ? 'jobs.to_cancelled' : sheet.kind === 'return' ? 'jobs.return' : 'jobs.add_labour')}
+          title={t(sheet.kind === 'note' ? 'estimates.approve_call' : sheet.kind === 'cancel' ? 'jobs.to_cancelled' : sheet.kind === 'return' ? 'jobs.return' : sheet.kind === 'next' ? 'jobs.next_service' : 'jobs.add_labour')}
         >
-          {sheet.kind === 'labour' ? (
+          {sheet.kind === 'next' ? (
+            <View style={{ gap: space[3] }}>
+              {!j.next_service?.custom ? <Banner text={t('jobs.next_service_default', { days: settings?.service_reminder_days ?? 90, km: settings?.service_reminder_km ?? 3000 })} /> : null}
+              <Field label={t('jobs.next_service_on')} value={text} onChangeText={setText} keyboardType="numbers-and-punctuation" hint="DD-MM-YYYY" error={dmyToIso(text) === undefined ? t('fields.invalid_date') : undefined} />
+              <Field label={t('jobs.next_service_km')} value={nsKm} onChangeText={setNsKm} keyboardType="number-pad" />
+              <Txt size="sm" muted>{t('jobs.next_service_hint')}</Txt>
+            </View>
+          ) : sheet.kind === 'labour' ? (
             <View style={{ gap: space[2] }}>
               {(rates.data ?? []).map((r) => (
                 <Pressable
@@ -418,8 +463,9 @@ export default function JobScreen() {
             title={t('common.confirm')}
             loading={act.isPending}
             needsOnline
-            disabled={sheet.kind === 'labour' ? !rateId : !text.trim()}
+            disabled={sheet.kind === 'labour' ? !rateId : sheet.kind === 'next' ? dmyToIso(text) === undefined : !text.trim()}
             onPress={() => {
+              if (sheet.kind === 'next') return void run({ method: 'PUT', path: `/jobs/${jobId}/next-service`, body: { next_service_on: dmyToIso(text), next_service_km: nsKm.trim() || null } }, t('jobs.next_service_saved'));
               if (sheet.kind === 'note') return void run({ path: `/estimates/${sheet.estimateId}/approve-call`, body: { note: text.trim() } }, t('status.approved'));
               if (sheet.kind === 'cancel') return void run({ path: `/jobs/${jobId}/status`, body: { status: 'cancelled', note: text.trim() } }, t('status.cancelled'));
               if (sheet.kind === 'return') return void run({ path: `/jobs/${jobId}/return`, body: { job_part_id: sheet.jobPartId, qty: Number(text.replace(',', '.')) } }, t('common.saved'));

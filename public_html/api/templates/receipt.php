@@ -126,6 +126,12 @@ $font = $paper === 80 ? 13 : 11;
     <div class="c sm"><?= e($upi) ?></div>
   <?php endif; ?>
 
+  <?php if ($inv['next_service'] && $inv['status'] !== 'cancelled'): ?>
+    <div class="hr"></div>
+    <div class="c"><?= e($L('next_service')) ?>:</div>
+    <div class="c b"><?= e(next_service_text($inv['next_service'], $lang)) ?></div>
+  <?php endif; ?>
+
   <div class="hr"></div>
   <?php if ($terms): ?><div class="sm"><?= nl2br(e($terms)) ?></div><?php endif; ?>
   <div class="c b" style="margin-top:4px"><?= e($L('thank_you')) ?></div>

@@ -86,7 +86,7 @@ test('reports: sales / purchase registers, stock valuation, dues, payables; CSV 
 });
 
 test('reminders: service due by days, payment due; sending removes them from the list', function () {
-    tdb()->prepare('UPDATE vehicles SET last_service_on = ? WHERE reg_no = ?')->execute([date('Y-m-d', strtotime('-100 days')), 'MH12AB1234']);
+    tdb()->prepare('UPDATE vehicles SET last_service_on = ?, next_service_on = NULL, next_service_km = NULL WHERE reg_no = ?')->execute([date('Y-m-d', strtotime('-100 days')), 'MH12AB1234']);
     $due = status(200, get('/messages/due', 'desk'));
     $svc = array_values(array_filter($due['service'], static fn ($x) => $x['reg_no'] === 'MH12AB1234'));
     eq(1, count($svc), 'bike due for service');

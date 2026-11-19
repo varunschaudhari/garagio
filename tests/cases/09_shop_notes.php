@@ -87,3 +87,39 @@ test('cash book: the owner keeps the list of expense types; older apps still sen
     status(200, del('/expenses/' . $e['id'], 'desk'));
     status(200, del('/expenses/' . $old['id'], 'desk'));
 });
+
+test('jobs: next service due (date and km) - usual gap by default, front desk changes it, printed on the bill, drives the reminder', function () {
+    $j = status(200, post('/jobs', ['customer' => ['name' => 'Next Service', 'phone' => '9011122377'], 'vehicle' => ['reg_no' => 'MH19NS1234', 'model' => 'Splendor'], 'odometer' => 12400, 'complaint' => 'Service'], 'desk'))['item'];
+    eq(['on' => date('Y-m-d', strtotime('+90 days')), 'km' => 15400, 'custom' => false], $j['next_service'], 'job date + 90 days, km + 3000');
+    eq(403, put("/jobs/{$j['id']}/next-service", ['next_service_km' => 14000], 'stock')['status']);
+    eq(422, put("/jobs/{$j['id']}/next-service", ['next_service_on' => date('Y-m-d', strtotime('-1 day'))], 'desk')['status'], 'not before the job date');
+    $on = date('Y-m-d', strtotime('+60 days'));
+    $u = status(200, put("/jobs/{$j['id']}/next-service", ['next_service_on' => $on, 'next_service_km' => 14500], 'desk'))['item'];
+    eq(['on' => $on, 'km' => 14500, 'custom' => true], $u['next_service']);
+    $back = status(200, put("/jobs/{$j['id']}/next-service", ['next_service_on' => '', 'next_service_km' => ''], 'desk'))['item'];
+    eq(false, $back['next_service']['custom'], 'both empty = usual gap again');
+
+    // A billed and delivered job: the bike takes its next service; the bill prints it in the customer's language.
+    $d = status(200, post('/jobs/' . flow_job('next-service')['id'] . '/approve', [], 'desk'))['item'];
+    status(200, post("/jobs/{$d['id']}/labour", ['description' => 'Service', 'amount' => 300], 'desk'));
+    $bill = status(200, post('/invoices', ['job_card_id' => $d['id']], 'desk'))['item'];
+    status(200, post("/invoices/{$bill['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $bill['grand_total']]]], 'desk'));
+    status(200, post("/jobs/{$d['id']}/status", ['status' => 'delivered'], 'desk'));
+    eq(date('Y-m-d', strtotime('+90 days')), tval('SELECT next_service_on FROM vehicles WHERE id = ?', [$d['vehicle_id']]), 'delivery copies the usual gap');
+    status(200, put("/jobs/{$d['id']}/next-service", ['next_service_on' => $on, 'next_service_km' => 22000], 'desk'));
+    eq($on, tval('SELECT next_service_on FROM vehicles WHERE id = ?', [$d['vehicle_id']]), 'changed after delivery: the bike follows');
+    $inv = status(200, get('/invoices/' . $bill['id'], 'desk'))['item'];
+    eq(22000, $inv['next_service']['km']);
+    $dmy = date('d-m-Y', strtotime($on));
+    ok(str_contains(get('/invoices/' . $bill['id'] . '/receipt?lang=en', 'desk')['body'], "$dmy or 22000 km, whichever comes first"), 'receipt');
+    $a4 = get('/invoices/' . $bill['id'] . '/html?lang=mr', 'desk')['body'];
+    ok(str_contains($a4, "$dmy किंवा 22000 km, जे आधी येईल"), 'A4 bill in Marathi');
+
+    // Reminder: a written next service date decides, not the 90-day rule.
+    status(200, post("/jobs/{$j['id']}/status", ['status' => 'cancelled', 'note' => 'Test'], 'desk'));
+    $due = static fn () => count(array_filter(status(200, get('/messages/due', 'desk'))['service'], static fn ($x) => $x['reg_no'] === 'MH19NS1234'));
+    tdb()->prepare('UPDATE vehicles SET last_service_on = ?, next_service_on = ? WHERE reg_no = ?')->execute([date('Y-m-d', strtotime('-100 days')), date('Y-m-d', strtotime('+20 days')), 'MH19NS1234']);
+    eq(0, $due(), 'next service still ahead');
+    tdb()->prepare('UPDATE vehicles SET next_service_on = ? WHERE reg_no = ?')->execute([date('Y-m-d', strtotime('-1 day')), 'MH19NS1234']);
+    eq(1, $due(), 'next service date passed');
+});

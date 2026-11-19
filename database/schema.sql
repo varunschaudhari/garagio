@@ -242,6 +242,8 @@ CREATE TABLE vehicles (
   last_odometer INT NULL,
   last_service_on DATE NULL,
   last_service_odometer INT NULL,
+  next_service_on DATE NULL,
+  next_service_km INT NULL,
   created_at DATETIME NULL,
   updated_at DATETIME NULL,
   UNIQUE KEY uq_vehicles_reg (reg_no),
@@ -270,6 +272,8 @@ CREATE TABLE job_cards (
   mechanic_id INT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'pending',
   promised_at DATETIME NULL,
+  next_service_on DATE NULL,
+  next_service_km INT NULL,
   approved_estimate_id INT NULL,
   invoice_id INT NULL,
   delivered_at DATETIME NULL,
@@ -712,6 +716,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('005_sale_returns.sql',
 INSERT INTO schema_migrations (name, applied_at) VALUES ('006_cash_book.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('007_purchase_mrp.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('008_expense_categories.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('009_next_service.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

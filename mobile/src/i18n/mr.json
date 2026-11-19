@@ -780,7 +780,13 @@
     "part_planned": "अंदाजपत्रकातून – बिल झाल्यावर स्टॉकमधून कमी होईल",
     "remove_part": "काढा",
     "remove_part_confirm": "{{part}} या जॉबमधून काढायचा?",
-    "part_not_stock": "पार्ट – स्टॉकमधील नाही"
+    "part_not_stock": "पार्ट – स्टॉकमधील नाही",
+    "next_service": "पुढील सर्व्हिसिंग",
+    "next_service_on": "तारीख",
+    "next_service_km": "किलोमीटर",
+    "next_service_default": "सेटिंग्जमधील नेहमीचे अंतर ({{days}} दिवस / {{km}} km). गाडी लवकर यायला हवी असल्यास बदला.",
+    "next_service_hint": "सेटिंग्जमधील नेहमीच्या अंतरासाठी दोन्ही रिकामे ठेवा. हे बिलावर छापले जाते आणि WhatsApp आठवणीसाठी वापरले जाते.",
+    "next_service_saved": "पुढील सर्व्हिसिंग सेव्ह झाले."
   },
   "estimates": {
     "title": "अंदाजपत्रक",
@@ -931,7 +937,9 @@
     "return_total": "एकूण परत",
     "refunded": "परत दिले",
     "return_reason": "कारण",
-    "mrp": "MRP"
+    "mrp": "MRP",
+    "next_service": "पुढील सर्व्हिसिंग",
+    "next_service_both": "{{date}} किंवा {{km}} km, जे आधी येईल"
   },
   "billing": {
     "title": "बिलिंग",

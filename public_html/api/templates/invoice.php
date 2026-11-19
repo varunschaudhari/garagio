@@ -101,6 +101,7 @@ $desc = static function (array $it) use ($lang): string {
         <h3><?= e($L('bike')) ?></h3>
         <div><strong><?= e($inv['reg_no']) ?></strong> <?= e(trim(($inv['make'] ?? '') . ' ' . ($inv['model'] ?? ''))) ?></div>
         <?php if ($inv['odometer']): ?><div><?= e($L('odometer')) ?>: <?= e((string) $inv['odometer']) ?> km</div><?php endif; ?>
+        <?php if ($inv['next_service'] && $inv['status'] !== 'cancelled'): ?><div><strong><?= e($L('next_service')) ?>:</strong> <?= e(next_service_text($inv['next_service'], $lang)) ?><?php if ($lang !== 'en'): ?> <span class="alt">(<?= e(next_service_text($inv['next_service'], 'en')) ?>)</span><?php endif; ?></div><?php endif; ?>
       <?php endif; ?>
     </div>
   </div>

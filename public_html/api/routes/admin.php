@@ -90,7 +90,7 @@ route('POST', '/admin/go-live', function () {
             $removed['suppliers'] = q("DELETE FROM suppliers$where")->rowCount();
         }
         // Service dates came from the removed jobs.
-        q('UPDATE vehicles SET last_service_on = NULL, last_service_odometer = NULL');
+        q('UPDATE vehicles SET last_service_on = NULL, last_service_odometer = NULL, next_service_on = NULL, next_service_km = NULL');
 
         save_setting('live_since', today());
         return $removed;

@@ -117,6 +117,8 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Front desk sees "Only the owner can give a discount"; owner can set line and bill discounts on the draft (Apply).
 - [ ] Payment boxes (cash / UPI / card / bank) show the remaining credit; "Paid in full" fills cash.
 - [ ] Finalise with no payment for a non-trusted or walk-in customer → refused with a clear message; for a trusted customer within limit → saved as unpaid.
+- [ ] Job screen shows "Next service due: <date> or <km> km, whichever comes first"; the pencil opens a sheet (DD-MM-YYYY + km); a wrong date is refused; saving updates the line. Mechanics do not see the pencil.
+- [ ] The printed receipt of a job bill ends with the next service date and km.
 - [ ] Bill lines read "2 × rate"; a discounted part line adds "MRP … −10%"; the printed receipt shows the same.
 - [ ] Final bill: "Print receipt" opens the Android print screen; the thermal printer prints a 58 / 80 mm receipt in the customer's language (`docs/PRINTER_SETUP.md`).
 - [ ] "Share PDF" opens the share sheet with the A4 PDF; sharing to WhatsApp attaches it (Marathi + English bill).

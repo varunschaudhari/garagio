@@ -780,7 +780,13 @@
     "part_planned": "From estimate – leaves stock when billed",
     "remove_part": "Remove",
     "remove_part_confirm": "Remove {{part}} from this job?",
-    "part_not_stock": "Part – not from stock"
+    "part_not_stock": "Part – not from stock",
+    "next_service": "Next service due",
+    "next_service_on": "Date",
+    "next_service_km": "At km",
+    "next_service_default": "Usual gap from Settings ({{days}} days / {{km}} km). Change it if the bike needs to come sooner.",
+    "next_service_hint": "Leave both empty to go back to the usual gap from Settings. Printed on the bill and used for the WhatsApp reminder.",
+    "next_service_saved": "Next service saved."
   },
   "estimates": {
     "title": "Estimate",
@@ -931,7 +937,9 @@
     "return_total": "Total returned",
     "refunded": "Refunded",
     "return_reason": "Reason",
-    "mrp": "MRP"
+    "mrp": "MRP",
+    "next_service": "Next service",
+    "next_service_both": "{{date}} or {{km}} km, whichever comes first"
   },
   "billing": {
     "title": "Billing",

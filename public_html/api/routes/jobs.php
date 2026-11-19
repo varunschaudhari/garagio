@@ -46,6 +46,7 @@ function job_detail(int $id): array
     );
     $j['requests'] = requests_for_job($id);
     $j['photos'] = rows('SELECT id, created_at FROM job_photos WHERE job_card_id = ? ORDER BY id', [$id]);
+    $j['next_service'] = job_next_service($j);
     $j['invoice'] = $j['invoice_id'] ? row('SELECT id, invoice_no, status, grand_total, balance, pay_status FROM invoices WHERE id = ?', [$j['invoice_id']]) : null;
     $j['money'] = job_money($j);
     $j['timeline'] = rows(
@@ -267,7 +268,8 @@ route('POST', '/jobs/{id}/status', function ($p) {
         $data = ['status' => $to];
         if ($to === 'delivered') {
             $data['delivered_at'] = now();
-            q('UPDATE vehicles SET last_service_on = ?, last_service_odometer = COALESCE(?, last_service_odometer), updated_at = ? WHERE id = ?', [today(), $j['odometer'], now(), $j['vehicle_id']]);
+            $ns = job_next_service($j);
+            q('UPDATE vehicles SET last_service_on = ?, last_service_odometer = COALESCE(?, last_service_odometer), next_service_on = ?, next_service_km = ?, updated_at = ? WHERE id = ?', [today(), $j['odometer'], $ns['on'], $ns['km'], now(), $j['vehicle_id']]);
         }
         if ($to === 'cancelled') {
             $data['cancel_reason'] = $in['note'];
@@ -285,6 +287,30 @@ route('POST', '/jobs/{id}/status', function ($p) {
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC]]);
 
 /* ------------------------------------------------------------------ labour */
+
+/* Next servicing due (date and / or km). Empty both = back to the default from Settings. Also after delivery. */
+route('PUT', '/jobs/{id}/next-service', function ($p) {
+    $j = job_row((int) $p['id']);
+    if ($j['status'] === 'cancelled') {
+        fail(409, 'job_closed', 'This job is closed');
+    }
+    $in = clean(body(), ['next_service_on' => 'date', 'next_service_km' => 'int|min:0|max:9999999']);
+    $data = ['next_service_on' => $in['next_service_on'] ?? null, 'next_service_km' => $in['next_service_km'] ?? null];
+    if ($data['next_service_on'] !== null && $data['next_service_on'] < substr((string) $j['created_at'], 0, 10)) {
+        fail(422, 'validation_failed', 'The next service cannot be before the job date', ['next_service_on' => 'invalid_date']);
+    }
+    tx(function () use ($j, $data) {
+        update_row('job_cards', (int) $j['id'], $data);
+        // The bike's latest delivered job decides its reminder.
+        $latest = (int) val("SELECT id FROM job_cards WHERE vehicle_id = ? AND status = 'delivered' ORDER BY delivered_at DESC, id DESC LIMIT 1", [$j['vehicle_id']]);
+        if ($latest === (int) $j['id']) {
+            $ns = job_next_service($data + $j);
+            q('UPDATE vehicles SET next_service_on = ?, next_service_km = ?, updated_at = ? WHERE id = ?', [$ns['on'], $ns['km'], now(), $j['vehicle_id']]);
+        }
+        job_event((int) $j['id'], 'job_next_service', $data);
+    });
+    return ['item' => job_detail((int) $j['id'])];
+}, ['perm' => 'jobs']);
 
 route('POST', '/jobs/{id}/labour', function ($p) {
     $j = job_row((int) $p['id']);

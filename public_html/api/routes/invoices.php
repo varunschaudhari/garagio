@@ -12,7 +12,7 @@ const PAY_IN_MODES = ['cash', 'upi', 'card', 'bank'];
 function invoice_row(int $id): array
 {
     $inv = row(
-        'SELECT i.*, j.job_no, j.status AS job_status, j.odometer, v.reg_no, v.make, v.model, c.name AS customer_name, c.phone AS customer_phone,
+        'SELECT i.*, j.job_no, j.status AS job_status, j.odometer, j.created_at AS job_created_at, j.next_service_on, j.next_service_km, v.reg_no, v.make, v.model, c.name AS customer_name, c.phone AS customer_phone,
                 c.is_trusted, c.credit_limit, c.language AS customer_language, u.name AS created_by_name
          FROM invoices i LEFT JOIN job_cards j ON j.id = i.job_card_id LEFT JOIN vehicles v ON v.id = j.vehicle_id
          LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN users u ON u.id = i.created_by WHERE i.id = ?',
@@ -28,6 +28,7 @@ function invoice_row(int $id): array
         $it['rate'] = line_rate($it);
     }
     unset($it);
+    $inv['next_service'] = $inv['job_card_id'] ? job_next_service(['created_at' => $inv['job_created_at']] + $inv) : null;
     $inv['returns'] = rows('SELECT r.id, r.return_no, r.return_date, r.total, r.refund_amount, r.refund_mode, r.reason, u.name AS user_name FROM sale_returns r LEFT JOIN users u ON u.id = r.user_id WHERE r.invoice_id = ? ORDER BY r.id', [$id]);
     $inv['payments'] = rows(
         'SELECT p.id, p.mode, p.reference, p.received_on, a.amount, u.name AS user_name FROM payment_allocations a

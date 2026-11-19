@@ -3,7 +3,7 @@ import { t, nm, errorText } from '../i18n.js';
 import { api, request } from '../api.js';
 import { session, hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
-import { money, qty, datetime } from '../format.js';
+import { money, qty, datetime, date } from '../format.js';
 import { statusChip, skeletonRows } from '../ui/table.js';
 import { field, busy } from '../ui/form.js';
 import { openDrawer } from '../ui/drawer.js';
@@ -19,6 +19,13 @@ const STATUS_BTN = {
   delivered: { label: 'jobs.to_delivered', kind: 'primary', ic: 'bike' },
   cancelled: { label: 'jobs.to_cancelled', kind: 'ghost', ic: 'ban' },
 };
+
+/** "17-02-2027 or 15400 km, whichever comes first" */
+export function nextServiceText(ns) {
+  if (!ns) return '—';
+  if (ns.on && ns.km) return t('inv.next_service_both', { date: date(ns.on), km: ns.km });
+  return ns.on ? date(ns.on) : ns.km ? ns.km + ' km' : '—';
+}
 
 /** Open a WhatsApp URL; the window is opened before the await so pop-up blockers allow it. */
 async function openWhatsApp(getUrl) {
@@ -189,6 +196,8 @@ export default async function jobPage(ctx) {
               <dt>${t('jobs.odometer')}</dt><dd>${j.odometer ? j.odometer + ' km' : '—'}</dd>
               <dt>${t('jobs.fuel')}</dt><dd>${j.fuel_level || '—'}</dd>
               <dt>${t('jobs.opened')}</dt><dd>${datetime(j.created_at)}</dd>
+              <dt>${t('jobs.next_service')}</dt><dd id="next-service"><span class="strong">${nextServiceText(j.next_service)}</span>
+                ${canEdit && j.status !== 'cancelled' ? html` <button class="btn btn-ghost btn-sm" data-act="next-service" aria-label="${t('common.edit')} · ${t('jobs.next_service')}">${icon('pencil', 14)}</button>` : ''}</dd>
             </dl>
             <form id="insp-form" class="field">
               <label for="insp">${t('jobs.inspection')}</label>
@@ -336,6 +345,26 @@ export default async function jobPage(ctx) {
       onSubmit: (d) => api.put('/jobs/' + id, d),
     });
     if (res) draw(res.item);
+  });
+  on(ctx.el, 'click', '[data-act="next-service"]', async () => {
+    const ns = job.next_service || {};
+    const s = session.settings || {};
+    const res = await openDrawer({
+      title: t('jobs.next_service'),
+      body: html`<div class="stack">
+        ${ns.custom ? '' : html`<div class="banner info">${icon('info')}<span>${t('jobs.next_service_default', { days: s.service_reminder_days || 90, km: s.service_reminder_km || 3000 })}</span></div>`}
+        <div class="form-grid">
+          ${field({ name: 'next_service_on', label: t('jobs.next_service_on'), type: 'date', value: ns.on || '' })}
+          ${field({ name: 'next_service_km', label: t('jobs.next_service_km'), type: 'number', dtype: 'int', value: ns.km ?? '' })}
+        </div>
+        <div class="small muted">${t('jobs.next_service_hint')}</div>
+      </div>`,
+      onSubmit: (d) => api.put(`/jobs/${id}/next-service`, d),
+    });
+    if (res) {
+      toast(t('jobs.next_service_saved'));
+      draw(res.item);
+    }
   });
   on(ctx.el, 'change', '#photo-in', async (e, inp) => {
     const file = inp.files[0];
