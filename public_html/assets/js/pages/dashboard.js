@@ -73,12 +73,12 @@ async function drawSalesChart(canvas, series) {
 const TILES = [
   { key: 'purchase', ic: 'truck', href: '#/purchases/new', perm: 'purchases', tone: 'info' },
   { key: 'sale', ic: 'receipt', href: '#/invoices/counter', perm: 'make_bills', tone: 'success' },
-  { key: 'stock', ic: 'boxes', href: '#/parts' },
-  { key: 'job', ic: 'clipboard-list', href: '#/jobs/new', perm: 'jobs' },
-  { key: 'payables', ic: 'hand-coins', href: '#/suppliers?due=1', perm: 'purchases', tone: 'warning' },
-  { key: 'expenses', ic: 'wallet', href: '#/cash', perm: 'cash_book', tone: 'danger' },
-  { key: 'reports', ic: 'chart-column', href: '#/reports', perm: 'reports', tone: 'info' },
-  { key: 'suppliers', ic: 'store', href: '#/suppliers', perm: 'purchases' },
+  { key: 'stock', ic: 'boxes', href: '#/parts', tone: 'warning' },
+  { key: 'job', ic: 'clipboard-list', href: '#/jobs/new', perm: 'jobs', tone: 'violet' },
+  { key: 'payables', ic: 'hand-coins', href: '#/suppliers?due=1', perm: 'purchases', tone: 'danger' },
+  { key: 'expenses', ic: 'wallet', href: '#/cash', perm: 'cash_book', tone: 'pink' },
+  { key: 'reports', ic: 'chart-column', href: '#/reports', perm: 'reports', tone: 'teal' },
+  { key: 'suppliers', ic: 'store', href: '#/suppliers', perm: 'purchases', tone: 'primary' },
 ];
 
 function tiles(subs) {
@@ -86,7 +86,7 @@ function tiles(subs) {
   if (shown.length < 2) return '';
   return html`<nav class="tiles" aria-label="${t('dashboard.tiles')}">${shown.map((x) => html`
     <a class="card tile" href="${x.href}" data-tile="${x.key}">
-      <span class="kpi-icon ${x.tone || ''}">${icon(x.ic, 24)}</span>
+      <span class="kpi-icon ${x.tone || ''}">${icon(x.ic, 22)}</span>
       <span class="tile-label">${t('dashboard.tile_' + x.key)}</span>
       ${subs[x.key] ? html`<span class="tile-sub">${subs[x.key]}</span>` : ''}
     </a>`)}</nav>`;
@@ -147,12 +147,27 @@ export default async function dashboard(ctx) {
   cards.push(kpi({ label: t('dashboard.low_stock'), value: s.low_stock_count, ic: 'triangle-alert', tone: s.low_stock_count ? 'danger' : 'success', href: '#/parts?low=1' }));
   if (s.stock_value !== undefined) cards.push(kpi({ label: t('dashboard.stock_value'), value: rupees(s.stock_value), sub: `${t('dashboard.parts_count')}: ${s.parts}`, ic: 'warehouse', tone: 'info', href: can('reports') ? '#/reports?tab=stock' : null }));
 
+  // Banner figures: money for the owner, the workshop for everyone else.
+  const heroStats = [];
+  if (m) {
+    heroStats.push({ v: rupees(m.sales_today), l: t('dashboard.sales_today'), href: '#/invoices?from=' + todayISO() });
+    if (d.sales) heroStats.push({ v: d.sales.today.count, l: t('dashboard.sales_bills_today'), href: '#/invoices?from=' + todayISO() });
+  }
+  if (BUILT_PHASE >= 3) {
+    heroStats.push({ v: inShop, l: t('dashboard.jobs_in_shop'), href: '#/jobs' });
+    if (!m) heroStats.push({ v: d.delivered_today || 0, l: t('dashboard.delivered_today'), href: '#/jobs' });
+  }
+  if (!m) heroStats.push({ v: s.low_stock_count ?? 0, l: t('dashboard.low_stock'), href: '#/parts?low=1' });
+
   setHTML(ctx.el, html`
-    <div class="page-head">
-      <div style="flex:1"><h1>${greeting()}, ${u.name.split(' ')[0]}</h1><div class="sub">${t('roles.' + u.role)} · ${date(todayISO())}</div></div>
-      ${can('jobs') ? html`<a class="btn btn-primary" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
-    </div>
     <div class="stack-lg">
+      <section class="hero" aria-label="${t('dashboard.title')}">
+        <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div style="flex:1;min-width:220px"><h1>${greeting()}, ${u.name.split(' ')[0]}</h1><div class="sub">${t('roles.' + u.role)} · ${date(todayISO())}</div></div>
+          ${can('jobs') ? html`<a class="btn btn-light" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
+        </div>
+        ${heroStats.length ? html`<div class="hero-stats">${heroStats.map((x) => html`<a class="hero-stat" href="${x.href}"><div class="v">${x.v}</div><div class="l">${x.l}</div></a>`)}</div>` : ''}
+      </section>
       ${tiles({ payables: m ? rupees(m.supplier_payables) : '', stock: s.low_stock_count ? t('dashboard.low_stock') + ': ' + s.low_stock_count : '' })}
       ${moneyCards.length ? html`<div class="kpis">${moneyCards}</div>` : ''}
       ${billCards.length ? html`<div class="kpis">${billCards}</div>` : ''}

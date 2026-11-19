@@ -8,8 +8,9 @@ import { useNotifications, useWorkMutation } from '@/api/queries';
 import { datetime, money, qty } from '@/format';
 import { nm } from '@/i18n';
 import { useSession, can } from '@/store/session';
-import { radius, space, useTheme } from '@/theme';
+import { elevation, radius, space, useTheme } from '@/theme';
 import type { JobListItem, Part, PartRequest, RequestLine } from '@/types';
+import { Plate } from './brand';
 import { PartPicker } from './pickers';
 import { Sheet } from './sheet';
 import { toast, toastError } from './toast';
@@ -35,12 +36,12 @@ export function JobRow({ job, onPress }: { job: JobListItem; onPress: () => void
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      style={({ pressed }) => [styles.row, { borderColor: c.border, backgroundColor: pressed ? c.surface2 : c.surface }]}
+      style={({ pressed }) => [styles.row, elevation.card, { borderColor: c.border, backgroundColor: pressed ? c.surface2 : c.surface, shadowColor: c.shadow }]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-        <Txt size="lg" weight="bold" style={{ flex: 1 }}>
-          {job.reg_no}
-        </Txt>
+        <View style={{ flex: 1 }}>
+          <Plate reg={job.reg_no} />
+        </View>
         <StatusChip status={job.status} />
       </View>
       <Txt size="sm" muted numberOfLines={1}>

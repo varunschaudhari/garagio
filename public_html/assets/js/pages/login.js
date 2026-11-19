@@ -1,8 +1,9 @@
-import { html, setHTML, $, on } from '../dom.js';
+import { html, raw, setHTML, $, on } from '../dom.js';
 import { t, getLang, setLang, errorText } from '../i18n.js';
 import { api } from '../api.js';
 import { session, setToken } from '../store.js';
 import { icon } from '../ui/icons.js';
+import { logoGlyph } from '../ui/logo.js';
 import { busy } from '../ui/form.js';
 
 export default function login(appRoot, { onDone }) {
@@ -18,7 +19,7 @@ export default function login(appRoot, { onDone }) {
         <form class="card auth-card stack-lg" novalidate>
           <div class="row" style="justify-content:space-between;align-items:flex-start">
             <div class="row" style="gap:12px">
-              <div class="brand-mark">${icon('wrench', 24)}</div>
+              <div class="brand-mark">${raw(logoGlyph())}</div>
               <div><div class="strong" style="font-size:18px">${shop || ''}</div><div class="small muted">${t('app.name')}</div></div>
             </div>
             <div class="seg" role="group" aria-label="${t('common.language')}">

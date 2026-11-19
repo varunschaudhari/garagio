@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api, apiUrl } from '@/api/client';
 import { useJob, useLabourRates, useSettings, useWorkMutation } from '@/api/queries';
+import { Plate } from '@/components/brand';
 import { DateField } from '@/components/dateField';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
@@ -131,9 +132,9 @@ export default function JobScreen() {
       >
         <Card style={{ gap: space[2] }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[2] }}>
-            <Txt size="xxl" weight="bold" style={{ flex: 1 }}>
-              {j.reg_no}
-            </Txt>
+            <View style={{ flex: 1 }}>
+              <Plate reg={j.reg_no} large />
+            </View>
             <StatusChip status={j.status} />
           </View>
           <Txt muted>

@@ -123,7 +123,7 @@ export default async function invoicePage(ctx) {
               ${i.discount_total ? html`<dt>${t('inv.discount')}</dt><dd class="num">−${money(i.discount_total)}</dd>` : ''}
               ${!Number(i.gst_registered) ? html`<dt class="small" style="grid-column:1 / -1">${t('inv.no_gst_note')}</dt>` : Number(i.is_interstate) ? html`<dt>${t('inv.igst')}</dt><dd class="num">${money(i.igst)}</dd>` : html`<dt>${t('inv.cgst')}</dt><dd class="num">${money(i.cgst)}</dd><dt>${t('inv.sgst')}</dt><dd class="num">${money(i.sgst)}</dd>`}
               <dt>${t('inv.round_off')}</dt><dd class="num">${money(i.round_off)}</dd>
-              <dt class="strong" style="font-size:18px;color:var(--text)">${t('inv.grand_total')}</dt><dd class="num strong" style="font-size:22px">${money(i.grand_total)}</dd>
+              <dt class="strong grand">${t('inv.grand_total')}</dt><dd class="num strong grand">${money(i.grand_total)}</dd>
               ${Number(i.returned_total) ? html`<dt>${t('billing.returned')}</dt><dd class="num">−${money(i.returned_total)}</dd>` : ''}
               ${final ? html`<dt>${t('inv.paid')}</dt><dd class="num">${money(i.paid_total)}</dd><dt class="strong">${t('inv.balance')}</dt><dd class="num strong" style="color:${i.balance > 0 ? 'var(--danger-text)' : 'var(--success-text)'}">${money(i.balance)}</dd>` : ''}
             </dl>

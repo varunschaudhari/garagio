@@ -99,7 +99,7 @@ export default async function counterSale(ctx) {
       ${tt?.discount_total ? html`<dt>${t('inv.discount')}</dt><dd class="num">−${money(tt.discount_total)}</dd>` : ''}
       ${noGst ? '' : tt?.igst ? html`<dt>${t('inv.igst')}</dt><dd class="num">${money(tt.igst)}</dd>` : html`<dt>${t('inv.cgst')} + ${t('inv.sgst')}</dt><dd class="num">${money((tt?.cgst || 0) + (tt?.sgst || 0))}</dd>`}
       <dt>${t('inv.round_off')}</dt><dd class="num">${money(tt?.round_off)}</dd>
-      <dt class="strong" style="font-size:18px;color:var(--text)">${t('inv.grand_total')}</dt><dd class="num strong" style="font-size:24px">${money(tt?.grand_total)}</dd>`);
+      <dt class="strong grand">${t('inv.grand_total')}</dt><dd class="num strong grand">${money(tt?.grand_total)}</dd>`);
     pay.recalc();
   };
 

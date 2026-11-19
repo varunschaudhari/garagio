@@ -11,7 +11,7 @@ import { MrpSheet } from '@/components/mrpSheet';
 import { printReturn, ReturnSheet } from '@/components/returns';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
-import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, TotalBand, Txt } from '@/components/ui';
 import { date, datetime, money, qty } from '@/format';
 import { errorText } from '@/i18n';
 import { useSession, can } from '@/store/session';
@@ -184,11 +184,7 @@ export default function InvoiceScreen() {
             </>
           )}
           <Row label={t('inv.round_off')} value={money(i.round_off)} />
-          <Divider />
-          <View style={styles.kv}>
-            <Txt size="lg" weight="bold">{t('inv.grand_total')}</Txt>
-            <Txt size="xl" weight="bold" tabular>{money(i.grand_total)}</Txt>
-          </View>
+          <TotalBand label={t('inv.grand_total')} value={money(i.grand_total)} />
           {i.returned_total ? <Row label={t('billing.returned')} value={`−${money(i.returned_total)}`} /> : null}
           {final ? (
             <>

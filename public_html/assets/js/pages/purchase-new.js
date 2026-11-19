@@ -239,7 +239,7 @@ export default async function purchaseNew(ctx) {
       <dt><label for="pur-other">${t('purchases.other_charges')}</label></dt>
       <dd><input id="pur-other" class="input num" inputmode="decimal" value="${otherCharges}" style="max-width:140px;margin-left:auto"></dd>
       ${line(t('purchases.round_off'), money(tot?.round_off))}
-      <dt class="strong" style="font-size:18px;color:var(--text)">${t('purchases.total')}</dt><dd class="num strong" style="font-size:22px">${money(tot?.grand_total)}</dd>`);
+      <dt class="strong grand">${t('purchases.total')}</dt><dd class="num strong grand">${money(tot?.grand_total)}</dd>`);
   };
   drawTotals(null);
 

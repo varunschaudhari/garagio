@@ -510,3 +510,10 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
       limit); if it goes down a customer keeps the extra as advance and a walk-in customer gets it back (bill_refunds,
       in the cash book). Not after a return or a change of GST registration. Every edit is previewed first and audited
       with the old and new lines; the bill shows "Edited … by …".
+31. **Design refresh (19 Nov 2026, owner's choice "Fresh & light, keep orange"), web and phone together:** softer
+    off-white background (#F4F6FA), white cards with 16–18 px corners and soft shadows, rounder buttons and inputs, an
+    orange brand gradient (#C2410C → #EA580C → #F97316; white text only on its darker part). A simple logo: "TA"
+    monogram over a road line on the gradient (web sidebar, login, favicon, Android icon / splash, A4 bill; black on
+    the thermal receipt). Home starts with a gradient banner (greeting, today's sales / bills / jobs) above the eight
+    tiles, which now have colourful round icons. Bike numbers look like Indian number plates. Bill totals sit on a
+    soft orange band. Phone tab bar: active tab on an orange pill; its height includes Android's navigation bar.

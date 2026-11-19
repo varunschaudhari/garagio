@@ -50,13 +50,15 @@ $font = $paper === 80 ? 13 : 11;
   .qr { width: 32mm; height: 32mm; margin: 4px auto 0; }
   .qr svg { width: 100%; height: 100%; }
   .bar { position: sticky; top: 0; display: flex; justify-content: center; padding: 8px; background: #F3F4F6; }
-  .bar button { font: 600 16px system-ui, sans-serif; padding: 10px 28px; border-radius: 8px; border: 0; background: #F97316; color: #111827; }
+  .bar button { font: 600 16px system-ui, sans-serif; padding: 10px 28px; border-radius: 10px; border: 0; background: #F97316; color: #111827; }
+  .logo { display: flex; justify-content: center; margin: 0 0 3px; }
   @media print { .bar { display: none; } }
 </style>
 </head>
 <body>
 <div class="bar"><button onclick="window.print()"><?= e($L('print')) ?></button></div>
 <div class="r">
+  <div class="logo"><?= logo_svg('mono', $paper === 80 ? 40 : 32) ?></div>
   <div class="c big"><?= e($shopName) ?></div>
   <?php if ($shopAddr): ?><div class="c sm"><?= nl2br(e($shopAddr)) ?></div><?php endif; ?>
   <?php if ($s['shop_phone']): ?><div class="c sm"><?= e($L('phone')) ?>: <?= e($s['shop_phone']) ?></div><?php endif; ?>

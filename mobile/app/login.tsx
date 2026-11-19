@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
-import { Eye, EyeOff, LogIn, Wrench } from 'lucide-react-native';
+import { Eye, EyeOff, LogIn } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View, type TextInputInstance } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/api/client';
 import { queryClient } from '@/api/queries';
-import { Banner, Button, Field, IconButton, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { GradientPanel, Logo } from '@/components/brand';
+import { Banner, Button, Card, Field, IconButton, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { errorText } from '@/i18n';
 import { useSession } from '@/store/session';
 import { radius, space, useTheme } from '@/theme';
@@ -56,19 +57,18 @@ export default function Login() {
       <OfflineBanner />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
-          <View style={styles.head}>
-            <View style={[styles.mark, { backgroundColor: c.primary }]}>
-              <Wrench size={30} color={c.primaryInk} />
+          <GradientPanel radius={28} style={styles.hero}>
+            <View style={styles.logoRing}>
+              <Logo size={64} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Txt size="lg" weight="bold" numberOfLines={1}>
-                {shop}
-              </Txt>
-              <Txt size="sm" muted>
-                {t('app.name')}
-              </Txt>
-            </View>
-          </View>
+            <Txt size="xl" weight="bold" center numberOfLines={2} style={{ color: '#FFFFFF' }}>
+              {shop}
+            </Txt>
+            <Txt size="sm" weight="semibold" center style={{ color: 'rgba(255,255,255,0.92)' }}>
+              {t('app.name')}
+            </Txt>
+          </GradientPanel>
+          <Card style={{ gap: space[4], padding: space[5] }}>
           <Segmented<Lang>
             value={lang}
             onChange={(l) => void setLang(l)}
@@ -107,6 +107,7 @@ export default function Login() {
             right={<IconButton icon={show ? EyeOff : Eye} label={t(show ? 'auth.hide_password' : 'auth.show_password')} onPress={() => setShow(!show)} />}
           />
           <Button title={t('auth.sign_in')} icon={LogIn} onPress={submit} loading={busy} needsOnline />
+          </Card>
           <Button title={t('mobile.change_server')} variant="ghost" small onPress={() => router.replace('/setup')} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -115,7 +116,7 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { padding: space[6], gap: space[5], flexGrow: 1, justifyContent: 'center' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
-  mark: { width: 52, height: 52, borderRadius: radius.card, alignItems: 'center', justifyContent: 'center' },
+  wrap: { padding: space[5], gap: space[5], flexGrow: 1, justifyContent: 'center' },
+  hero: { alignItems: 'center', gap: space[1], paddingVertical: space[6], paddingHorizontal: space[5] },
+  logoRing: { padding: 5, borderRadius: radius.xl, backgroundColor: '#FFFFFF', marginBottom: space[2] },
 });

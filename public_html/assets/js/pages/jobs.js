@@ -68,7 +68,7 @@ export default async function jobs(ctx) {
         return html`<section class="kanban-col ${items.length ? '' : 'is-empty'}" aria-label="${t('status.' + s)}">
           <h3>${statusChip(s, s === 'delivered' ? t('jobs.delivered_today') : null)}<span class="n">${items.length}</span></h3>
           ${items.map((j) => html`<a class="kanban-card" href="#/jobs/${j.id}">
-            <div class="row" style="justify-content:space-between"><span class="reg">${j.reg_no}</span><span class="small muted">${j.job_no}</span></div>
+            <div class="row" style="justify-content:space-between"><span class="plate">${j.reg_no}</span><span class="small muted">${j.job_no}</span></div>
             <div class="small muted ellipsis">${[j.make, j.model].filter(Boolean).join(' ')} · ${j.customer_name}</div>
             ${j.complaint ? html`<div class="small ellipsis" style="margin-top:4px">${j.complaint}</div>` : ''}
             <div class="row-wrap" style="margin-top:8px">${promisedBadge(j)}<span class="small muted">${icon('wrench', 13)} ${j.mechanic_name || t('jobs.no_mechanic')}</span></div>
@@ -79,7 +79,7 @@ export default async function jobs(ctx) {
     } else {
       setHTML(body, html`<div class="card">${dataTable({
         columns: [
-          { key: 'reg', label: t('jobs.bike'), primary: true, render: (j) => html`<div class="t-title">${j.reg_no} <span class="muted small">${j.job_no}</span></div><div class="t-sub">${[j.make, j.model].filter(Boolean).join(' ')} · ${j.customer_name}</div>` },
+          { key: 'reg', label: t('jobs.bike'), primary: true, render: (j) => html`<div class="t-title"><span class="plate">${j.reg_no}</span> <span class="muted small">${j.job_no}</span></div><div class="t-sub">${[j.make, j.model].filter(Boolean).join(' ')} · ${j.customer_name}</div>` },
           { key: 'status', label: t('common.status'), render: (j) => html`<div class="row-wrap">${statusChip(j.status)}${flags(j)}</div>` },
           { key: 'mechanic', label: t('jobs.mechanic'), render: (j) => j.mechanic_name || '—' },
           { key: 'promised', label: t('jobs.promised'), render: (j) => promisedBadge(j) || '—' },

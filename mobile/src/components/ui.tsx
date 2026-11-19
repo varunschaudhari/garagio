@@ -18,7 +18,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { radius, size, space, touch, useTheme, type Colors, type Weight } from '@/theme';
+import { elevation, radius, size, space, touch, useTheme, type Colors, type Weight } from '@/theme';
 
 /* ------------------------------------------------------------------ text */
 
@@ -123,6 +123,7 @@ export function Button({ title, onPress, variant = 'primary', icon: Icon, loadin
           backgroundColor: pressed && variant === 'primary' ? c.primaryPressed : pressed ? c.surface2 : bg,
           borderColor: variant === 'secondary' ? c.borderStrong : 'transparent',
           opacity: off ? 0.5 : 1,
+          ...(variant === 'primary' && !off ? { shadowColor: c.brandMid, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 3 } : {}),
           paddingHorizontal: small ? space[3] : space[5],
         },
         style,
@@ -205,7 +206,7 @@ export const Field = React.forwardRef<TextInputInstance, FieldProps>(function Fi
 
 export function Card({ children, style, padded = true }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; padded?: boolean }) {
   const { c } = useTheme();
-  return <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.border, padding: padded ? space[4] : 0 }, style]}>{children}</View>;
+  return <View style={[styles.card, elevation.card, { backgroundColor: c.surface, borderColor: c.border, shadowColor: c.shadow, padding: padded ? space[4] : 0 }, style]}>{children}</View>;
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'primary' }) {
@@ -240,7 +241,7 @@ export function Segmented<T extends string | number>({ options, value, onChange 
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(o.value)}
-            style={[styles.segItem, active && { backgroundColor: c.surface, borderColor: c.border }]}
+            style={[styles.segItem, active && [{ backgroundColor: c.surface, borderColor: c.border, shadowColor: c.shadow }, elevation.card]]}
           >
             <Txt size="sm" weight="semibold" color={active ? 'text' : 'muted'} numberOfLines={1}>
               {o.label}
@@ -286,6 +287,21 @@ export function Banner({ text, tone = 'info', icon: Icon }: { text: string; tone
   );
 }
 
+/** The grand total of a bill, on a soft orange band. */
+export function TotalBand({ label, value }: { label: string; value: string }) {
+  const { c } = useTheme();
+  return (
+    <View style={[styles.total, { backgroundColor: c.primarySoft }]} accessibilityLabel={`${label}: ${value}`}>
+      <Txt size="md" weight="bold" style={{ flex: 1 }}>
+        {label}
+      </Txt>
+      <Txt size="xl" weight="bold" tabular style={{ color: c.primaryText }}>
+        {value}
+      </Txt>
+    </View>
+  );
+}
+
 export function Divider() {
   const { c } = useTheme();
   return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: c.border }} />;
@@ -302,14 +318,15 @@ export function Loading() {
 
 const styles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingVertical: space[3] },
+  total: { flexDirection: 'row', alignItems: 'center', gap: space[3], borderRadius: 14, paddingHorizontal: space[4], paddingVertical: space[3] },
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space[2], borderRadius: radius.input, borderWidth: 1 },
   iconButton: { width: touch.button, height: touch.button, alignItems: 'center', justifyContent: 'center', borderRadius: radius.chip },
   inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.input, minHeight: touch.button },
   input: { flex: 1, fontSize: size.lg, paddingHorizontal: space[3], paddingVertical: space[2] },
   card: { borderWidth: 1, borderRadius: radius.card },
   chip: { borderRadius: radius.chip, paddingHorizontal: space[3], paddingVertical: 3, alignSelf: 'flex-start' },
-  seg: { flexDirection: 'row', padding: 3, borderRadius: radius.input, gap: 2 },
-  segItem: { flex: 1, minHeight: touch.min - 4, alignItems: 'center', justifyContent: 'center', borderRadius: 6, borderWidth: 1, borderColor: 'transparent', paddingHorizontal: space[2] },
+  seg: { flexDirection: 'row', padding: 4, borderRadius: radius.input, gap: 2 },
+  segItem: { flex: 1, minHeight: touch.min - 4, alignItems: 'center', justifyContent: 'center', borderRadius: 9, borderWidth: 1, borderColor: 'transparent', paddingHorizontal: space[2] },
   empty: { alignItems: 'center', justifyContent: 'center', padding: space[8], gap: space[3] },
-  emptyArt: { width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  emptyArt: { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center' },
 });

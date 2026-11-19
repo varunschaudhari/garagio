@@ -1,6 +1,23 @@
 <?php
 declare(strict_types=1);
 
+/* ------------------------------------------------------------------ the shop's logo (bills, receipts) */
+
+/**
+ * The logo as inline SVG: "TA" monogram over a road line, white on the orange gradient ('color') or on black
+ * ('mono', for thermal printers). Same drawing as assets/img/icon.svg and the apps.
+ */
+function logo_svg(string $variant = 'color', int $size = 48): string
+{
+    $glyph = '<rect x="9" y="14" width="20" height="6" rx="1.5"/><rect x="16" y="14" width="6" height="28" rx="1.5"/>'
+        . '<path fill-rule="evenodd" d="M33 42 41.5 14h5L55 42h-5.5l-1.9-6.5h-7.2L38.5 42zm8.8-11.2h4.4L44 23.2z"/>'
+        . '<rect x="9" y="47" width="46" height="3" rx="1.5" opacity=".6"/>';
+    $bg = $variant === 'mono'
+        ? '<rect width="64" height="64" rx="18" fill="#000"/>'
+        : '<defs><linearGradient id="gm-logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C2410C"/><stop offset=".6" stop-color="#EA580C"/><stop offset="1" stop-color="#F97316"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#gm-logo)"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="' . $size . '" height="' . $size . '" role="img" aria-label="logo">' . $bg . '<g fill="#fff">' . $glyph . '</g></svg>';
+}
+
 /* ------------------------------------------------------------------ uploaded photos (job photos, bill photos) */
 
 const IMAGE_MAX_BYTES = 6 * 1024 * 1024;

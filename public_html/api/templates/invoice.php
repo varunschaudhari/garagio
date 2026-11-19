@@ -39,24 +39,27 @@ $desc = static function (array $it) use ($lang): string {
   body { margin: 0; color: #111827; background: #fff; font: 12px/1.45 "Noto Sans Devanagari", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .page { max-width: 190mm; margin: 0 auto; padding: 8mm 0; position: relative; }
   .bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px; }
-  .bar button { font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 8px; border: 0; background: #F97316; color: #111827; cursor: pointer; }
-  header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 2px solid #111827; padding-bottom: 10px; }
-  .shop h1 { margin: 0; font-size: 22px; }
+  .bar button { font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 10px; border: 0; background: #F97316; color: #111827; cursor: pointer; box-shadow: 0 4px 12px rgba(249, 115, 22, .3); }
+  header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 3px solid #EA580C; padding-bottom: 12px; }
+  .shop { display: flex; gap: 12px; align-items: flex-start; }
+  .shop .logo { flex: none; }
+  .shop .logo svg { display: block; }
+  .shop h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
   .shop .mr { font-size: 16px; font-weight: 600; }
   .muted, .alt { color: #4B5563; }
   .alt { font-size: 11px; }
   .title { text-align: right; }
-  .title h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: .02em; }
+  .title h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: .02em; color: #C2410C; }
   .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
-  .box { border: 1px solid #D1D5DB; border-radius: 6px; padding: 8px 10px; }
+  .box { border: 1px solid #E5E7EB; border-radius: 10px; padding: 8px 12px; background: #FCFCFD; }
   .box h3 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; color: #4B5563; letter-spacing: .04em; }
   table { width: 100%; border-collapse: collapse; }
-  th { background: #F3F4F6; text-align: left; font-size: 10.5px; padding: 6px; border: 1px solid #D1D5DB; }
+  th { background: #FFF1E6; color: #7C2D12; text-align: left; font-size: 10.5px; padding: 6px; border: 1px solid #F5D0B5; }
   td { padding: 6px; border: 1px solid #E5E7EB; vertical-align: top; }
   .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .totals { display: grid; grid-template-columns: 1fr 260px; gap: 16px; margin-top: 12px; }
   .totals table td { border: 0; padding: 3px 0; }
-  .grand td { font-size: 16px; font-weight: 800; border-top: 2px solid #111827 !important; padding-top: 6px !important; }
+  .grand td { font-size: 16px; font-weight: 800; border-top: 2px solid #EA580C !important; padding-top: 6px !important; color: #9A3412; }
   .words { margin-top: 10px; }
   footer { display: grid; grid-template-columns: 1fr 200px; gap: 16px; margin-top: 18px; align-items: end; }
   .sign { text-align: center; border-top: 1px solid #111827; padding-top: 6px; margin-top: 46px; }
@@ -73,12 +76,15 @@ $desc = static function (array $it) use ($lang): string {
   <?php if ($inv['status'] === 'cancelled'): ?><div class="stamp"><?= e($L('cancelled')) ?></div><?php endif; ?>
   <header>
     <div class="shop">
+      <div class="logo"><?= logo_svg('color', 52) ?></div>
+      <div>
       <h1><?= e($shopEn) ?></h1>
       <?php if ($shopMr): ?><div class="mr"><?= e($shopMr) ?></div><?php endif; ?>
       <div><?= nl2br(e($s['shop_address'])) ?></div>
       <?php if ($s['shop_address_mr']): ?><div class="alt"><?= nl2br(e($s['shop_address_mr'])) ?></div><?php endif; ?>
       <div><?= e(implode(' · ', array_filter([$s['shop_phone'], $s['shop_email']]))) ?></div>
       <?php if ($reg): ?><div><strong>GSTIN:</strong> <?= e($s['shop_gstin'] ?: '—') ?> · <?= e($s['shop_state_name']) ?> (<?= e($shopState) ?>)</div><?php endif; ?>
+      </div>
     </div>
     <div class="title">
       <h2><?= e($L($reg ? 'tax_invoice' : 'bill_title')) ?></h2>
@@ -96,14 +102,14 @@ $desc = static function (array $it) use ($lang): string {
       <?php if ($gstin): ?><div>GSTIN: <?= e($gstin) ?></div><?php endif; ?>
       <div><?= e($L('state')) ?>: <?= e(GST_STATES[$custState] ?? '') ?> (<?= e($custState) ?>)</div>
     </div>
+    <?php if ($inv['reg_no']): ?>
     <div class="box">
-      <?php if ($inv['reg_no']): ?>
         <h3><?= e($L('bike')) ?></h3>
         <div><strong><?= e($inv['reg_no']) ?></strong> <?= e(trim(($inv['make'] ?? '') . ' ' . ($inv['model'] ?? ''))) ?></div>
         <?php if ($inv['odometer']): ?><div><?= e($L('odometer')) ?>: <?= e((string) $inv['odometer']) ?> km</div><?php endif; ?>
         <?php if ($inv['next_service'] && $inv['status'] !== 'cancelled'): ?><div><strong><?= e($L('next_service')) ?>:</strong> <?= e(next_service_text($inv['next_service'], $lang)) ?><?php if ($lang !== 'en'): ?> <span class="alt">(<?= e(next_service_text($inv['next_service'], 'en')) ?>)</span><?php endif; ?></div><?php endif; ?>
-      <?php endif; ?>
     </div>
+    <?php endif; ?>
   </div>
 
   <table>

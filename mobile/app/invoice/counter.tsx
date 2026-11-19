@@ -11,7 +11,7 @@ import { MrpSheet } from '@/components/mrpSheet';
 import { PartPicker } from '@/components/pickers';
 import { Sheet } from '@/components/sheet';
 import { toast } from '@/components/toast';
-import { Button, Card, Field, IconButton, OfflineBanner, Txt } from '@/components/ui';
+import { Button, Card, Field, IconButton, OfflineBanner, TotalBand, Txt } from '@/components/ui';
 import { money, qty } from '@/format';
 import { errorText, nm } from '@/i18n';
 import { useScan } from '@/store/scan';
@@ -132,10 +132,7 @@ export default function CounterSale() {
         </Card>
 
         <Card style={{ gap: space[3] }}>
-          <View style={styles.kv}>
-            <Txt size="lg" weight="bold">{t('inv.grand_total')}</Txt>
-            <Txt size="xl" weight="bold" tabular>{money(total)}</Txt>
-          </View>
+          <TotalBand label={t('inv.grand_total')} value={money(total)} />
           <PaymentEntry total={total} value={pay} onChange={setPay} />
         </Card>
         <Button title={t('billing.finalize')} icon={Check} onPress={submit} loading={create.isPending || finalize.isPending} needsOnline disabled={!lines.length} />

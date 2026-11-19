@@ -6,31 +6,36 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useDashboard } from '@/api/queries';
+import { GradientPanel } from '@/components/brand';
 import { Card, Chip, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { date, money, qty, rupees } from '@/format';
 import { nm } from '@/i18n';
 import { useSession, can } from '@/store/session';
 import { hasTab } from '@/tabs';
-import { radius, space, useTheme, type Colors } from '@/theme';
+import { elevation, radius, space, useTheme, type Colors } from '@/theme';
 import type { Perm } from '@/types';
 
-type Tone = 'primary' | 'success' | 'danger' | 'info';
+type Tone = 'primary' | 'success' | 'danger' | 'info' | 'warning' | 'violet' | 'teal' | 'pink';
 const TONES: Record<Tone, [keyof Colors, keyof Colors]> = {
   primary: ['primarySoft', 'primaryText'],
   success: ['successSoft', 'successText'],
   danger: ['dangerSoft', 'dangerText'],
   info: ['infoSoft', 'infoText'],
+  warning: ['warningSoft', 'warningText'],
+  violet: ['violetSoft', 'violetText'],
+  teal: ['tealSoft', 'tealText'],
+  pink: ['pinkSoft', 'pinkText'],
 };
 
 /** The shop's eight big buttons (its own dashboard notes), each shown to people who may use it. */
 const TILES: { key: string; icon: LucideIcon; to: Href; perm?: Perm; tone: Tone }[] = [
   { key: 'purchase', icon: Truck, to: '/purchase/new', perm: 'purchases', tone: 'info' },
   { key: 'sale', icon: Receipt, to: '/invoice/counter', perm: 'make_bills', tone: 'success' },
-  { key: 'stock', icon: Boxes, to: '/parts', tone: 'primary' },
-  { key: 'job', icon: ClipboardList, to: '/job/new', perm: 'jobs', tone: 'primary' },
+  { key: 'stock', icon: Boxes, to: '/parts', tone: 'warning' },
+  { key: 'job', icon: ClipboardList, to: '/job/new', perm: 'jobs', tone: 'violet' },
   { key: 'payables', icon: HandCoins, to: '/suppliers', perm: 'purchases', tone: 'danger' },
-  { key: 'expenses', icon: Wallet, to: '/cash', perm: 'cash_book', tone: 'danger' },
-  { key: 'reports', icon: ChartColumn, to: '/reports', perm: 'reports', tone: 'info' },
+  { key: 'expenses', icon: Wallet, to: '/cash', perm: 'cash_book', tone: 'pink' },
+  { key: 'reports', icon: ChartColumn, to: '/reports', perm: 'reports', tone: 'teal' },
   { key: 'suppliers', icon: Store, to: '/suppliers', perm: 'purchases', tone: 'primary' },
 ];
 
@@ -51,7 +56,7 @@ function Tiles({ subs }: { subs: Record<string, string | undefined> }) {
             onPress={() => router.push(x.to)}
             accessibilityRole="button"
             accessibilityLabel={t(`dashboard.tile_${x.key}`)}
-            style={({ pressed }) => [styles.tile, { backgroundColor: c.surface, borderColor: pressed ? c.primary : c.border }]}
+            style={({ pressed }) => [styles.tile, elevation.card, { backgroundColor: c.surface, borderColor: pressed ? c.primary : c.border, shadowColor: c.shadow, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
           >
             <View style={[styles.tileIcon, { backgroundColor: c[bg] }]}>
               <Icon size={24} color={c[fg]} />
@@ -75,7 +80,7 @@ function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; 
   const { c } = useTheme();
   const [bg, fg] = TONES[tone];
   return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={onPress ? 'button' : undefined} style={({ pressed }) => [styles.kpi, { backgroundColor: c.surface, borderColor: pressed ? c.primary : c.border }]}>
+    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={onPress ? 'button' : undefined} style={({ pressed }) => [styles.kpi, elevation.card, { backgroundColor: c.surface, borderColor: pressed ? c.primary : c.border, shadowColor: c.shadow }]}>
       <View style={[styles.kpiIcon, { backgroundColor: c[bg] }]}>
         <Icon size={20} color={c[fg]} />
       </View>
@@ -90,6 +95,26 @@ function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; 
           {sub}
         </Txt>
       ) : null}
+    </Pressable>
+  );
+}
+
+function isoToday() {
+  const d = new Date();
+  const p = (x: number) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** A figure on the Home banner. */
+function HeroStat({ value, label, onPress }: { value: string; label: string; onPress?: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`} style={({ pressed }) => [styles.heroStat, { backgroundColor: pressed ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.15)' }]}>
+      <Txt size="xl" weight="bold" tabular style={{ color: '#FFFFFF' }} numberOfLines={1}>
+        {value}
+      </Txt>
+      <Txt size="xs" weight="semibold" style={{ color: '#FFFFFF' }} numberOfLines={2}>
+        {label}
+      </Txt>
     </Pressable>
   );
 }
@@ -112,12 +137,19 @@ export default function Home() {
         contentContainerStyle={{ padding: space[4], gap: space[4], paddingBottom: space[10] }}
         refreshControl={<RefreshControl refreshing={d.isRefetching} onRefresh={() => void d.refetch()} colors={[c.primary]} />}
       >
-        <View>
-          <Txt size="xl" weight="bold">
+        <GradientPanel style={{ padding: space[5], gap: space[1] }}>
+          <Txt size="xl" weight="bold" style={{ color: '#FFFFFF' }}>
             {greet}, {user?.name.split(' ')[0]}
           </Txt>
-          <Txt muted>{user ? t(`roles.${user.role}`) : ''}</Txt>
-        </View>
+          <Txt size="sm" weight="semibold" style={{ color: 'rgba(255,255,255,0.92)' }}>
+            {user ? t(`roles.${user.role}`) : ''} · {date(isoToday())}
+          </Txt>
+          <View style={styles.heroStats}>
+            {d.data?.money ? <HeroStat value={rupees(d.data.money.sales_today)} label={t('dashboard.sales_today')} onPress={() => router.push('/money')} /> : null}
+            <HeroStat value={String(Object.values(d.data?.jobs_by_status ?? {}).reduce((a, b) => a + b, 0))} label={t('dashboard.jobs_in_shop')} onPress={() => router.push('/jobs')} />
+            {!d.data?.money && s ? <HeroStat value={String(s.low_stock_count)} label={t('dashboard.low_stock')} onPress={() => router.push('/parts')} /> : null}
+          </View>
+        </GradientPanel>
         <Tiles subs={{ payables: d.data?.money ? rupees(d.data.money.supplier_payables) : undefined, stock: s?.low_stock_count ? `${t('dashboard.low_stock')}: ${s.low_stock_count}` : undefined }} />
         {d.data?.money ? (
           <View style={styles.grid}>
@@ -251,10 +283,12 @@ export default function Home() {
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
-  tile: { flexBasis: '23%', flexGrow: 1, minHeight: 104, borderWidth: 1, borderRadius: radius.card, paddingVertical: space[3], paddingHorizontal: space[1], alignItems: 'center', gap: space[2] },
-  tileIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  tile: { flexBasis: '23%', flexGrow: 1, minHeight: 108, borderWidth: 1, borderRadius: radius.card, paddingVertical: space[3], paddingHorizontal: space[1], alignItems: 'center', gap: space[2] },
+  tileIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  heroStats: { flexDirection: 'row', gap: space[2], marginTop: space[3] },
+  heroStat: { flex: 1, borderRadius: 14, paddingVertical: space[2], paddingHorizontal: space[3], gap: 2 },
   kpi: { flexBasis: '47%', flexGrow: 1, borderWidth: 1, borderRadius: radius.card, padding: space[4], gap: space[2] },
-  kpiIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  kpiIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   cardHead: { padding: space[4], borderBottomWidth: 1 },
   lowRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingHorizontal: space[4], paddingVertical: space[3], borderBottomWidth: StyleSheet.hairlineWidth },
 });

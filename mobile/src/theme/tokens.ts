@@ -2,11 +2,11 @@
 
 export const palette = {
   light: {
-    bg: '#F7F8FA',
+    bg: '#F4F6FA',
     surface: '#FFFFFF',
-    surface2: '#F3F4F6',
-    border: '#E5E7EB',
-    borderStrong: '#D1D5DB',
+    surface2: '#F1F3F8',
+    border: '#E6E9EF',
+    borderStrong: '#D2D7E0',
     text: '#111827',
     muted: '#6B7280',
     primary: '#F97316',
@@ -26,6 +26,17 @@ export const palette = {
     info: '#2563EB',
     infoSoft: '#DBEAFE',
     infoText: '#1E40AF',
+    violetSoft: '#EDE9FE',
+    violetText: '#5B21B6',
+    tealSoft: '#CCFBF1',
+    tealText: '#115E59',
+    pinkSoft: '#FCE7F3',
+    pinkText: '#9D174D',
+    /** Brand gradient (logo, Home banner): white text stays on the darker start. */
+    brandFrom: '#C2410C',
+    brandMid: '#EA580C',
+    brandTo: '#F97316',
+    shadow: '#101828',
     overlay: 'rgba(17,24,39,0.45)',
   },
   dark: {
@@ -53,6 +64,16 @@ export const palette = {
     info: '#60A5FA',
     infoSoft: 'rgba(96,165,250,0.14)',
     infoText: '#93C5FD',
+    violetSoft: 'rgba(167,139,250,0.16)',
+    violetText: '#C4B5FD',
+    tealSoft: 'rgba(45,212,191,0.14)',
+    tealText: '#5EEAD4',
+    pinkSoft: 'rgba(244,114,182,0.14)',
+    pinkText: '#F9A8D4',
+    brandFrom: '#7C2D12',
+    brandMid: '#9A3412',
+    brandTo: '#C2410C',
+    shadow: '#000000',
     overlay: 'rgba(0,0,0,0.6)',
   },
 };
@@ -61,7 +82,13 @@ export type Colors = typeof palette.light;
 
 /** 4 px grid */
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40 } as const;
-export const radius = { input: 8, card: 12, chip: 999 } as const;
+export const radius = { input: 12, card: 18, xl: 22, chip: 999 } as const;
+
+/** Soft card shadow (Android uses elevation). */
+export const elevation = {
+  card: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
+  raised: { shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 18, elevation: 5 },
+} as const;
 /** Type scale 12 / 14 / 16 / 20 / 24 / 32 */
 export const size = { xs: 12, sm: 14, md: 16, lg: 20, xl: 24, xxl: 32 } as const;
 /** Big targets for greasy hands: buttons are taller than the 44 px minimum. */

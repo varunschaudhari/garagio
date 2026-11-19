@@ -100,4 +100,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Every UI string in BOTH `en.json` and `mr.json`. Bilingual records use `name_en`/`name_mr` → `nm(obj)`.
 - Money `money()` (Indian grouping), dates `DD-MM-YYYY`, Western digits in both languages.
 - Orange buttons use dark ink (#111827): white on #F97316 fails WCAG AA. Deliberate deviation from the spec token table.
+- Look (decision 31): tokens in `css/tokens.css` and `mobile/src/theme/tokens.ts` (change both); `--grad-brand` banner
+  (`.hero`), `.plate` for bike numbers, `.dl dt.grand/dd.grand` for bill totals, round `.kpi-icon` tones
+  (success/warning/danger/info/violet/teal/pink). Logo: `ui/logo.js` (web), `logo_svg()` (bills), `components/brand.tsx`
+  (phone: `Logo`, `GradientPanel`, `Plate`), `tools/make-app-icons.mjs` (Android icons).
 - One `<h1>` per page (the page heading); the top-bar title is a plain div.

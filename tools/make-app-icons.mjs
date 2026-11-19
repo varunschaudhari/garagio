@@ -1,4 +1,5 @@
-// Generates the Android app icon, adaptive icon and splash image (orange tile, dark spanner).
+// Generates the Android app icon, adaptive icon (foreground + background) and splash image from the shop's logo:
+// a white "TA" monogram over a road line on the orange brand gradient (same drawing as assets/img/icon.svg).
 //   node tools/make-app-icons.mjs
 // No dependencies: shapes are rasterised with 4×4 supersampling and written as PNG via zlib.
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -6,8 +7,13 @@ import { deflateSync } from 'node:zlib';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ORANGE = [0xf9, 0x73, 0x16];
-const INK = [0x11, 0x18, 0x27];
+// Gradient stops (top-left → bottom-right), as in the web / phone brand gradient.
+const STOPS = [
+  [0, [0xc2, 0x41, 0x0c]],
+  [0.6, [0xea, 0x58, 0x0c]],
+  [1, [0xf9, 0x73, 0x16]],
+];
+const WHITE = [255, 255, 255];
 
 const CRC_TABLE = new Uint32Array(256).map((_, n) => {
   let c = n;
@@ -44,44 +50,78 @@ function png(size, pixel) {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))]);
 }
 
-// Spanner in unit coordinates (0..1): a handle capsule plus an open ring head.
-function inSpanner(u, v) {
-  const ax = 0.27, ay = 0.73, bx = 0.516, by = 0.484, r = 0.075;
-  const dx = bx - ax, dy = by - ay;
-  const t = Math.max(0, Math.min(1, ((u - ax) * dx + (v - ay) * dy) / (dx * dx + dy * dy)));
-  const hx = ax + t * dx - u, hy = ay + t * dy - v;
-  if (hx * hx + hy * hy <= r * r) return true;
-  const cx = 0.64, cy = 0.36;
-  const d = Math.hypot(u - cx, v - cy);
-  if (d < 0.095 || d > 0.2) return false;
-  const ang = Math.atan2(-(v - cy), u - cx); // opening faces up-right
-  return !(ang > Math.PI / 4 - 0.42 && ang < Math.PI / 4 + 0.42);
-}
-function inRoundRect(u, v, radius) {
-  const qx = Math.max(Math.abs(u - 0.5) - (0.5 - radius), 0);
-  const qy = Math.max(Math.abs(v - 0.5) - (0.5 - radius), 0);
-  return qx * qx + qy * qy <= radius * radius;
+function gradient(t) {
+  for (let i = 1; i < STOPS.length; i++) {
+    const [t1, c1] = STOPS[i];
+    const [t0, c0] = STOPS[i - 1];
+    if (t <= t1) {
+      const k = (t - t0) / (t1 - t0);
+      return c0.map((v, j) => Math.round(v + (c1[j] - v) * k));
+    }
+  }
+  return STOPS[STOPS.length - 1][1];
 }
 
+/* Logo glyph in the 64 × 64 grid of icon.svg. */
+function inRoundRect(x, y, rx, ry, w, h, r) {
+  if (x < rx || y < ry || x > rx + w || y > ry + h) return false;
+  const qx = Math.max(Math.abs(x - (rx + w / 2)) - (w / 2 - r), 0);
+  const qy = Math.max(Math.abs(y - (ry + h / 2)) - (h / 2 - r), 0);
+  return qx * qx + qy * qy <= r * r;
+}
+function inPoly(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i];
+    const [xj, yj] = pts[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+const A_OUTER = [[33, 42], [41.5, 14], [46.5, 14], [55, 42], [49.5, 42], [47.6, 35.5], [40.4, 35.5], [38.5, 42]];
+const A_HOLE = [[41.8, 30.8], [46.2, 30.8], [44, 23.2]];
+/** 1 inside the letters, 0.6 on the road line, 0 outside. */
+function glyph(x, y) {
+  if (inRoundRect(x, y, 9, 14, 20, 6, 1.5) || inRoundRect(x, y, 16, 14, 6, 28, 1.5)) return 1;
+  if (inPoly(x, y, A_OUTER) && !inPoly(x, y, A_HOLE)) return 1;
+  if (inRoundRect(x, y, 9, 47, 46, 3, 1.5)) return 0.6;
+  return 0;
+}
+
+/**
+ * tile: 'full' (square, the launcher masks it), 'round' (rounded tile with transparent corners), 'none' (white glyph
+ * on transparent: adaptive foreground) or 'bg' (gradient only: adaptive background). scale shrinks the glyph.
+ */
 function render(size, { tile, scale }) {
   const S = 4;
-  return png(size, (x, y) => {
-    let tileHits = 0, inkHits = 0;
+  return png(size, (px, py) => {
+    let r = 0, g = 0, b = 0, a = 0;
     for (let sy = 0; sy < S; sy++) {
       for (let sx = 0; sx < S; sx++) {
-        const u = (x + (sx + 0.5) / S) / size;
-        const v = (y + (sy + 0.5) / S) / size;
-        const su = (u - 0.5) / scale + 0.5, sv = (v - 0.5) / scale + 0.5;
-        if (inSpanner(su, sv)) inkHits++;
-        else if (tile === 'full' || (tile === 'round' && inRoundRect(u, v, 0.22))) tileHits++;
+        const u = (px + (sx + 0.5) / S) / size;
+        const v = (py + (sy + 0.5) / S) / size;
+        const inTile = tile === 'full' || tile === 'bg' || (tile === 'round' && inRoundRect(u * 64, v * 64, 0, 0, 64, 64, 18));
+        const gu = ((u - 0.5) / scale + 0.5) * 64;
+        const gv = ((v - 0.5) / scale + 0.5) * 64;
+        const k = tile === 'bg' ? 0 : glyph(gu, gv);
+        let col;
+        let alpha;
+        if (tile === 'none') {
+          col = WHITE;
+          alpha = k;
+        } else if (inTile) {
+          const base = gradient((u + v) / 2);
+          col = base.map((c, i) => c + (WHITE[i] - c) * k);
+          alpha = 1;
+        } else {
+          continue;
+        }
+        r += col[0] * alpha; g += col[1] * alpha; b += col[2] * alpha; a += alpha;
       }
     }
     const n = S * S;
-    if (tile === 'none') return [...INK, Math.round((inkHits / n) * 255)];
-    const a = (tileHits + inkHits) / n;
     if (a === 0) return [0, 0, 0, 0];
-    const k = inkHits / (tileHits + inkHits);
-    return [0, 1, 2].map((i) => Math.round(ORANGE[i] * (1 - k) + INK[i] * k)).concat(Math.round(a * 255));
+    return [Math.round(r / a), Math.round(g / a), Math.round(b / a), Math.round((a / n) * 255)];
   });
 }
 
@@ -89,6 +129,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, '..', 'mobile', 'assets');
 mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'icon.png'), render(1024, { tile: 'full', scale: 0.9 }));
-writeFileSync(join(out, 'adaptive-icon.png'), render(1024, { tile: 'none', scale: 0.62 }));
+writeFileSync(join(out, 'adaptive-icon.png'), render(1024, { tile: 'none', scale: 0.58 }));
+writeFileSync(join(out, 'adaptive-background.png'), render(512, { tile: 'bg', scale: 1 }));
 writeFileSync(join(out, 'splash-icon.png'), render(512, { tile: 'round', scale: 0.85 }));
-console.log('Wrote mobile/assets/icon.png, adaptive-icon.png, splash-icon.png');
+console.log('Wrote mobile/assets/icon.png, adaptive-icon.png, adaptive-background.png, splash-icon.png');

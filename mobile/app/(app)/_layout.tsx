@@ -3,6 +3,8 @@ import { Boxes, ClipboardList, House, Inbox, LayoutGrid, PackageSearch, Plus, Re
 import type { LucideIcon } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMe, useRequests } from '@/api/queries';
 import { Loading } from '@/components/ui';
 import { NotificationBell } from '@/components/work';
@@ -31,6 +33,7 @@ const TAB_META: Record<TabKey, { icon: LucideIcon; label: string }> = {
 export default function AppLayout() {
   const { t } = useTranslation();
   const { c, font } = useTheme();
+  const insets = useSafeAreaInsets();
   const token = useSession((s) => s.token);
   const user = useSession((s) => s.user);
   const setUser = useSession((s) => s.setUser);
@@ -73,7 +76,8 @@ export default function AppLayout() {
           headerRight: () => <NotificationBell />,
           tabBarActiveTintColor: c.primaryText,
           tabBarInactiveTintColor: c.muted,
-          tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.border, height: 68, paddingTop: 6 },
+          // Height includes Android's navigation bar: a fixed height squeezed the tab buttons into it.
+          tabBarStyle: { backgroundColor: c.surface, borderTopWidth: 0, height: 66 + insets.bottom, paddingTop: 8, elevation: 12, shadowColor: c.shadow, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -2 } },
           tabBarLabelStyle: { fontFamily: font('semibold'), fontSize: 12 },
           tabBarBadgeStyle: { backgroundColor: c.primary, color: c.primaryInk, fontFamily: font('bold') },
           sceneStyle: { backgroundColor: c.bg },
@@ -91,7 +95,11 @@ export default function AppLayout() {
               options={{
                 href: visible.has(key) ? undefined : null,
                 title,
-                tabBarIcon: ({ color }) => <Icon size={26} color={color} />,
+                tabBarIcon: ({ color, focused }) => (
+                  <View style={{ paddingHorizontal: 16, paddingVertical: 3, borderRadius: 999, backgroundColor: focused ? c.primarySoft : 'transparent' }}>
+                    <Icon size={24} color={color} />
+                  </View>
+                ),
                 tabBarBadge: badge(key),
               }}
             />

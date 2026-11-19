@@ -52,7 +52,7 @@ export default async function requests(ctx) {
     <section class="card" aria-label="${r.job_no}">
       <div class="card-head" style="flex-wrap:wrap">
         <div style="flex:1;min-width:220px">
-          <h3><a href="#/jobs/${r.job_card_id}">${r.reg_no}</a> <span class="muted" style="font-weight:500">${r.job_no}</span></h3>
+          <h3><a href="#/jobs/${r.job_card_id}" class="plate">${r.reg_no}</a> <span class="muted" style="font-weight:500">${r.job_no}</span></h3>
           <div class="small muted">${[r.make, r.model].filter(Boolean).join(' ')} · ${t('requests.requested_by')} ${r.requested_by_name} · ${datetime(r.created_at)}${r.mechanic_name && r.mechanic_name !== r.requested_by_name ? html` · ${icon('wrench', 12)} ${r.mechanic_name}` : ''}</div>
           ${r.note ? html`<div class="small" style="margin-top:4px">${icon('info', 13)} ${r.note}</div>` : ''}
         </div>

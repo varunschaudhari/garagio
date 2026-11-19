@@ -100,7 +100,7 @@ export default async function jobPage(ctx) {
       <div class="page-head">
         <div style="flex:1;min-width:260px">
           <a href="#/jobs" class="small muted">${icon('arrow-left', 14)} ${isMech ? t('jobs.my_jobs') : t('jobs.title')}</a>
-          <h1 style="margin-top:6px">${j.reg_no} <span class="muted" style="font-weight:500">${j.job_no}</span> ${statusChip(j.status)}</h1>
+          <h1 style="margin-top:6px;display:flex;align-items:center;flex-wrap:wrap;gap:10px"><span class="plate lg">${j.reg_no}</span> <span class="muted" style="font-weight:500">${j.job_no}</span> ${statusChip(j.status)}</h1>
           <div class="sub">${[j.make, j.model, j.year].filter(Boolean).join(' ')} ·
             ${canEdit ? html`<a href="#/customers/${j.customer_id}">${j.customer_name}</a>` : j.customer_name}
             ${canEdit ? html` · <a href="tel:${j.customer_phone}">${j.customer_phone}</a>` : ''}

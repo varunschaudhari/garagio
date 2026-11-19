@@ -27,12 +27,12 @@
 
 :root {
   color-scheme: light;
-  --bg: #F7F8FA;
+  --bg: #F4F6FA;
   --surface: #FFFFFF;
-  --surface-2: #F3F4F6;
-  --surface-hover: #F9FAFB;
-  --border: #E5E7EB;
-  --border-strong: #D1D5DB;
+  --surface-2: #F1F3F8;
+  --surface-hover: #F8F9FC;
+  --border: #E6E9EF;
+  --border-strong: #D2D7E0;
   --text: #111827;
   --text-muted: #6B7280;
 
@@ -58,16 +58,24 @@
   --neutral-soft: #F3F4F6;
   --neutral-text: #374151;
 
-  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.05);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06);
+  --shadow-hover: 0 2px 6px rgba(16, 24, 40, 0.06), 0 12px 32px rgba(16, 24, 40, 0.1);
   --shadow-pop: 0 8px 32px rgba(16, 24, 40, 0.16);
+  /* Brand gradient (logo, Home banner): white text stays on the darker left part (#C2410C 5.2:1, #EA580C 3.6:1 for big text). */
+  --grad-brand: linear-gradient(135deg, #C2410C 0%, #EA580C 60%, #F97316 100%);
+  /* Extra tones for colourful round icons. */
+  --violet-soft: #EDE9FE; --violet-text: #5B21B6;
+  --teal-soft: #CCFBF1; --teal-text: #115E59;
+  --pink-soft: #FCE7F3; --pink-text: #9D174D;
   --overlay: rgba(17, 24, 39, 0.45);
   --focus: 0 0 0 3px rgba(249, 115, 22, 0.45);
   /* Chart mark colour: validated (dataviz validator) for lightness band + 3:1 contrast on both surfaces. */
   --chart-1: #EA580C;
   --chart-grid: #EEF0F3;
 
-  --radius-input: 8px;
-  --radius-card: 12px;
+  --radius-input: 10px;
+  --radius-card: 16px;
+  --radius-xl: 20px;
   --radius-chip: 999px;
 
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px;
@@ -110,6 +118,11 @@
   --focus: 0 0 0 3px rgba(251, 146, 60, 0.5);
   --chart-1: #EA580C;
   --chart-grid: #262B35;
+  --grad-brand: linear-gradient(135deg, #7C2D12 0%, #9A3412 50%, #C2410C 100%);
+  --shadow-hover: 0 10px 32px rgba(0, 0, 0, 0.5);
+  --violet-soft: rgba(167, 139, 250, 0.16); --violet-text: #C4B5FD;
+  --teal-soft: rgba(45, 212, 191, 0.14); --teal-text: #5EEAD4;
+  --pink-soft: rgba(244, 114, 182, 0.14); --pink-text: #F9A8D4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -137,6 +150,11 @@
     --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
     --overlay: rgba(0, 0, 0, 0.6);
     --focus: 0 0 0 3px rgba(251, 146, 60, 0.5);
+    --grad-brand: linear-gradient(135deg, #7C2D12 0%, #9A3412 50%, #C2410C 100%);
+    --shadow-hover: 0 10px 32px rgba(0, 0, 0, 0.5);
+    --violet-soft: rgba(167, 139, 250, 0.16); --violet-text: #C4B5FD;
+    --teal-soft: rgba(45, 212, 191, 0.14); --teal-text: #5EEAD4;
+    --pink-soft: rgba(244, 114, 182, 0.14); --pink-text: #F9A8D4;
   --chart-1: #EA580C;
   --chart-grid: #262B35;
   }

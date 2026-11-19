@@ -51,7 +51,7 @@ export default async function customerPage(ctx) {
         ${c.vehicles.length ? html`<div class="list">${c.vehicles.map((v) => html`
           <div class="list-item">
             <span class="kpi-icon">${icon('bike', 18)}</span>
-            <div style="flex:1"><div class="strong">${v.reg_no}</div><div class="small muted">${[v.make, v.model, v.year].filter(Boolean).join(' · ')}${v.last_odometer ? ' · ' + v.last_odometer + ' km' : ''}${v.last_service_on ? ' · ' + date(v.last_service_on) : ''}</div></div>
+            <div style="flex:1"><div><span class="plate">${v.reg_no}</span></div><div class="small muted">${[v.make, v.model, v.year].filter(Boolean).join(' · ')}${v.last_odometer ? ' · ' + v.last_odometer + ' km' : ''}${v.last_service_on ? ' · ' + date(v.last_service_on) : ''}</div></div>
             <button class="btn btn-ghost btn-sm" data-edit-bike="${v.id}">${icon('pencil', 16)}</button>
             <a class="btn btn-secondary btn-sm" href="#/jobs/new?customer=${c.id}&vehicle=${v.id}">${icon('plus', 16)}${t('jobs.job')}</a>
           </div>`)}</div>` : html`<div class="card-body muted">—</div>`}

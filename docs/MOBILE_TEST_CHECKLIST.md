@@ -138,6 +138,8 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Supplier page: "Delete supplier" – a new, unused supplier disappears; one with bills is hidden (message says so).
 - [ ] Purchase bill: "Correct bill" and "Cancel bill" are right under the bill header.
 - [ ] Cash book (Bills tab button, or More → Cash book): add a tea expense in cash – "Should be in the drawer" goes down; a UPI expense does not change it.
+- [ ] New look: the app icon is the orange "TA" badge; login shows the logo on an orange banner; Home starts with an orange banner (greeting, today's sales, jobs in the shop); cards are white with soft shadows; bike numbers look like number plates; bill totals are on an orange band.
+- [ ] The bottom tab bar sits fully above Android's navigation bar (3-button and gesture), the active tab has an orange pill.
 - [ ] Owner Home starts with eight tiles (Purchase bill, Sales bill, Stock, Job card, Supplier payables with the amount, Expenses, Reports, Suppliers); each opens its screen and Back returns to Home (no bounce to the dashboard).
 - [ ] Owner: "Change the list of expense types" in the cash book – add "Cleaning", rename it, hide it; the add-expense sheet shows only the visible types. Front desk does not see the button.
 - [ ] Add an expense with "Take photo": the camera opens; after saving, the expense shows a picture icon that opens the photo full screen. An expense without a photo has a camera icon (camera or gallery).

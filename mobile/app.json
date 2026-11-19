@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
-    "backgroundColor": "#F7F8FA",
+    "backgroundColor": "#F4F6FA",
     "platforms": [
       "android"
     ],
@@ -16,7 +16,8 @@
       "versionCode": 9,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F97316"
+        "backgroundColor": "#EA580C",
+        "backgroundImage": "./assets/adaptive-background.png"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -35,7 +36,7 @@
         {
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
-          "backgroundColor": "#F7F8FA",
+          "backgroundColor": "#F4F6FA",
           "dark": {
             "backgroundColor": "#0F1115"
           }
