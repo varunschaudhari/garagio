@@ -69,6 +69,29 @@ async function drawSalesChart(canvas, series) {
   });
 }
 
+/** The shop's eight big buttons, each shown to people who may use it. */
+const TILES = [
+  { key: 'purchase', ic: 'truck', href: '#/purchases/new', perm: 'purchases', tone: 'info' },
+  { key: 'sale', ic: 'receipt', href: '#/invoices/counter', perm: 'make_bills', tone: 'success' },
+  { key: 'stock', ic: 'boxes', href: '#/parts' },
+  { key: 'job', ic: 'clipboard-list', href: '#/jobs/new', perm: 'jobs' },
+  { key: 'payables', ic: 'hand-coins', href: '#/suppliers?due=1', perm: 'purchases', tone: 'warning' },
+  { key: 'expenses', ic: 'wallet', href: '#/cash', perm: 'cash_book', tone: 'danger' },
+  { key: 'reports', ic: 'chart-column', href: '#/reports', perm: 'reports', tone: 'info' },
+  { key: 'suppliers', ic: 'store', href: '#/suppliers', perm: 'purchases' },
+];
+
+function tiles(subs) {
+  const shown = TILES.filter((x) => !x.perm || can(x.perm));
+  if (shown.length < 2) return '';
+  return html`<nav class="tiles" aria-label="${t('dashboard.tiles')}">${shown.map((x) => html`
+    <a class="card tile" href="${x.href}" data-tile="${x.key}">
+      <span class="kpi-icon ${x.tone || ''}">${icon(x.ic, 24)}</span>
+      <span class="tile-label">${t('dashboard.tile_' + x.key)}</span>
+      ${subs[x.key] ? html`<span class="tile-sub">${subs[x.key]}</span>` : ''}
+    </a>`)}</nav>`;
+}
+
 export default async function dashboard(ctx) {
   ctx.setTitle(t('dashboard.title'));
   setHTML(ctx.el, skeletonRows(4));
@@ -130,6 +153,7 @@ export default async function dashboard(ctx) {
       ${can('jobs') ? html`<a class="btn btn-primary" href="#/jobs/new">${icon('plus')}${t('jobs.new')}</a>` : ''}
     </div>
     <div class="stack-lg">
+      ${tiles({ payables: m ? rupees(m.supplier_payables) : '', stock: s.low_stock_count ? t('dashboard.low_stock') + ': ' + s.low_stock_count : '' })}
       ${moneyCards.length ? html`<div class="kpis">${moneyCards}</div>` : ''}
       ${billCards.length ? html`<div class="kpis">${billCards}</div>` : ''}
       <div class="kpis">${cards}</div>

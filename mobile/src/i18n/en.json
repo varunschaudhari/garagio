@@ -176,7 +176,16 @@
     "bills_count": "{{n}} bills",
     "latest_sales": "Latest sale bills",
     "latest_purchases": "Latest purchase bills",
-    "no_bills": "No bills yet"
+    "no_bills": "No bills yet",
+    "tiles": "Shortcuts",
+    "tile_purchase": "Purchase bill",
+    "tile_sale": "Sales bill",
+    "tile_stock": "Stock",
+    "tile_job": "Job card",
+    "tile_payables": "Supplier payables",
+    "tile_expenses": "Expenses",
+    "tile_reports": "Reports",
+    "tile_suppliers": "Suppliers"
   },
   "parts": {
     "title": "Parts",

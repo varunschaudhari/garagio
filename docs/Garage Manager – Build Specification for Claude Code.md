@@ -476,3 +476,7 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     gallery; JPEG / PNG / WebP up to 6 MB), added while entering it or later, replaced or removed. Files are kept in
     api/storage/bills/ (never served directly; not in the SQL backup, like job photos) and removed with the record and
     on the go-live reset.
+27. **Dashboard tiles (19 Nov 2026):** the dashboard (web and the owner's phone Home) starts with the shop's eight big
+    buttons - Purchase bill (new), Sales bill (counter sale, with or without a customer), Stock, Job card (new), Supplier
+    payables (with the total when money may be seen), Expenses (cash book), Reports, Suppliers - each shown only to people
+    whose ticks allow it; the figures stay below them.

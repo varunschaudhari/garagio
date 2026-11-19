@@ -176,7 +176,16 @@
     "bills_count": "{{n}} बिले",
     "latest_sales": "अलीकडील विक्री बिले",
     "latest_purchases": "अलीकडील खरेदी बिले",
-    "no_bills": "अजून बिल नाही"
+    "no_bills": "अजून बिल नाही",
+    "tiles": "शॉर्टकट",
+    "tile_purchase": "खरेदी बिल",
+    "tile_sale": "विक्री बिल",
+    "tile_stock": "स्टॉक",
+    "tile_job": "जॉब कार्ड",
+    "tile_payables": "सप्लायर देणे",
+    "tile_expenses": "खर्च",
+    "tile_reports": "रिपोर्ट",
+    "tile_suppliers": "सप्लायर"
   },
   "parts": {
     "title": "पार्ट्स",

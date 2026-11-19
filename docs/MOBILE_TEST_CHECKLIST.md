@@ -126,6 +126,7 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Owner: Money tab shows today's sales and customer dues; "Cancel bill" asks for a reason; a counter-sale cancel puts stock back.
 - [ ] Owner → More: New job, Customers, Parts requests, Purchase bills and My profile each open their own page with a back arrow (not the dashboard). Dashboard purchase / low-stock cards open purchase bills / parts.
 - [ ] Cash book (Bills tab button, or More → Cash book): add a tea expense in cash – "Should be in the drawer" goes down; a UPI expense does not change it.
+- [ ] Owner Home starts with eight tiles (Purchase bill, Sales bill, Stock, Job card, Supplier payables with the amount, Expenses, Reports, Suppliers); each opens its screen and Back returns to Home (no bounce to the dashboard).
 - [ ] Owner: "Change the list of expense types" in the cash book – add "Cleaning", rename it, hide it; the add-expense sheet shows only the visible types. Front desk does not see the button.
 - [ ] Add an expense with "Take photo": the camera opens; after saving, the expense shows a picture icon that opens the photo full screen. An expense without a photo has a camera icon (camera or gallery).
 - [ ] Purchase bill: "Photo of the bill" on the new bill form and on the saved bill (take / replace / gallery / remove); the photo opens full screen on tap.

@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { Bike, Boxes, Calendar, CircleCheck, HandCoins, IndianRupee, Inbox, Package, Receipt, ShieldCheck, Truck, TriangleExclamationPoint, Users, Warehouse } from 'lucide-react-native';
+import { Bike, Boxes, Calendar, ChartColumn, CircleCheck, ClipboardList, HandCoins, IndianRupee, Inbox, Package, Receipt, ShieldCheck, Store, Truck, TriangleExclamationPoint, Users, Wallet, Warehouse } from 'lucide-react-native';
+import type { Href } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,16 +12,68 @@ import { nm } from '@/i18n';
 import { useSession, can } from '@/store/session';
 import { hasTab } from '@/tabs';
 import { radius, space, useTheme, type Colors } from '@/theme';
+import type { Perm } from '@/types';
 
-function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; value: string | number; sub?: string; icon: LucideIcon; tone: 'primary' | 'success' | 'danger' | 'info'; onPress?: () => void }) {
+type Tone = 'primary' | 'success' | 'danger' | 'info';
+const TONES: Record<Tone, [keyof Colors, keyof Colors]> = {
+  primary: ['primarySoft', 'primaryText'],
+  success: ['successSoft', 'successText'],
+  danger: ['dangerSoft', 'dangerText'],
+  info: ['infoSoft', 'infoText'],
+};
+
+/** The shop's eight big buttons (its own dashboard notes), each shown to people who may use it. */
+const TILES: { key: string; icon: LucideIcon; to: Href; perm?: Perm; tone: Tone }[] = [
+  { key: 'purchase', icon: Truck, to: '/purchase/new', perm: 'purchases', tone: 'info' },
+  { key: 'sale', icon: Receipt, to: '/invoice/counter', perm: 'make_bills', tone: 'success' },
+  { key: 'stock', icon: Boxes, to: '/parts', tone: 'primary' },
+  { key: 'job', icon: ClipboardList, to: '/job/new', perm: 'jobs', tone: 'primary' },
+  { key: 'payables', icon: HandCoins, to: '/suppliers', perm: 'purchases', tone: 'danger' },
+  { key: 'expenses', icon: Wallet, to: '/cash', perm: 'cash_book', tone: 'danger' },
+  { key: 'reports', icon: ChartColumn, to: '/reports', perm: 'reports', tone: 'info' },
+  { key: 'suppliers', icon: Store, to: '/suppliers', perm: 'purchases', tone: 'primary' },
+];
+
+function Tiles({ subs }: { subs: Record<string, string | undefined> }) {
+  const { t } = useTranslation();
   const { c } = useTheme();
-  const tones: Record<string, [keyof Colors, keyof Colors]> = {
-    primary: ['primarySoft', 'primaryText'],
-    success: ['successSoft', 'successText'],
-    danger: ['dangerSoft', 'dangerText'],
-    info: ['infoSoft', 'infoText'],
-  };
-  const [bg, fg] = tones[tone];
+  const user = useSession((s) => s.user);
+  const shown = TILES.filter((x) => !x.perm || can(user, x.perm));
+  if (shown.length < 2) return null;
+  return (
+    <View style={styles.tiles} accessibilityLabel={t('dashboard.tiles')}>
+      {shown.map((x) => {
+        const [bg, fg] = TONES[x.tone];
+        const Icon = x.icon;
+        return (
+          <Pressable
+            key={x.key}
+            onPress={() => router.push(x.to)}
+            accessibilityRole="button"
+            accessibilityLabel={t(`dashboard.tile_${x.key}`)}
+            style={({ pressed }) => [styles.tile, { backgroundColor: c.surface, borderColor: pressed ? c.primary : c.border }]}
+          >
+            <View style={[styles.tileIcon, { backgroundColor: c[bg] }]}>
+              <Icon size={24} color={c[fg]} />
+            </View>
+            <Txt size="sm" weight="semibold" center numberOfLines={2}>
+              {t(`dashboard.tile_${x.key}`)}
+            </Txt>
+            {subs[x.key] ? (
+              <Txt size="xs" muted center tabular numberOfLines={1}>
+                {subs[x.key]}
+              </Txt>
+            ) : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; value: string | number; sub?: string; icon: LucideIcon; tone: Tone; onPress?: () => void }) {
+  const { c } = useTheme();
+  const [bg, fg] = TONES[tone];
   return (
     <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={onPress ? 'button' : undefined} style={({ pressed }) => [styles.kpi, { backgroundColor: c.surface, borderColor: pressed ? c.primary : c.border }]}>
       <View style={[styles.kpiIcon, { backgroundColor: c[bg] }]}>
@@ -65,6 +118,7 @@ export default function Home() {
           </Txt>
           <Txt muted>{user ? t(`roles.${user.role}`) : ''}</Txt>
         </View>
+        <Tiles subs={{ payables: d.data?.money ? rupees(d.data.money.supplier_payables) : undefined, stock: s?.low_stock_count ? `${t('dashboard.low_stock')}: ${s.low_stock_count}` : undefined }} />
         {d.data?.money ? (
           <View style={styles.grid}>
             <Kpi label={t('dashboard.sales_today')} value={rupees(d.data.money.sales_today)} icon={IndianRupee} tone="success" onPress={() => router.push('/money')} />
@@ -196,6 +250,9 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[3] },
+  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  tile: { flexBasis: '23%', flexGrow: 1, minHeight: 104, borderWidth: 1, borderRadius: radius.card, paddingVertical: space[3], paddingHorizontal: space[1], alignItems: 'center', gap: space[2] },
+  tileIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   kpi: { flexBasis: '47%', flexGrow: 1, borderWidth: 1, borderRadius: radius.card, padding: space[4], gap: space[2] },
   kpiIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   cardHead: { padding: space[4], borderBottomWidth: 1 },

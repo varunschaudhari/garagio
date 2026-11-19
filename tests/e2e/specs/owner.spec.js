@@ -3,6 +3,26 @@ import { login } from './helpers.js';
 
 test.describe.configure({ mode: 'serial' });
 
+test("dashboard tiles: the shop's eight buttons for the owner", async ({ page }) => {
+  await login(page, 'admin');
+  const tiles = page.locator('.tiles .tile');
+  await expect(tiles).toHaveCount(8);
+  await expect(page.locator('.tiles')).toContainText('Purchase bill');
+  await expect(page.locator('[data-tile="payables"]')).toContainText('₹');
+  await page.locator('[data-tile="purchase"]').click();
+  await expect(page.locator('h1')).toHaveText('New purchase bill');
+  await page.goto('/#/');
+  await page.locator('[data-tile="expenses"]').click();
+  await expect(page.getByRole('heading', { name: 'Cash book' })).toBeVisible();
+});
+
+test('dashboard tiles: the store keeper gets only the buttons for their work', async ({ page }) => {
+  await login(page, 'stock');
+  await expect(page.locator('.tiles .tile')).toHaveCount(5);
+  await expect(page.locator('[data-tile="sale"]')).toHaveCount(0);
+  await expect(page.locator('[data-tile="expenses"]')).toHaveCount(0);
+});
+
 test('owner dashboard shows money KPIs and the 30-day sales chart', async ({ page }) => {
   await login(page, 'admin');
   await expect(page.locator('.kpi', { hasText: "Today's sales" })).toBeVisible();
