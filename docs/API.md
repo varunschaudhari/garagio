@@ -42,7 +42,8 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `POST /parts` · `PUT /parts/{id}` | O I | `opening_stock`, `opening_cost`; stock is never typed |
 | `GET /parts/{id}/ledger` | all | movements with `balance_after`, `balanced` flag |
 | `POST /parts/{id}/adjust` | O I | `{qty (±), reason}` – audited |
-| `POST /parts/import` | O I | `{rows:[…]}` upsert by part no. |
+| `POST /parts/import` | O I | `{rows:[{heading: cell}]}` - headings matched loosely (Part No, Part Name, MRP, Rate, Qty, GST, Marathi too); upsert by part no., or by name when there is none (else automatic `P00001…`); returns `created, updated, auto_numbered, errors, unused_columns` |
+| `GET /parts/import-sample` | O I | sample .xlsx (Parts + How to fill) |
 | `GET /parts/labels` | all | HTML QR sheet; `mode=part|rack, location, rack, ids, copies` |
 | `POST /stock-counts` · `GET /stock-counts[/{id}]` | O I | `{location_id, lines:[{part_id, counted}]}` |
 | `GET /reorder` | O I | low stock + unavailable lines (30 days), by last supplier |

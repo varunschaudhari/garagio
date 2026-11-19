@@ -236,10 +236,10 @@
     "labels_copies": "Copies of each",
     "import": "Import",
     "import_title": "Import parts from Excel or CSV",
-    "import_help": "First row must be headings. Columns: part_no, name_en, name_mr, category, brand, compatible_models, unit, hsn, gst_rate, selling_price, last_purchase_price, last_purchase_disc_pct, location, rack, min_stock, opening_stock. Existing part numbers are updated; their stock is not changed.",
-    "import_template": "Download template",
+    "import_help": "Choose your Excel file. The first row must have the headings; Part Name and MRP are enough. Get the sample file to see the format.",
+    "import_template": "Download sample Excel",
     "import_file": "Choose file",
-    "import_rows": "{{n}} rows ready",
+    "import_rows": "{{n}} rows found in {{file}}",
     "import_run": "Import",
     "import_done": "{{created}} created, {{updated}} updated",
     "import_errors": "{{n}} rows have errors",
@@ -249,7 +249,25 @@
     "not_found": "No part matches “{{q}}”",
     "open_requests": "Waiting in requests",
     "inactive_part": "Inactive part",
-    "search_placeholder": "Part no., name, rack…"
+    "search_placeholder": "Part no., name, rack…",
+    "sample": {
+      "required": "Only Part Name and MRP are needed for each part. Leave a box empty when you do not know it.",
+      "part_no": "Part No: the number on the box. If it is empty, the app gives one (P00001, P00002 …).",
+      "mrp": "MRP: the selling price, with GST.",
+      "rate": "Purchase Rate: what you pay the supplier for one piece, without GST, before discount.",
+      "discount": "Discount %: the discount the supplier gives you.",
+      "qty": "Available Qty: pieces in the shop today. Used only for new parts; parts already in the app keep their stock.",
+      "min": "Min Qty: below this the part shows as low stock.",
+      "headings": "Your own sheet works too: headings like Part No, Part Name, MRP, Rate, Qty, GST (in English or Marathi) are understood. Keep the headings in the first row.",
+      "update": "A part number that is already in the app is updated, not added twice.",
+      "file": "Save as Excel (.xlsx), .xls or .csv. Only the first sheet is read; up to 3000 parts at a time."
+    },
+    "import_sample_share": "Get the sample Excel file",
+    "import_short": "Import from Excel",
+    "import_unused": "Columns not used: {{list}}",
+    "import_auto": "{{n}} new parts got an automatic part number.",
+    "import_empty": "No rows in this file. Put the headings in the first row and the parts below.",
+    "import_read_error": "Could not read this file. Save it as .xlsx or .csv and try again."
   },
   "stock": {
     "count_title": "Stock count",
@@ -478,7 +496,8 @@
     "same": "Must be different",
     "future_date": "Date cannot be in the future",
     "before_last_bill": "Cannot be earlier than the last bill",
-    "gstin_required": "Enter the shop GSTIN first"
+    "gstin_required": "Enter the shop GSTIN first",
+    "pick_date": "Choose a date"
   },
   "mobile": {
     "setup_title": "Connect to your shop",
@@ -544,7 +563,8 @@
     "none": "No supplier",
     "against_bill": "Against bill",
     "advance_note": "Paying more than the balance leaves an advance with the supplier.",
-    "contact_person": "Contact person"
+    "contact_person": "Contact person",
+    "gstin_hint": "Optional. The state is read from the GSTIN (another state means IGST on purchases)."
   },
   "purchases": {
     "title": "Purchase bills",

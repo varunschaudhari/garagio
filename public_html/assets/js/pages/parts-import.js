@@ -1,11 +1,9 @@
 import { html, $ } from '../dom.js';
 import { t, errorText } from '../i18n.js';
-import { api } from '../api.js';
+import { api, request } from '../api.js';
 import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { busy } from '../ui/form.js';
-
-const COLUMNS = ['part_no', 'name_en', 'name_mr', 'category', 'brand', 'compatible_models', 'unit', 'hsn', 'gst_rate', 'selling_price', 'last_purchase_price', 'last_purchase_disc_pct', 'location', 'rack', 'min_stock', 'opening_stock'];
 
 let xlsxLoading = null;
 function loadXlsx() {
@@ -20,36 +18,36 @@ function loadXlsx() {
   return xlsxLoading;
 }
 
-function normaliseKey(k) {
-  return String(k).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
-
 async function parseFile(file) {
   const XLSX = await loadXlsx();
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+  // Every filled cell under its own heading; the server matches the headings (Part No, MRP, Rate, Qty …).
   return raw
     .map((r) => {
       const o = {};
       for (const [k, v] of Object.entries(r)) {
-        const key = normaliseKey(k);
-        if (COLUMNS.includes(key) && String(v).trim() !== '') o[key] = String(v).trim();
+        if (!String(k).startsWith('__EMPTY') && String(v).trim() !== '') o[String(k).trim()] = String(v).trim();
       }
       return o;
     })
     .filter((o) => Object.keys(o).length);
 }
 
-function downloadTemplate() {
-  const sample = ['SP-CPR7EA9', 'Spark plug', 'स्पार्क प्लग', 'Engine', 'NGK', 'Splendor, Activa', 'pcs', '85111000', '18', '150', '85', '5', 'Counter', 'A1', '10', '40'];
-  const csv = '﻿' + COLUMNS.join(',') + '\n' + sample.map((v) => (v.includes(',') ? `"${v}"` : v)).join(',') + '\n';
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'parts-template.csv';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+/** The sample Excel file (made by the server, with a "How to fill" sheet). */
+async function downloadTemplate() {
+  try {
+    const res = await request('GET', '/parts/import-sample', { raw: true });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await res.blob());
+    a.download = 'parts-import-sample.xlsx';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (err) {
+    toast(errorText(err), 'error');
+  }
 }
 
 /** Resolves true when something was imported. */
@@ -80,7 +78,7 @@ export function openImport() {
         if (!file) return;
         try {
           rows = await parseFile(file);
-          $('#imp-count', root).textContent = file.name + ' · ' + t('parts.import_rows', { n: rows.length });
+          $('#imp-count', root).textContent = rows.length ? t('parts.import_rows', { n: rows.length, file: file.name }) : t('parts.import_empty');
           runBtn.disabled = !rows.length;
         } catch {
           $('#imp-count', root).textContent = t('errors.file_read');
@@ -96,6 +94,8 @@ export function openImport() {
             const box = $('#imp-result', root);
             box.innerHTML = String(html`
               <div class="banner ${res.errors.length ? 'warning' : 'success'}">${t('parts.import_done', res)}${res.errors.length ? ' · ' + t('parts.import_errors', { n: res.errors.length }) : ''}</div>
+              ${res.auto_numbered ? html`<p class="small muted" style="margin-top:8px">${t('parts.import_auto', { n: res.auto_numbered })}</p>` : ''}
+              ${res.unused_columns?.length ? html`<p class="small" style="margin-top:8px">${t('parts.import_unused', { list: res.unused_columns.join(', ') })}</p>` : ''}
               ${res.errors.length ? html`<div class="table-wrap" style="max-height:240px;margin-top:12px"><table class="table"><thead><tr><th>${t('parts.row')}</th><th>${t('parts.part_no')}</th><th>${t('common.details')}</th></tr></thead>
                 <tbody>${res.errors.map((er) => html`<tr><td>${er.row}</td><td>${er.part_no || '—'}</td><td>${er.error}${er.fields ? ' (' + Object.keys(er.fields).join(', ') + ')' : ''}</td></tr>`)}</tbody></table></div>` : ''}`);
             rows = [];

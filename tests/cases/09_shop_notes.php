@@ -170,3 +170,45 @@ test('bill photos: a photo of the paper bill on an expense and on a purchase bil
     eq(404, get("/purchases/$pid/photo", 'stock')['status']);
     ok(!is_file("$dir/purchases/{$pp['photo']}"));
 });
+
+test('parts import: the shop\'s own sheet headings (Part No, Part Name, MRP, Rate, Qty), no part number, ₹ and %; sample Excel file', function () {
+    $res = status(200, post('/parts/import', ['rows' => [
+        ['Part No' => 'IMPX-1', 'Part Name' => 'Clutch plate', 'MRP' => '₹ 1,250', 'Rate' => '900', 'Disc %' => '10%', 'GST %' => '18', 'Available Qty' => '6', 'Remarks' => 'old stock'],
+        ['Part Name' => 'Side mirror', 'पार्टचे नाव' => '', 'MRP' => '220', 'Qty' => '4'],
+        ['पार्ट नं.' => 'IMPX-2', 'नाव' => 'Chain set', 'मराठी नाव' => 'चेन सेट', 'एमआरपी' => '1450', 'नग' => '2'],
+        ['Part Name' => 'No price'],
+        ['Remarks' => 'just a note'],
+    ]], 'stock'));
+    eq(3, $res['created']);
+    eq(1, $res['auto_numbered']);
+    eq(1, count($res['errors']), 'the row without MRP');
+    eq(5, $res['errors'][0]['row']);
+    eq(['Remarks'], $res['unused_columns'], 'headings we do not use');
+    $p = trows("SELECT * FROM parts WHERE part_no = 'IMPX-1'")[0];
+    eq(1250.0, (float) $p['selling_price']);
+    eq(900.0, (float) $p['last_purchase_price']);
+    eq(10.0, (float) $p['last_purchase_disc_pct']);
+    eq(6.0, (float) $p['current_stock']);
+    $m = trows("SELECT * FROM parts WHERE name_en = 'Side mirror'")[0];
+    ok((bool) preg_match('/^P\d{5}$/', $m['part_no']), 'automatic part number ' . $m['part_no']);
+    eq('चेन सेट', tval("SELECT name_mr FROM parts WHERE part_no = 'IMPX-2'"));
+    // Again without a part number: the same name updates, nothing is added twice.
+    $again = status(200, post('/parts/import', ['rows' => [['Part Name' => 'Side mirror', 'MRP' => '240']]], 'stock'));
+    eq([0, 1, 0], [$again['created'], $again['updated'], $again['auto_numbered']]);
+    eq(240.0, (float) tval("SELECT selling_price FROM parts WHERE name_en = 'Side mirror'"));
+
+    $x = get('/parts/import-sample', 'stock');
+    eq(200, $x['status']);
+    eq("PK\x03\x04", substr($x['body'], 0, 4), 'an Excel (zip) file');
+    ok(str_contains($x['body'], 'Part Name') && str_contains($x['body'], 'MRP') && str_contains($x['body'], 'पार्टचे नाव आणि MRP'), 'headings and the Marathi help');
+    if (class_exists('ZipArchive')) {
+        $f = tempnam(sys_get_temp_dir(), 'gx');
+        file_put_contents($f, $x['body']);
+        $z = new ZipArchive();
+        eq(true, $z->open($f) === true, 'opens as a zip');
+        ok($z->locateName('xl/worksheets/sheet2.xml') !== false, 'two sheets');
+        $z->close();
+        @unlink($f);
+    }
+    eq(403, get('/parts/import-sample', 'desk')['status']);
+});

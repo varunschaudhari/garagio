@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { PackageSearch, ScanLine, Search, TriangleExclamationPoint, X } from 'lucide-react-native';
+import { FileSpreadsheet, PackageSearch, Plus, ScanLine, Search, TriangleExclamationPoint, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
@@ -7,8 +7,9 @@ import { useParts } from '@/api/queries';
 import { qty } from '@/format';
 import { nm, nmAlt } from '@/i18n';
 import { radius, size, space, touch, useTheme } from '@/theme';
+import { can, useSession } from '@/store/session';
 import type { Part } from '@/types';
-import { Chip, EmptyState, IconButton, Loading, OfflineBanner, Txt } from './ui';
+import { Button, Chip, EmptyState, IconButton, Loading, OfflineBanner, Txt } from './ui';
 
 export function PartRow({ part, onPress }: { part: Part; onPress: () => void }) {
   const { c } = useTheme();
@@ -53,6 +54,7 @@ export function PartsList({ location, rack, header }: { location?: number; rack?
   const [text, setText] = useState('');
   const [q, setQ] = useState('');
   const [low, setLow] = useState(false);
+  const canEdit = can(useSession((s) => s.user), 'edit_parts');
 
   useEffect(() => {
     const timer = setTimeout(() => setQ(text.trim()), 250);
@@ -101,6 +103,12 @@ export function PartsList({ location, rack, header }: { location?: number; rack?
           </Txt>
         ) : null}
       </View>
+      {canEdit && !rack ? (
+        <View style={styles.actions}>
+          <Button title={t('parts.new')} icon={Plus} variant="secondary" small onPress={() => router.push('/part/edit')} needsOnline style={{ flex: 1 }} />
+          <Button title={t('parts.import_short')} icon={FileSpreadsheet} variant="secondary" small onPress={() => router.push('/parts-import')} needsOnline style={{ flex: 1 }} />
+        </View>
+      ) : null}
       {header}
       {parts.isPending ? (
         <Loading />
@@ -125,5 +133,6 @@ const styles = StyleSheet.create({
   search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2], borderWidth: 1, borderRadius: radius.input, paddingLeft: space[3], minHeight: touch.button },
   searchInput: { flex: 1, fontSize: size.md, paddingVertical: space[2] },
   filters: { flexDirection: 'row', alignItems: 'center', gap: space[2], paddingHorizontal: space[4], paddingTop: space[3] },
+  actions: { flexDirection: 'row', gap: space[2], paddingHorizontal: space[4], paddingBottom: space[2] },
   filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.chip, paddingHorizontal: space[3], minHeight: 40 },
 });

@@ -720,6 +720,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('007_purchase_mrp.sql',
 INSERT INTO schema_migrations (name, applied_at) VALUES ('008_expense_categories.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('009_next_service.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('010_bill_photos.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('011_shop_phone.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

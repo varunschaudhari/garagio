@@ -8,7 +8,9 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "backgroundColor": "#F7F8FA",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "android": {
       "package": "in.trimurtiauto.garage",
       "versionCode": 6,
@@ -16,7 +18,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F97316"
       },
-      "permissions": ["android.permission.CAMERA", "android.permission.VIBRATE"],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.VIBRATE"
+      ],
       "softwareKeyboardLayoutMode": "pan"
     },
     "plugins": [
@@ -31,7 +36,9 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "backgroundColor": "#F7F8FA",
-          "dark": { "backgroundColor": "#0F1115" }
+          "dark": {
+            "backgroundColor": "#0F1115"
+          }
         }
       ],
       [
@@ -46,7 +53,8 @@
         {
           "color": "#F97316"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "defaultServer": "https://trimurti.foreverstory.in"

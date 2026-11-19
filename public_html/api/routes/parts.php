@@ -184,6 +184,95 @@ route('GET', '/parts/labels', function () {
     return html_response((string) ob_get_clean());
 });
 
+/*
+ * Parts import from the shop's own Excel sheet. Headings are matched loosely (English or Marathi, any case,
+ * spaces or dots): "Part No", "Part Name", "MRP", "Rate", "Qty" … all work. Numbers may carry ₹, %, commas.
+ */
+const PART_IMPORT_ALIASES = [
+    'part_no' => ['part_no', 'part_number', 'partno', 'part_code', 'code', 'item_code', 'sku', 'पार्ट_नं', 'पार्ट_नंबर', 'पार्ट_क्रमांक', 'पार्ट_क्र'],
+    'name_en' => ['name_en', 'name', 'part_name', 'item_name', 'item', 'description', 'product', 'product_name', 'spare_part', 'spare_part_name', 'english_name', 'name_english', 'name_in_english', 'पार्टचे_नाव', 'पार्ट_नाव', 'नाव'],
+    'name_mr' => ['name_mr', 'marathi_name', 'name_marathi', 'name_in_marathi', 'marathi', 'मराठी_नाव', 'मराठी'],
+    'selling_price' => ['selling_price', 'mrp', 'sale_price', 'sales_price', 'sell_price', 'selling_rate', 'sale_rate', 'price', 'एमआरपी', 'विक्री_किंमत', 'किंमत'],
+    'last_purchase_price' => ['last_purchase_price', 'purchase_price', 'purchase_rate', 'purchase_cost', 'rate', 'cost', 'cost_price', 'buying_price', 'खरेदी_किंमत', 'खरेदी_दर', 'दर'],
+    'last_purchase_disc_pct' => ['last_purchase_disc_pct', 'disc', 'discount', 'disc_pct', 'discount_pct', 'discount_percent', 'purchase_disc', 'purchase_discount', 'सूट'],
+    'gst_rate' => ['gst_rate', 'gst', 'gst_pct', 'gst_percent', 'tax', 'tax_rate', 'जीएसटी'],
+    'opening_stock' => ['opening_stock', 'qty', 'quantity', 'stock', 'available_qty', 'available_quantity', 'available_stock', 'current_stock', 'closing_stock', 'opening_qty', 'नग', 'स्टॉक', 'उपलब्ध_नग'],
+    'opening_cost' => ['opening_cost'],
+    'min_stock' => ['min_stock', 'minimum_stock', 'min_qty', 'minimum_qty', 'reorder_level', 'reorder_qty', 'किमान_स्टॉक', 'किमान_नग'],
+    'category' => ['category', 'group', 'item_group', 'प्रकार'],
+    'brand' => ['brand', 'company', 'make', 'कंपनी'],
+    'compatible_models' => ['compatible_models', 'models', 'model', 'bike_models', 'bike_model', 'vehicle', 'vehicles', 'fits', 'गाडी'],
+    'unit' => ['unit', 'uom', 'units'],
+    'hsn' => ['hsn', 'hsn_code', 'hsn_sac'],
+    'location' => ['location', 'store', 'godown', 'जागा'],
+    'rack' => ['rack', 'rack_no', 'shelf', 'bin', 'रॅक'],
+];
+const PART_IMPORT_NUMBERS = ['selling_price', 'last_purchase_price', 'last_purchase_disc_pct', 'gst_rate', 'opening_stock', 'opening_cost', 'min_stock'];
+
+/** "Part No." → "part_no", "पार्ट नं." → "पार्ट_नं" */
+function import_heading(string $h): string
+{
+    return trim((string) preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '_', mb_strtolower(trim($h))), '_');
+}
+
+/** One sheet row (heading => cell) → part fields; headings that match nothing are collected in $unused. */
+function import_part_row(array $raw, array &$unused): array
+{
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        foreach (PART_IMPORT_ALIASES as $field => $names) {
+            foreach ($names as $n) {
+                $map[$n] = $field;
+            }
+        }
+    }
+    $out = [];
+    foreach ($raw as $heading => $value) {
+        $field = $map[import_heading((string) $heading)] ?? null;
+        if ($field === null) {
+            $unused[(string) $heading] = true;
+            continue;
+        }
+        $v = is_scalar($value) ? trim((string) $value) : '';
+        if (in_array($field, PART_IMPORT_NUMBERS, true)) {
+            $v = (string) preg_replace('/[^0-9.\-]/', '', (string) preg_replace('/rs\.?/i', '', $v));
+        }
+        if ($v !== '' && !isset($out[$field])) {
+            $out[$field] = $v;
+        }
+    }
+    return $out;
+}
+
+/** Next free automatic part number: P00001, P00002 … */
+function next_auto_part_no(): string
+{
+    $n = (int) val('SELECT COUNT(*) FROM parts') + 1;
+    do {
+        $no = sprintf('P%05d', $n++);
+    } while (val('SELECT id FROM parts WHERE part_no = ?', [$no]));
+    return $no;
+}
+
+/* A sample sheet to fill in, with a "How to fill" page in English and Marathi. */
+route('GET', '/parts/import-sample', function () {
+    $rows = [
+        ['Part No', 'Part Name', 'Marathi Name', 'MRP', 'Purchase Rate', 'Discount %', 'GST %', 'Available Qty', 'Min Qty', 'Category', 'Brand', 'Bike Models', 'Unit', 'HSN', 'Location', 'Rack'],
+        ['001', 'Brake lines', 'ब्रेक लाइन्स', 185, 156.78, 22, 18, 10, 2, 'Brakes', '', 'Splendor, Passion', 'pcs', '', 'Counter', 'A1'],
+        ['SP-CPR7EA9', 'Spark plug', 'स्पार्क प्लग', 150, 85, 5, 18, 40, 10, 'Engine', 'NGK', 'Splendor, Activa', 'pcs', '85111000', 'Counter', 'A2'],
+        ['', 'Engine oil 1 litre', 'इंजिन ऑईल 1 लिटर', 420, 330, 0, 18, 24, 6, 'Oil', 'Castrol', '', 'pcs', '27101980', 'Store room', 'B1'],
+    ];
+    $help = [['English', 'मराठी']];
+    foreach (['required', 'part_no', 'mrp', 'rate', 'discount', 'qty', 'min', 'headings', 'update', 'file'] as $k) {
+        $help[] = [tr("parts.sample.$k", 'en'), tr("parts.sample.$k", 'mr')];
+    }
+    return new RawResponse(xlsx_build(['Parts' => $rows, 'How to fill' => $help]), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 200, [
+        'Content-Disposition' => 'attachment; filename="parts-import-sample.xlsx"',
+        'Cache-Control' => 'no-store',
+    ]);
+}, ['perm' => 'edit_parts']);
+
 route('GET', '/parts/{id}', function ($p) {
     $part = part_by_id((int) $p['id']);
     $part['open_request_qty'] = (float) val(
@@ -343,14 +432,29 @@ route('POST', '/parts/import', function () {
 
     $created = 0;
     $updated = 0;
+    $autoNumbered = 0;
     $errors = [];
-    foreach ($rowsIn as $i => $r) {
+    $unused = [];
+    foreach ($rowsIn as $i => $raw) {
         $rowNo = $i + 2; // +1 for header, +1 for 1-based
+        $r = is_array($raw) ? import_part_row($raw, $unused) : null;
         try {
-            if (!is_array($r)) {
+            if ($r === null) {
                 throw new ApiError(422, 'bad_row', 'Row is not an object');
             }
-            tx(function () use ($r, $findOrCreate, &$catCache, &$locCache, &$created, &$updated) {
+            if (!$r) {
+                continue; // nothing we know in this row (an empty or notes row)
+            }
+            tx(function () use (&$r, $findOrCreate, &$catCache, &$locCache, &$created, &$updated, &$autoNumbered) {
+                if (empty($r['name_en']) && !empty($r['name_mr'])) {
+                    $r['name_en'] = $r['name_mr'];
+                }
+                if (empty($r['part_no'])) {
+                    // No part number in the sheet: the same name updates that part, otherwise a new number.
+                    $same = !empty($r['name_en']) ? val('SELECT part_no FROM parts WHERE LOWER(name_en) = ? LIMIT 1', [mb_strtolower((string) $r['name_en'])]) : null;
+                    $auto = !$same;
+                    $r['part_no'] = $same ?: next_auto_part_no();
+                }
                 if (!empty($r['category'])) {
                     $r['category_id'] = $findOrCreate('categories', (string) $r['category'], $catCache);
                 }
@@ -376,6 +480,9 @@ route('POST', '/parts/import', function () {
                         stock_move($id, $opening, 'opening', 'part', $id, (float) $cost, 'Opening stock (import)');
                     }
                     $created++;
+                    if (!empty($auto)) {
+                        $autoNumbered++;
+                    }
                 }
             });
         } catch (ApiError $e) {
@@ -389,5 +496,5 @@ route('POST', '/parts/import', function () {
         }
     }
     audit('parts_import', 'part', null, null, ['created' => $created, 'updated' => $updated, 'errors' => count($errors)]);
-    return ['created' => $created, 'updated' => $updated, 'errors' => $errors];
+    return ['created' => $created, 'updated' => $updated, 'auto_numbered' => $autoNumbered, 'errors' => $errors, 'unused_columns' => array_keys($unused)];
 }, ['perm' => 'edit_parts']);

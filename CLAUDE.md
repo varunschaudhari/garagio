@@ -59,6 +59,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
   the go-live ledger wipe is `stock_restart_ledger()`, also in `lib/stock.php`.
 - Line discounts go through `clean_discounts()`; unused customer money is applied with `apply_customer_advance()`.
 - Return payloads through `strip_cost()` wherever cost fields (COST_FIELDS) may appear.
+- Excel downloads: `xlsx_build(['Sheet' => rows])` (lib/xlsx.php, no extension needed). Parts import headings:
+  `PART_IMPORT_ALIASES` in routes/parts.php.
 - Uploaded photos: `save_uploaded_image($dir)` / `image_response($file)` (lib/util.php), files under `api/storage/`
   (photos, bills, scans), never served directly.
 - `audit()` for discounts, invoice cancels, stock adjustments, credit changes, user changes.
@@ -79,6 +81,9 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Data via TanStack Query hooks in `src/api/queries.ts`; session in zustand `src/store/session.ts` (token in SecureStore).
 - UI kit in `src/components/ui.tsx`: `Txt` picks Inter or Noto Sans Devanagari by language; `Button needsOnline` disables while offline.
 - Import fonts by subpath (`@expo-google-fonts/inter/400Regular`), never the package root (bundles every weight).
+- Dates: `DateField` (`src/components/dateField.tsx`, calendar, ISO in/out, `isoDay()`); never typed dates and never
+  `toISOString()` for a day (midnight in India is still the previous day in UTC).
+- Forms show API field errors with `fieldErrors()` (`src/fieldErrors.ts`).
 - RN 0.88: TextInput refs are `TextInputInstance`. lucide-react-native 1.x renamed icons (e.g. `TriangleExclamationPoint`).
 - No device or emulator on the dev machine: manual checklist in `docs/MOBILE_TEST_CHECKLIST.md`.
 

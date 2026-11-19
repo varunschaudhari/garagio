@@ -77,6 +77,8 @@ export default function RootLayout() {
             <Stack.Screen name="password" options={{ title: t('auth.change_password') }} />
             <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal', headerShown: false }} />
             <Stack.Screen name="part/[id]" options={{ title: t('parts.part') }} />
+            <Stack.Screen name="part/edit" options={{ title: t('parts.new') }} />
+            <Stack.Screen name="parts-import" options={{ title: t('parts.import_title') }} />
             <Stack.Screen name="parts" options={{ title: t('parts.title') }} />
             <Stack.Screen name="count" options={{ title: t('stock.count_title') }} />
             <Stack.Screen name="purchase/index" options={{ title: t('purchases.title') }} />

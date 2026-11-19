@@ -480,3 +480,11 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     buttons - Purchase bill (new), Sales bill (counter sale, with or without a customer), Stock, Job card (new), Supplier
     payables (with the total when money may be seen), Expenses (cash book), Reports, Suppliers - each shown only to people
     whose ticks allow it; the figures stay below them.
+28. **Shop requests of 19 Nov 2026 (phone):** suppliers and parts can be added and edited on the phone (purchases /
+    edit_parts ticks), also "New supplier" from the purchase bill's supplier search. Dates on the phone are picked from
+    the calendar, never typed (the typed purchase date failed for everyone: the old check turned the day into UTC, where
+    midnight in India is still the previous day). Parts import from Excel on the phone and the web; headings are matched loosely on the
+    server (English or Marathi: Part No, Part Name, MRP, Rate, Qty, GST …; ₹ % and commas allowed), a missing part
+    number gets an automatic P00001… (or updates the part with the same name), and GET /parts/import-sample gives a
+    sample .xlsx with a "How to fill" sheet. The shop phone printed on bills became 8669116229 (migration 011, only if it
+    was still the old number).

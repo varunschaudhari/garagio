@@ -54,3 +54,20 @@ test('owner edits shop settings', async ({ page }) => {
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.locator('.toast')).toContainText('Saved');
 });
+
+test('download the sample Excel and import it back: the shop\'s headings are understood', async ({ page }) => {
+  await page.goto('/#/parts');
+  await page.getByRole('button', { name: 'Import' }).click();
+  const modal = page.locator('.modal');
+  await expect(modal).toContainText('Part Name and MRP are enough');
+  const [download] = await Promise.all([page.waitForEvent('download'), modal.getByRole('button', { name: 'Download sample Excel' }).click()]);
+  expect(download.suggestedFilename()).toBe('parts-import-sample.xlsx');
+  await modal.locator('#imp-file').setInputFiles(await download.path());
+  await expect(modal.locator('#imp-count')).toContainText('3 rows found in');
+  await modal.getByRole('button', { name: 'Import', exact: true }).click();
+  await expect(modal.locator('#imp-result')).toContainText('2 created, 1 updated');
+  await expect(modal.locator('#imp-result')).toContainText('1 new parts got an automatic part number');
+  await modal.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('searchbox').fill('Brake lines');
+  await expect(page.getByText('Brake lines').first()).toBeVisible();
+});

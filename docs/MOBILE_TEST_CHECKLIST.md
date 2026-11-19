@@ -34,6 +34,8 @@ Marathi and English** unless the line says otherwise. Automated checks (`npm run
 - [ ] Front desk: Home · Stock · Me.  Mechanic: Stock · Me.
 
 ### Stock lookup
+- [ ] Stock (owner / store keeper): "New part" opens the form; MRP and part name required; GST, location and category as chips; saving opens the new part. "Edit part" on a part changes it.
+- [ ] "Import from Excel": "Get the sample Excel file" opens the share sheet with parts-import-sample.xlsx; choosing that file shows "3 rows found"; Import shows created / updated and the automatic part number note. An .xls and a .csv also work; a photo or PDF shows "Could not read this file".
 - [ ] Search finds parts by English name, Marathi name, part no. and rack.
 - [ ] Low-stock chip filters; low parts show the red "Low" chip.
 - [ ] Pull to refresh works on every list.
@@ -67,7 +69,9 @@ Marathi and English** unless the line says otherwise. Automated checks (`npm run
 ## Phase 2 – suppliers and purchases
 
 - [ ] Inventory manager has a Purchases tab; the owner reaches Purchases, Suppliers and Reorder from More.
-- [ ] New purchase bill: pick a supplier from the search sheet; supplier balance shows under the name.
+- [ ] New purchase bill: pick a supplier from the search sheet; supplier balance shows under the name. "New supplier" in the search sheet adds one and picks it.
+- [ ] Bill date: tapping opens the calendar (no future days); today is filled in; no "invalid date".
+- [ ] Suppliers screen: "New supplier"; a supplier's page has "Edit supplier" (contact person, phone, GSTIN, opening balance, address).
 - [ ] Add parts from the search sheet and by scanning a QR label; MRP fills from the selling price, discount from the last purchase.
 - [ ] "Prices on this bill" = MRP: 10 × MRP 185, 22% → line total ₹1,443.00; the rate follows the MRP until you change it. Switch to "Without GST": the rate becomes the last purchase price and GST is added on top.
 - [ ] The supplier's contact person and phone show under the supplier name and on the saved bill.

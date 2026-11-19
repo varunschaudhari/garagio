@@ -15,7 +15,7 @@ Settings → **Shop** and **Billing & GST**. Copy the details exactly as on the 
 |---|---|---|
 | Shop name (English / Marathi) | Legal or trade name as registered | Every bill, estimate, WhatsApp message |
 | Address (English / Marathi) | Already filled in: *Beside Ambedkar Statue, Dharangaon - 425105* / *आंबेडकर पुतळ्याशेजारी, धरणगाव - 425105* – check it | Bills, receipts, estimates |
-| Phone | Already filled in: 8956252573 – check it | Bills, receipts, estimate page "Call me" |
+| Phone | Already filled in: 8669116229 – check it | Bills, receipts, estimate page "Call me" |
 | GST registered | **Off for now** – the shop is not registered yet. Bills are plain bills without GST (`BIL/26-27/00001`). See "GST registration day" below | Every bill |
 | GSTIN | Empty until registration; 15 characters, e.g. `27ABCDE1234F1Z5` | Every tax invoice |
 | State | Maharashtra (27) | Decides CGST + SGST or IGST |

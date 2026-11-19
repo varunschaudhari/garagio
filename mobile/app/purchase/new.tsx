@@ -7,7 +7,9 @@ import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TextInput, Vie
 import { api, ApiError } from '@/api/client';
 import { useSavePurchase } from '@/api/queries';
 import { BillPhotoPicker, uploadBillPhoto } from '@/components/billPhoto';
+import { DateField, isoDay } from '@/components/dateField';
 import { PartPicker, SupplierPicker } from '@/components/pickers';
+import { SupplierFormSheet } from '@/components/supplierForm';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Field, IconButton, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { money, qty } from '@/format';
@@ -38,21 +40,6 @@ function startPrice(l: Line, mode: PriceMode): Line {
 
 let lineSeq = 0;
 
-function todayDMY() {
-  const d = new Date();
-  const p = (x: number) => String(x).padStart(2, '0');
-  return `${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}`;
-}
-
-/** "13-11-2026" → "2026-11-13" (null if not a real date) */
-function dmyToIso(s: string): string | null {
-  const m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(s.trim());
-  if (!m) return null;
-  const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-  const d = new Date(iso + 'T00:00:00');
-  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso ? null : iso;
-}
-
 const num = (s: string) => Number(s.replace(',', '.'));
 
 function SmallInput({ label, value, onChange, invalid }: { label: string; value: string; onChange: (v: string) => void; invalid?: boolean }) {
@@ -82,13 +69,15 @@ export default function NewPurchase() {
   const save = useSavePurchase();
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [billNo, setBillNo] = useState('');
-  const [billDate, setBillDate] = useState(todayDMY());
+  const today = isoDay(new Date());
+  const [billDate, setBillDate] = useState(today);
   const [mode, setMode] = useState<PayMode>('credit');
   const [priceMode, setPriceMode] = useState<PriceMode>('mrp');
   const [photo, setPhoto] = useState<string | null>(null);
   const [other, setOther] = useState('');
   const [lines, setLines] = useState<Line[]>([]);
   const [pickSupplier, setPickSupplier] = useState(false);
+  const [newSupplier, setNewSupplier] = useState(false);
   const [pickPart, setPickPart] = useState(false);
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [badLines, setBadLines] = useState<Set<number>>(new Set());
@@ -107,7 +96,7 @@ export default function NewPurchase() {
       setOld(p);
       setSupplier(s);
       setBillNo(p.bill_no);
-      setBillDate(p.bill_date.split('-').reverse().join('-'));
+      setBillDate(p.bill_date);
       setMode(p.payment_mode);
       setPriceMode(p.price_mode);
       setOther(Number(p.other_charges) ? String(p.other_charges) : '');
@@ -208,10 +197,9 @@ export default function NewPurchase() {
 
   const submit = async () => {
     const e: Record<string, string> = {};
-    const iso = dmyToIso(billDate);
+    const iso = billDate;
     if (!supplier) e.supplier = t('fields.required');
     if (!billNo.trim()) e.bill_no = t('fields.required');
-    if (!iso) e.bill_date = t('fields.invalid_date');
     if (!valid.length) e.items = t('purchases.no_lines');
     setErrs(e);
     if (Object.keys(e).length) return;
@@ -277,7 +265,7 @@ export default function NewPurchase() {
             ) : null}
           </View>
           <Field label={t('purchases.bill_no')} value={billNo} onChangeText={setBillNo} autoCapitalize="characters" error={errs.bill_no} required />
-          <Field label={t('purchases.bill_date')} value={billDate} onChangeText={setBillDate} keyboardType="numbers-and-punctuation" hint="DD-MM-YYYY" error={errs.bill_date} />
+          <DateField label={t('purchases.bill_date')} value={billDate} onChange={(v) => v && setBillDate(v)} max={today} required error={errs.bill_date} />
           <View style={{ gap: 6 }}>
             <Txt size="sm" weight="semibold">
               {t('purchases.payment_mode')}
@@ -391,7 +379,21 @@ export default function NewPurchase() {
           setPickSupplier(false);
           setErrs((e) => ({ ...e, supplier: '' }));
         }}
+        onNew={() => {
+          setPickSupplier(false);
+          setNewSupplier(true);
+        }}
       />
+      {newSupplier ? (
+        <SupplierFormSheet
+          onClose={() => setNewSupplier(false)}
+          onSaved={(s) => {
+            setSupplier(s);
+            setNewSupplier(false);
+            setErrs((e) => ({ ...e, supplier: '' }));
+          }}
+        />
+      ) : null}
       <PartPicker
         visible={pickPart}
         onClose={() => setPickPart(false)}

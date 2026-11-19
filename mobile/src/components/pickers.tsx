@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react-native';
+import { Plus, Search } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -39,7 +39,7 @@ function useDebounced(value: string, ms = 250) {
   return v;
 }
 
-export function SupplierPicker({ visible, onClose, onPick }: { visible: boolean; onClose: () => void; onPick: (s: Supplier) => void }) {
+export function SupplierPicker({ visible, onClose, onPick, onNew }: { visible: boolean; onClose: () => void; onPick: (s: Supplier) => void; onNew?: () => void }) {
   const { t } = useTranslation();
   const { c } = useTheme();
   const [text, setText] = useState('');
@@ -49,6 +49,7 @@ export function SupplierPicker({ visible, onClose, onPick }: { visible: boolean;
     <Sheet visible={visible} onClose={onClose} title={t('purchases.supplier')} full>
       <View style={{ paddingHorizontal: space[4], paddingBottom: space[2] }}>
         <SearchBox value={text} onChange={setText} placeholder={t('purchases.choose_supplier')} />
+        {onNew ? <Button title={t('suppliers.new')} icon={Plus} variant="ghost" small onPress={onNew} style={{ marginTop: space[2] }} /> : null}
       </View>
       {list.isPending ? (
         <Loading />

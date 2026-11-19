@@ -1,5 +1,5 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { ArrowUpDown, Boxes, IndianRupee, MapPin, Minus, Plus, Tag } from 'lucide-react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { ArrowUpDown, Boxes, IndianRupee, MapPin, Minus, Pencil, Plus, Tag } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -191,6 +191,7 @@ export default function PartDetail() {
         </View>
 
         {canAdjust ? <Button title={t('parts.adjust')} icon={ArrowUpDown} variant="secondary" onPress={() => setAdjusting(true)} needsOnline /> : null}
+        {canAdjust ? <Button title={t('parts.edit')} icon={Pencil} variant="ghost" onPress={() => router.push({ pathname: '/part/edit', params: { id: String(p.id) } })} needsOnline /> : null}
 
         <Card style={{ gap: space[2] }}>
           <Txt muted size="sm">

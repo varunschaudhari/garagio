@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { Search, Store } from 'lucide-react-native';
+import { Plus, Search, Store } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { useSuppliers } from '@/api/queries';
-import { EmptyState, Loading, OfflineBanner, Txt } from '@/components/ui';
+import { SupplierFormSheet } from '@/components/supplierForm';
+import { Button, EmptyState, Loading, OfflineBanner, Txt } from '@/components/ui';
 import { money } from '@/format';
 import { radius, size, space, touch, useTheme } from '@/theme';
 
@@ -18,6 +19,7 @@ export default function Suppliers() {
     return () => clearTimeout(timer);
   }, [text]);
   const list = useSuppliers(q);
+  const [adding, setAdding] = useState(false);
 
   return (
     <View style={{ flex: 1 }}>
@@ -34,6 +36,7 @@ export default function Suppliers() {
             accessibilityLabel={t('common.search')}
           />
         </View>
+        <Button title={t('suppliers.new')} icon={Plus} variant="secondary" small onPress={() => setAdding(true)} needsOnline />
         {list.data ? (
           <Txt size="sm" muted>
             {t('suppliers.payable_total')}: <Txt size="sm" weight="bold" color="dangerText">{money(list.data.payable_total)}</Txt>
@@ -60,7 +63,7 @@ export default function Suppliers() {
                   {item.name}
                 </Txt>
                 <Txt size="sm" muted numberOfLines={1}>
-                  {item.phone ?? ''} {item.gstin ?? ''}
+                  {[item.contact_person, item.phone, item.gstin].filter(Boolean).join(' · ')}
                 </Txt>
               </View>
               <Txt weight="bold" tabular color={item.balance > 0 ? 'dangerText' : 'muted'}>
@@ -70,6 +73,15 @@ export default function Suppliers() {
           )}
         />
       )}
+      {adding ? (
+        <SupplierFormSheet
+          onClose={() => setAdding(false)}
+          onSaved={(s) => {
+            setAdding(false);
+            router.push(`/supplier/${s.id}`);
+          }}
+        />
+      ) : null}
     </View>
   );
 }
