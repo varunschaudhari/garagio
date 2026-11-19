@@ -25,6 +25,7 @@ function invoice_row(int $id): array
     }
     foreach ($inv['items'] as &$it) {
         $it['returned_qty'] = r2($back[(int) $it['id']] ?? 0);
+        $it['rate'] = line_rate($it);
     }
     unset($it);
     $inv['returns'] = rows('SELECT r.id, r.return_no, r.return_date, r.total, r.refund_amount, r.refund_mode, r.reason, u.name AS user_name FROM sale_returns r LEFT JOIN users u ON u.id = r.user_id WHERE r.invoice_id = ? ORDER BY r.id', [$id]);
@@ -353,6 +354,7 @@ route('POST', '/invoices/preview', function () {
         return ['lines' => [], 'totals' => null];
     }
     $bill = sale_bill($lines, is_interstate($gstin ?: null), (float) $in['bill_disc_pct']);
+    $bill['lines'] = array_map(static fn ($l) => $l + ['rate' => line_rate($l)], $bill['lines']);
     return strip_cost(['lines' => $bill['lines'], 'totals' => $bill['totals'], 'by_rate' => $bill['by_rate']]);
 }, ['perm' => 'make_bills']);
 

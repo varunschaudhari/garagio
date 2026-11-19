@@ -104,11 +104,11 @@ export default async function invoicePage(ctx) {
         <div class="card">
           <div class="card-head"><h3>${t('billing.items')}</h3>${draft && !owner ? html`<span class="small muted">${t('billing.owner_discount')}</span>` : ''}</div>
           <div class="table-wrap"><table class="table">
-            <thead><tr><th>${t('inv.description')}</th><th class="num">${t('inv.qty')}</th><th class="num">${t('inv.rate')}</th><th class="num">${t('inv.disc')}</th><th class="num">${t('inv.gst')}</th><th class="num">${t('inv.amount')}</th></tr></thead>
+            <thead><tr><th>${t('inv.description')}</th><th class="num">${t('inv.qty')}</th><th class="num">${t('inv.mrp')}</th><th class="num">${t('inv.disc')}</th><th class="num">${t('inv.rate')}</th><th class="num">${t('inv.gst')}</th><th class="num">${t('inv.amount')}</th></tr></thead>
             <tbody>${i.items.map((it) => html`<tr>
               <td><div class="t-title">${it.description_en}${Number(it.returned_qty) ? html` <span class="chip warning">${t('billing.returned_qty', { qty: qty(it.returned_qty) })}</span>` : ''}</div><div class="t-sub">${it.part_no ? html`<strong>${it.part_no}</strong> · ` : ''}${it.description_mr || ''}${it.hsn ? ' · ' + it.hsn : ''}</div></td>
-              <td class="num">${qty(it.qty)}</td><td class="num">${money(it.unit_price)}</td>
-              <td class="num">${lineDisc(it)}</td><td class="num">${qty(it.gst_rate)}%</td><td class="num strong">${money(it.line_total)}</td>
+              <td class="num">${qty(it.qty)}</td><td class="num">${it.item_type === 'part' ? money(it.unit_price) : ''}</td>
+              <td class="num">${lineDisc(it)}</td><td class="num">${money(it.rate)}</td><td class="num">${qty(it.gst_rate)}%</td><td class="num strong">${money(it.line_total)}</td>
             </tr>`)}</tbody>
           </table></div>
         </div>

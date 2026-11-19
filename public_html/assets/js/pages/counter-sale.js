@@ -50,12 +50,13 @@ export default async function counterSale(ctx) {
 
   const drawLines = () => {
     setHTML(linesBox, st.lines.length
-      ? html`<div class="table-wrap"><table class="table"><thead><tr><th>${t('parts.part')}</th><th class="num">${t('common.qty')}</th><th class="num">${t('inv.rate')}</th>${owner ? html`<th class="num">${t('inv.disc')}</th>` : ''}<th class="num">${t('inv.amount')}</th><th></th></tr></thead>
+      ? html`<div class="table-wrap"><table class="table"><thead><tr><th>${t('parts.part')}</th><th class="num">${t('common.qty')}</th><th class="num">${t('inv.mrp')}</th>${owner ? html`<th class="num">${t('inv.disc')}</th>` : ''}<th class="num">${t('inv.rate')}</th><th class="num">${t('inv.amount')}</th><th></th></tr></thead>
         <tbody>${st.lines.map((l, i) => html`<tr>
           <td><div class="t-title">${nm(l.part)}</div><div class="t-sub">${l.part.part_no} · ${t('purchases.in_stock')} ${qty(l.part.current_stock)}${l.part.rack ? ' · ' + l.part.rack : ''}</div></td>
           <td class="num"><input class="input num" data-q="${i}" value="${qty(l.qty)}" inputmode="decimal" style="width:70px" aria-label="${t('common.qty')}"></td>
           <td class="num">${money(l.part.selling_price)}</td>
           ${owner ? html`<td class="num"><input class="input num" data-d="${i}" value="${l.disc || ''}" inputmode="decimal" style="width:64px" aria-label="${t('inv.disc')}"></td>` : ''}
+          <td class="num" data-rate="${i}"></td>
           <td class="num strong" data-amt="${i}"></td>
           <td class="actions"><button type="button" class="btn btn-ghost btn-icon btn-sm" data-rm="${i}" aria-label="${t('common.delete')}">${icon('trash-2', 16)}</button></td>
         </tr>`)}</tbody></table></div>`
@@ -79,6 +80,8 @@ export default async function counterSale(ctx) {
       res.lines.forEach((l, i) => {
         const cell = linesBox.querySelector(`[data-amt="${i}"]`);
         if (cell) cell.textContent = money(l.line_total);
+        const rate = linesBox.querySelector(`[data-rate="${i}"]`);
+        if (rate) rate.textContent = money(l.rate);
       });
       st.total = res.totals.grand_total;
       drawTotals(res.totals);

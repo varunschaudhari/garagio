@@ -93,7 +93,7 @@ export default function CounterSale() {
             <View style={{ flexDirection: 'row', gap: space[2] }}>
               <View style={{ flex: 1 }}>
                 <Txt weight="semibold">{nm(l.part)}</Txt>
-                <Txt size="sm" muted>{l.part.part_no} · {money(l.part.selling_price)} · {t('purchases.in_stock')} {qty(l.part.current_stock)}</Txt>
+                <Txt size="sm" muted>{l.part.part_no} · {t('inv.mrp')} {money(l.part.selling_price)} · {t('purchases.in_stock')} {qty(l.part.current_stock)}</Txt>
               </View>
               <IconButton icon={Trash2} label={t('common.delete')} color={c.dangerText} onPress={() => setLines((ls) => ls.filter((x) => x.part.id !== l.part.id))} />
             </View>

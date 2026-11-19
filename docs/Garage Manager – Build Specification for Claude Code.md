@@ -458,3 +458,7 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     carry the MRP; saving makes it the part's selling price (audited as a price change; only for people with the
     edit_parts tick). parts.last_purchase_price stays without GST in both modes. Suppliers get a contact person, shown
     with the phone on the purchase bill.
+23. **MRP and Rate on bills (19 Nov 2026):** bill lines show the MRP (the part's price on the bill), the discount and
+    the Rate = one unit after its discounts (line + share of a bill discount), on screen, on the A4 bill and on the
+    thermal receipt ("2 × 180.00", with "MRP 200.00 −10%" underneath when discounted). Labour lines have no MRP.
+    Discounts stay owner-only (give_discount).

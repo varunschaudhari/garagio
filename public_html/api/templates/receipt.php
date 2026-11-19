@@ -81,9 +81,10 @@ $font = $paper === 80 ? 13 : 11;
       <div class="b"><?= e($itemName($it)) ?></div>
       <?php if (!empty($it['part_no'])): ?><div class="sm"><?= e($L('part_no')) ?>: <?= e($it['part_no']) ?></div><?php endif; ?>
       <div class="row">
-        <span><?= e(fmt_qty((float) $it['qty'])) ?> × <?= $num($it['unit_price']) ?><?= (float) $it['disc_pct'] ? ' −' . e(fmt_qty((float) $it['disc_pct'])) . '%' : '' ?></span>
+        <span><?= e(fmt_qty((float) $it['qty'])) ?> × <?= $num($it['rate']) ?></span>
         <span><?= $num($it['line_total']) ?></span>
       </div>
+      <?php if (abs((float) $it['rate'] - (float) $it['unit_price']) >= 0.005): ?><div class="sm"><?= $it['item_type'] === 'part' ? e($L('mrp')) . ' ' : '' ?><?= $num($it['unit_price']) ?><?= (float) $it['disc_pct'] ? ' −' . e(fmt_qty((float) $it['disc_pct'])) . '%' : '' ?></div><?php endif; ?>
       <?php if ($reg): ?><div class="sm"><?= $it['hsn'] ? e($L('hsn')) . ' ' . e($it['hsn']) . ' · ' : '' ?>GST <?= e(fmt_qty((float) $it['gst_rate'])) ?>%</div><?php endif; ?>
     </div>
   <?php endforeach; ?>

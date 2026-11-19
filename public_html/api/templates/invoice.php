@@ -108,7 +108,7 @@ $desc = static function (array $it) use ($lang): string {
   <table>
     <thead><tr>
       <th><?= e($L('sr')) ?></th><th><?= e($L('description')) ?></th><?php if ($reg): ?><th><?= e($L('hsn')) ?></th><?php endif; ?>
-      <th class="n"><?= e($L('qty')) ?></th><th class="n"><?= e($L('rate')) ?></th><th class="n"><?= e($L('disc')) ?></th>
+      <th class="n"><?= e($L('qty')) ?></th><th class="n"><?= e($L('mrp')) ?></th><th class="n"><?= e($L('disc')) ?></th><th class="n"><?= e($L('rate')) ?></th>
       <?php if ($reg): ?><th class="n"><?= e($L('taxable')) ?></th><th class="n"><?= e($L('gst')) ?></th><th class="n"><?= e($L('gst_amt')) ?></th><?php endif; ?><th class="n"><?= e($L('amount')) ?></th>
     </tr></thead>
     <tbody>
@@ -118,8 +118,9 @@ $desc = static function (array $it) use ($lang): string {
         <td><?= $desc($it) ?><?php if (!empty($it['part_no'])): ?><div class="alt"><?= e($L('part_no')) ?>: <?= e($it['part_no']) ?></div><?php endif; ?></td>
         <?php if ($reg): ?><td><?= e($it['hsn'] ?? '') ?></td><?php endif; ?>
         <td class="n"><?= e(fmt_qty((float) $it['qty'])) ?></td>
-        <td class="n"><?= $num($it['unit_price']) ?></td>
+        <td class="n"><?= $it['item_type'] === 'part' ? $num($it['unit_price']) : '' ?></td>
         <td class="n"><?= (float) $it['disc_pct'] ? e(fmt_qty((float) $it['disc_pct'])) : '' ?><?= (float) $it['disc_amount'] && !(float) $it['disc_pct'] ? $num($it['disc_amount']) : '' ?></td>
+        <td class="n"><?= $num($it['rate']) ?></td>
         <?php if ($reg): ?>
         <td class="n"><?= $num($it['taxable']) ?></td>
         <td class="n"><?= e(fmt_qty((float) $it['gst_rate'])) ?>%</td>

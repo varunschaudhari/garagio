@@ -99,10 +99,16 @@ function return_view(int $id): array
         [$id]
     ) ?? not_found('Return');
     $r['items'] = rows(
-        'SELECT ri.*, ii.description_en, ii.description_mr, ii.hsn, ii.unit_price, ii.gst_rate, ii.item_type, p.part_no
+        'SELECT ri.*, ii.description_en, ii.description_mr, ii.hsn, ii.unit_price, ii.gst_rate, ii.item_type, p.part_no,
+                ii.qty AS sold_qty, ii.disc_amount AS sold_disc_amount
          FROM sale_return_items ri JOIN invoice_items ii ON ii.id = ri.invoice_item_id LEFT JOIN parts p ON p.id = ri.part_id WHERE ri.return_id = ? ORDER BY ri.id',
         [$id]
     );
+    foreach ($r['items'] as &$it) {
+        $it['rate'] = line_rate(['qty' => $it['sold_qty'], 'unit_price' => $it['unit_price'], 'disc_amount' => $it['sold_disc_amount']]);
+        unset($it['sold_qty'], $it['sold_disc_amount']);
+    }
+    unset($it);
     return $r;
 }
 

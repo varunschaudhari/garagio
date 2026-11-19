@@ -928,7 +928,8 @@
     "against_bill": "Against bill",
     "return_total": "Total returned",
     "refunded": "Refunded",
-    "return_reason": "Reason"
+    "return_reason": "Reason",
+    "mrp": "MRP"
   },
   "billing": {
     "title": "Billing",

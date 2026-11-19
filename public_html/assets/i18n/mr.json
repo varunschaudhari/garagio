@@ -928,7 +928,8 @@
     "against_bill": "बिल",
     "return_total": "एकूण परत",
     "refunded": "परत दिले",
-    "return_reason": "कारण"
+    "return_reason": "कारण",
+    "mrp": "MRP"
   },
   "billing": {
     "title": "बिलिंग",

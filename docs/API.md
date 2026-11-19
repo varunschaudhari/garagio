@@ -96,8 +96,8 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 ## Billing
 | Method & path | Roles | Notes |
 |---|---|---|
-| `POST /invoices/preview` | O D | |
-| `GET/POST /invoices`, `GET/PUT/DELETE /invoices/{id}` | O D | draft; discounts (`disc_pct`, `bill_disc_pct`, `discounts`) owner only |
+| `POST /invoices/preview` | O D | lines carry `rate` (one unit after discounts) |
+| `GET/POST /invoices`, `GET/PUT/DELETE /invoices/{id}` | O D | draft; discounts (`disc_pct`, `bill_disc_pct`, `discounts`) owner only; items carry `rate` next to `unit_price` (MRP) |
 | `POST /invoices/{id}/finalize` | O D | `{payments:[{mode, amount, reference}]}`; credit only for trusted customers within limit |
 | `POST /invoices/{id}/payments` | O D | |
 | `POST /invoices/{id}/cancel` | O | `{reason}` – stock back, job reopens; 409 `invoice_has_returns` once a return exists |

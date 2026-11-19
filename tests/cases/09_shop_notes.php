@@ -48,3 +48,22 @@ test('purchases: MRP bills - 10 × MRP 185 less 22% = 1443 with GST inside; MRP 
     status(200, put('/settings', ['gst_registered' => true], 'admin'));
     eq(422, post('/purchases/preview', ['supplier_id' => $s['id'], 'price_mode' => 'gross', 'items' => [$line]], 'stock')['status']);
 });
+
+test('bills: MRP and the rate after discount, on screen and on the printed bills', function () {
+    status(200, post('/parts', ['part_no' => 'MRP-SALE', 'name_en' => 'Clutch cable', 'selling_price' => 200, 'gst_rate' => 18, 'opening_stock' => 5, 'opening_cost' => 100], 'admin'));
+    $pid = (int) tval("SELECT id FROM parts WHERE part_no = 'MRP-SALE'");
+    $pv = status(200, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 2, 'disc_pct' => 10]]], 'admin'));
+    eq(180.0, $pv['lines'][0]['rate'], '200 less 10%');
+    $inv = status(200, post('/invoices', ['items' => [['part_id' => $pid, 'qty' => 2, 'disc_pct' => 10]]], 'admin'))['item'];
+    eq(200.0, (float) $inv['items'][0]['unit_price']);
+    eq(180.0, $inv['items'][0]['rate']);
+    eq(360.0, (float) $inv['items'][0]['line_total']);
+    $a4 = get("/invoices/{$inv['id']}/html?lang=en", 'admin')['body'];
+    ok(str_contains($a4, '>MRP<'), 'A4 bill has an MRP column');
+    ok(str_contains($a4, '180.00'), 'A4 bill shows the rate');
+    $rc = get("/invoices/{$inv['id']}/receipt?lang=en", 'admin')['body'];
+    ok(str_contains($rc, '2 × 180.00'), 'receipt: qty × rate');
+    ok(str_contains($rc, 'MRP 200.00 −10%'), 'receipt: MRP and discount under the line');
+    $plain = status(200, post('/invoices/preview', ['items' => [['part_id' => $pid, 'qty' => 1]]], 'desk'));
+    eq(200.0, $plain['lines'][0]['rate'], 'no discount: rate = MRP');
+});

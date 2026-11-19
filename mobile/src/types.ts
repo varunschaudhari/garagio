@@ -416,6 +416,8 @@ export interface InvoiceItem {
   qty: number;
   unit_price: number;
   disc_pct: number;
+  /** One unit after its discounts (shown next to the MRP). */
+  rate: number;
   gst_rate: number;
   line_total: number;
   returned_qty?: number;

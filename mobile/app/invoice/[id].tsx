@@ -121,7 +121,10 @@ export default function InvoiceScreen() {
                       {t('inv.part_no')}: {it.part_no}
                     </Txt>
                   ) : null}
-                  <Txt size="sm" muted>{qty(it.qty)} × {money(it.unit_price)} · GST {qty(it.gst_rate)}%{Number(it.disc_pct) ? ` · −${qty(it.disc_pct)}%` : ''}</Txt>
+                  <Txt size="sm" muted>
+                    {qty(it.qty)} × {money(it.rate)}
+                    {Math.abs(Number(it.rate) - Number(it.unit_price)) >= 0.005 ? ` · ${it.item_type === 'part' ? t('inv.mrp') + ' ' : ''}${money(it.unit_price)}${Number(it.disc_pct) ? ` −${qty(it.disc_pct)}%` : ''}` : ''} · GST {qty(it.gst_rate)}%
+                  </Txt>
                   {it.returned_qty ? <Txt size="sm" weight="semibold" color="warningText">{t('billing.returned_qty', { qty: qty(it.returned_qty) })}</Txt> : null}
                 </View>
                 {draft && owner ? (

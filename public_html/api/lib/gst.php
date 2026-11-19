@@ -110,6 +110,16 @@ function gst_bill(array $lines, bool $inclusive, bool $interstate, float $billDi
 }
 
 /**
+ * What one unit sells for after its discounts (the line's own and its share of a bill discount): the "Rate"
+ * printed next to the MRP. With prices including GST this is line_total / qty.
+ */
+function line_rate(array $line): float
+{
+    $qty = (float) $line['qty'];
+    return $qty > 0 ? r2((r2($qty * (float) $line['unit_price']) - (float) ($line['disc_amount'] ?? 0)) / $qty) : r2((float) $line['unit_price']);
+}
+
+/**
  * One line of a sale return: the bill line's taxable value and tax, reversed in proportion to the quantity
  * coming back. The last units of a line take exactly what is left, so a line returned in parts adds up.
  * $done = sums of earlier returns of this line (qty, taxable, cgst, sgst, igst, tax_amount, line_total).
