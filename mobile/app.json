@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trimurti Garage",
     "slug": "garage-manager",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "scheme": "garagemanager",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -13,7 +13,7 @@
     ],
     "android": {
       "package": "in.trimurtiauto.garage",
-      "versionCode": 9,
+      "versionCode": 10,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#EA580C",
