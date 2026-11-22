@@ -2,7 +2,7 @@
   "expo": {
     "name": "Trimurti Garage",
     "slug": "garage-manager",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "scheme": "garagemanager",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -13,10 +13,10 @@
     ],
     "android": {
       "package": "in.trimurtiauto.garage",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#EA580C",
+        "backgroundColor": "#FFFFFF",
         "backgroundImage": "./assets/adaptive-background.png"
       },
       "permissions": [
@@ -52,7 +52,7 @@
       [
         "expo-notifications",
         {
-          "color": "#F97316"
+          "color": "#C1272D"
         }
       ],
       "@react-native-community/datetimepicker"
