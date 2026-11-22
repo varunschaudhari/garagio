@@ -8,6 +8,8 @@ route('GET', '/public/info', function () {
         'app' => 'garage-manager',
         'shop_name' => $s['shop_name'],
         'shop_name_mr' => $s['shop_name_mr'],
+        'shop_full_name' => shop_full_name('en'),
+        'shop_full_name_mr' => shop_full_name('mr'),
         'min_app_version' => $s['min_app_version'],
         'latest_app_url' => $s['latest_app_url'],
         'server_time' => now(),

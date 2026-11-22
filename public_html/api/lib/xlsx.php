@@ -86,21 +86,94 @@ function import_heading(string $h): string
     return trim((string) preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '_', mb_strtolower(trim($h))), '_');
 }
 
+/** Headings that are money columns or serial numbers, never one of our fields (checked before the loose rules). */
+const IMPORT_SKIP_WORDS = ['taxable', 'amount', 'value', 'total', 'sl_no', 'sr_no', 's_no', 'serial', 'supplier', 'customer', 'party', 'vendor', 'date', 'bill_no', 'invoice', 'batch', 'expiry'];
+
 /**
- * One sheet row (heading => cell) → our fields, by $aliases (field => accepted headings). Number fields lose ₹, Rs,
- * %, commas and spaces. Headings that match nothing are collected in $unused.
+ * Which of our fields a heading means: an exact alias first ("Part No", "MRP"), then loose rules in order
+ * ($fuzzy = [[field, [words…]], …]: "Description of Goods" → name, "Quantity (Nos)" → qty). null = not used.
  */
-function import_map_row(array $raw, array $aliases, array $numbers, array &$unused): array
+function import_field(string $heading, array $aliases, array $fuzzy = []): ?string
 {
-    $map = [];
+    $h = import_heading($heading);
+    if ($h === '') {
+        return null;
+    }
     foreach ($aliases as $field => $names) {
-        foreach ($names as $n) {
-            $map[$n] = $field;
+        if (in_array($h, $names, true)) {
+            return $field;
         }
     }
+    foreach (IMPORT_SKIP_WORDS as $w) {
+        if (str_contains($h, $w)) {
+            return null;
+        }
+    }
+    foreach ($fuzzy as [$field, $words]) {
+        foreach ($words as $w) {
+            if (str_contains($h, $w)) {
+                return $field;
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * A whole sheet (rows of cells) → heading => cell rows. Sheets from billing software start with the shop's name and
+ * address, so the heading row is the one (among the first 40) that names most of our fields.
+ * @return array{rows: list<array<string,string>>, first_row: int} first_row = sheet row number of the first data row
+ */
+function import_table_rows(array $table, array $aliases, array $fuzzy = []): array
+{
+    $table = array_values(array_filter($table, 'is_array'));
+    $best = 0;
+    $bestScore = 0;
+    foreach (array_slice($table, 0, 40) as $i => $cells) {
+        $fields = [];
+        foreach ($cells as $c) {
+            $f = is_scalar($c) ? import_field((string) $c, $aliases, $fuzzy) : null;
+            if ($f !== null) {
+                $fields[$f] = true;
+            }
+        }
+        if (count($fields) > $bestScore) {
+            $best = $i;
+            $bestScore = count($fields);
+        }
+    }
+    $headings = [];
+    foreach (array_values($table[$best] ?? []) as $c => $h) {
+        $name = trim(is_scalar($h) ? (string) $h : '');
+        $name = $name === '' ? 'Column ' . ($c + 1) : $name;
+        while (in_array($name, $headings, true)) {
+            $name .= ' (2)';
+        }
+        $headings[$c] = $name;
+    }
+    $rows = [];
+    foreach (array_slice($table, $best + 1) as $cells) {
+        $row = [];
+        foreach (array_values($cells) as $c => $v) {
+            $v = is_scalar($v) ? trim((string) $v) : '';
+            if ($v !== '' && isset($headings[$c])) {
+                $row[$headings[$c]] = $v;
+            }
+        }
+        $rows[] = $row; // empty rows kept, so row numbers stay right
+    }
+    return ['rows' => $rows, 'first_row' => $best + 2];
+}
+
+/**
+ * One sheet row (heading => cell) → our fields, by $aliases (field => accepted headings) and the loose $fuzzy rules.
+ * Number fields lose ₹, Rs, %, commas, units ("10 Nos") and spaces. Headings that match nothing go to $unused.
+ */
+function import_map_row(array $raw, array $aliases, array $numbers, array &$unused, array $fuzzy = []): array
+{
     $out = [];
     foreach ($raw as $heading => $value) {
-        $field = $map[import_heading((string) $heading)] ?? null;
+        $field = import_field((string) $heading, $aliases, $fuzzy);
         if ($field === null) {
             $unused[(string) $heading] = true;
             continue;

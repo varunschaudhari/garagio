@@ -1,39 +1,33 @@
 import React, { useId } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useTheme } from '@/theme';
 
 /*
- * The shop's look: the logo ("TA" monogram over a road line on the orange gradient), gradient panels and the
- * number plate for a bike. The same logo drawing is in the web app (assets/js/ui/logo.js) and on the bills.
+ * The shop's look: the logo (grey gear, red ring and spanner), gradient panels and the number plate for a bike.
+ * The same logo drawing is in the web app (assets/js/ui/logo.js), on the bills and in the Android icons.
  */
 
-function Glyph() {
-  return (
-    <G fill="#FFFFFF">
-      <Rect x={9} y={14} width={20} height={6} rx={1.5} />
-      <Rect x={16} y={14} width={6} height={28} rx={1.5} />
-      <Path fillRule="evenodd" d="M33 42 41.5 14h5L55 42h-5.5l-1.9-6.5h-7.2L38.5 42zm8.8-11.2h4.4L44 23.2z" />
-      <Rect x={9} y={47} width={46} height={3} rx={1.5} opacity={0.6} />
-    </G>
-  );
-}
+const GREY = '#58595B';
+const RED = '#C1272D';
+const TEETH = [0, 45, 90, 135, 180, 225, 270, 315];
 
-/** The logo badge. */
+/** The logo on a white rounded tile (white in dark mode too, like the signboard). */
 export function Logo({ size = 56 }: { size?: number }) {
-  const { c } = useTheme();
-  const id = `logo${useId().replace(/:/g, '')}`;
   return (
-    <Svg width={size} height={size} viewBox="0 0 64 64" accessibilityLabel="Trimurti Auto">
-      <Defs>
-        <LinearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor={c.brandFrom} />
-          <Stop offset="0.6" stopColor={c.brandMid} />
-          <Stop offset="1" stopColor={c.brandTo} />
-        </LinearGradient>
-      </Defs>
-      <Rect width={64} height={64} rx={18} fill={`url(#${id})`} />
-      <Glyph />
+    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel="Trimurti Rambhau Auto">
+      <Rect width={100} height={100} rx={24} fill="#FFFFFF" />
+      <G transform="translate(7 7) scale(0.86)">
+        <G fill={GREY}>
+          {TEETH.map((a) => (
+            <Rect key={a} x={43.5} y={3} width={13} height={13} rx={2.5} transform={`rotate(${a} 50 50)`} />
+          ))}
+        </G>
+        <Circle cx={50} cy={50} r={37} fill="none" stroke={GREY} strokeWidth={8} />
+        <Path d="M30.08 61.5A23 23 0 1 1 50 73" fill="none" stroke={RED} strokeWidth={8} />
+        <Path fill={RED} d="M52.75 37.02A7.5 7.5 0 1 1 47.25 37.02V43h5.5z" />
+        <Rect x={46.75} y={47} width={6.5} height={30} fill={RED} />
+      </G>
     </Svg>
   );
 }

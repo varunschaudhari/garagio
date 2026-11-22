@@ -4,18 +4,33 @@ declare(strict_types=1);
 /* ------------------------------------------------------------------ the shop's logo (bills, receipts) */
 
 /**
- * The logo as inline SVG: "TA" monogram over a road line, white on the orange gradient ('color') or on black
- * ('mono', for thermal printers). Same drawing as assets/img/icon.svg and the apps.
+ * The shop's logo as inline SVG: grey gear, red ring and spanner ('color'), or all black ('mono', for thermal
+ * printers). Same drawing as assets/img/icon.svg, assets/js/ui/logo.js and the phone app.
  */
 function logo_svg(string $variant = 'color', int $size = 48): string
 {
-    $glyph = '<rect x="9" y="14" width="20" height="6" rx="1.5"/><rect x="16" y="14" width="6" height="28" rx="1.5"/>'
-        . '<path fill-rule="evenodd" d="M33 42 41.5 14h5L55 42h-5.5l-1.9-6.5h-7.2L38.5 42zm8.8-11.2h4.4L44 23.2z"/>'
-        . '<rect x="9" y="47" width="46" height="3" rx="1.5" opacity=".6"/>';
-    $bg = $variant === 'mono'
-        ? '<rect width="64" height="64" rx="18" fill="#000"/>'
-        : '<defs><linearGradient id="gm-logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C2410C"/><stop offset=".6" stop-color="#EA580C"/><stop offset="1" stop-color="#F97316"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#gm-logo)"/>';
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="' . $size . '" height="' . $size . '" role="img" aria-label="logo">' . $bg . '<g fill="#fff">' . $glyph . '</g></svg>';
+    $grey = $variant === 'mono' ? '#000' : '#58595B';
+    $red = $variant === 'mono' ? '#000' : '#C1272D';
+    $teeth = '';
+    foreach ([0, 45, 90, 135, 180, 225, 270, 315] as $a) {
+        $teeth .= '<rect x="43.5" y="3" width="13" height="13" rx="2.5" transform="rotate(' . $a . ' 50 50)"/>';
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="' . $size . '" height="' . $size . '" role="img" aria-label="logo">'
+        . '<g fill="' . $grey . '">' . $teeth . '</g>'
+        . '<circle cx="50" cy="50" r="37" fill="none" stroke="' . $grey . '" stroke-width="8"/>'
+        . '<path d="M30.08 61.5A23 23 0 1 1 50 73" fill="none" stroke="' . $red . '" stroke-width="8"/>'
+        . '<path fill="' . $red . '" d="M52.75 37.02A7.5 7.5 0 1 1 47.25 37.02V43h5.5z"/>'
+        . '<rect x="46.75" y="47" width="6.5" height="30" fill="' . $red . '"/></svg>';
+}
+
+/** The shop's full name from the signboard (bills, receipts, login), falling back to the short app name. */
+function shop_full_name(string $lang = 'en'): string
+{
+    $s = settings_all();
+    if ($lang === 'mr') {
+        return (string) ($s['shop_full_name_mr'] ?: ($s['shop_name_mr'] ?: ($s['shop_full_name'] ?: $s['shop_name'])));
+    }
+    return (string) ($s['shop_full_name'] ?: $s['shop_name']);
 }
 
 /* ------------------------------------------------------------------ uploaded photos (job photos, bill photos) */
@@ -96,6 +111,8 @@ function r2(float $v): float
 const SETTING_DEFAULTS = [
     'shop_name' => 'Trimurti Auto',
     'shop_name_mr' => 'त्रिमूर्ती ऑटो',
+    'shop_full_name' => 'Trimurti Rambhau Auto Spares and Garage',
+    'shop_full_name_mr' => 'त्रिमूर्ती रामभाऊ ऑटो स्पेअर्स अँड गॅरेज',
     'shop_address' => '',
     'shop_address_mr' => '',
     'shop_phone' => '',
@@ -133,6 +150,8 @@ const SETTING_DEFAULTS = [
 const SETTING_RULES = [
     'shop_name' => 'str|req|max:100',
     'shop_name_mr' => 'str|max:100',
+    'shop_full_name' => 'str|max:150',
+    'shop_full_name_mr' => 'str|max:150',
     'shop_address' => 'str|max:255',
     'shop_address_mr' => 'str|max:255',
     'shop_phone' => 'str|max:40',

@@ -345,6 +345,63 @@ test('bills: the owner edits a final bill, same number - stock and money follow 
     eq(round((float) $labour['unit_price'] - 50, 2), (float) tval('SELECT amount FROM job_labour WHERE job_card_id = ?', [$job]));
 });
 
+test('jobs: bill straight from a new job card - parts added on the job, the bill follows, stock leaves at final', function () {
+    $pid = (int) tval("SELECT id FROM parts WHERE part_no = 'EDIT-1'");
+    $stock = (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]);
+    $j = flow_job('direct-bill');
+    eq('pending', $j['status']);
+    eq(403, post("/jobs/{$j['id']}/parts", ['part_id' => $pid, 'qty' => 1], 'stock')['status'], 'store keeper does not bill');
+    $j = status(200, post("/jobs/{$j['id']}/parts", ['part_id' => $pid, 'qty' => 2], 'desk'))['item'];
+    eq(1, count($j['parts']));
+    eq($stock, (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]), 'not out of stock yet');
+
+    $inv = status(200, post('/invoices', ['job_card_id' => $j['id']], 'desk'))['item'];
+    eq('draft', $inv['status']);
+    eq('approved', tval('SELECT status FROM job_cards WHERE id = ?', [$j['id']]), 'making the bill approved the job');
+    eq(1, count($inv['items']));
+    status(200, post("/jobs/{$j['id']}/labour", ['description' => 'General service', 'amount' => 250], 'desk'));
+    $inv = status(200, get("/invoices/{$inv['id']}", 'desk'))['item'];
+    eq(2, count($inv['items']), 'the draft bill follows the job');
+    $fin = status(200, post("/invoices/{$inv['id']}/finalize", ['payments' => [['mode' => 'cash', 'amount' => $inv['grand_total']]]], 'desk'))['item'];
+    eq('final', $fin['status']);
+    eq(round($stock - 2, 2), (float) tval('SELECT current_stock FROM parts WHERE id = ?', [$pid]), 'parts leave stock when the bill is final');
+
+    // A bill can be opened before any work is on the job; it cannot be finalised empty.
+    $e = flow_job('empty-bill');
+    $draft = status(200, post('/invoices', ['job_card_id' => $e['id']], 'desk'))['item'];
+    eq(0, count($draft['items']));
+    eq('nothing_to_bill', post("/invoices/{$draft['id']}/finalize", ['payments' => []], 'desk')['json']['code']);
+});
+
+test('Excel: a supplier bill with its name and address above the table and Tally-style headings; a stock list with a title row', function () {
+    $res = status(200, post('/purchases/import-lines', ['table' => [
+        ['Raj Sports Spares', '', '', '', '', '', '', ''],
+        ['Main Road, Jalgaon', '', '', '', '', '', '', ''],
+        ['Tax Invoice', '', '', '', '', '', '', ''],
+        ['Sl No.', 'Description of Goods', 'HSN/SAC', 'Quantity', 'Rate', 'per', 'Disc. %', 'Amount'],
+        ['1', 'Edit extra part', '87141090', '5 Nos', '42.00', 'Nos', '10', '189.00'],
+        ['2', 'Chain lube spray', '34031900', '2 Nos', '150.00', 'Nos', '', '300.00'],
+        ['', 'Total', '', '7 Nos', '', '', '', '489.00'],
+        ['', 'CGST 9%', '', '', '', '', '', '44.01'],
+    ]], 'stock'));
+    eq(2, count($res['lines']), 'two item lines');
+    eq('EDIT-2', $res['lines'][0]['part']['part_no'], 'matched by name');
+    eq([5.0, 42.0, 10.0], [(float) $res['lines'][0]['qty'], (float) $res['lines'][0]['price'], (float) $res['lines'][0]['disc_pct']]);
+    eq('Chain lube spray', $res['lines'][1]['new_part']['name_en']);
+    eq('34031900', $res['lines'][1]['new_part']['hsn']);
+    eq([], $res['errors'], 'totals and tax lines are not parts');
+    ok(in_array('Amount', $res['unused_columns'], true) && in_array('Sl No.', $res['unused_columns'], true));
+
+    $p = status(200, post('/parts/import', ['table' => [
+        ['Trimurti stock list'],
+        ['Item Name', 'Sale Rate', 'Closing Stock', 'Brand Name'],
+        ['Fuzzy heading part', '99', '3', 'Bosch'],
+    ]], 'stock'));
+    eq([1, 1], [$p['created'], $p['auto_numbered']]);
+    $row = trows("SELECT selling_price, current_stock, brand FROM parts WHERE name_en = 'Fuzzy heading part'")[0];
+    eq([99.0, 3.0, 'Bosch'], [(float) $row['selling_price'], (float) $row['current_stock'], $row['brand']]);
+});
+
 test('parts upload (owner): replace the whole list - unused parts deleted, used ones hidden at 0 stock; a wrong row changes nothing', function () {
     eq(403, post('/parts/import', ['replace' => true, 'rows' => [['Part Name' => 'X', 'MRP' => '1']]], 'stock')['status'], 'owner only');
     $count = (int) tval('SELECT COUNT(*) FROM parts');

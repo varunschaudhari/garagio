@@ -214,9 +214,10 @@ function wa_text(string $key, array $vars, string $firstLang = 'mr'): string
     return $firstLang === 'en' ? "$en\n\n$mr" : "$mr\n\n$en";
 }
 
+/** The name customers see in WhatsApp messages: the full name from the signboard, as on the bills. */
 function shop_name_for(string $lang): string
 {
-    return $lang === 'mr' ? (setting('shop_name_mr') ?: (string) setting('shop_name')) : (string) setting('shop_name');
+    return shop_full_name($lang);
 }
 
 function log_message(?int $customerId, string $template, ?string $refType, ?int $refId, string $payload): void

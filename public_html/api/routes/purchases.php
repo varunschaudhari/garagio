@@ -56,6 +56,20 @@ const PURCHASE_IMPORT_ALIASES = [
     'unit' => ['unit', 'uom', 'units'],
 ];
 const PURCHASE_IMPORT_NUMBERS = ['qty', 'price', 'disc_pct', 'gst_rate', 'gst_half', 'mrp'];
+/** Loose heading rules for supplier bills (Tally and others), checked in this order after the exact aliases. */
+const PURCHASE_IMPORT_FUZZY = [
+    ['gst_half', ['cgst', 'sgst', 'utgst']],
+    ['gst_rate', ['igst', 'gst', 'tax']],
+    ['mrp', ['mrp', 'm_r_p']],
+    ['disc_pct', ['disc']],
+    ['qty', ['qty', 'quantity', 'nos', 'pcs']],
+    ['hsn', ['hsn', 'sac']],
+    ['part_no', ['part_no', 'partno', 'part_number', 'code', 'sku']],
+    ['name_mr', ['marathi', 'मराठी']],
+    ['price', ['rate', 'price', 'cost']],
+    ['unit', ['unit', 'uom', 'per']],
+    ['name_en', ['description', 'particular', 'item', 'product', 'goods', 'name', 'material', 'तपशील', 'नाव']],
+];
 
 /** The part a supplier's line is about: by part number, else by name (English or Marathi). */
 function purchase_import_part(array $r): ?array
@@ -79,24 +93,34 @@ function purchase_import_part(array $r): ?array
 }
 
 route('POST', '/purchases/import-lines', function () {
-    $rowsIn = body()['rows'] ?? null;
+    $body = body();
+    $rowsIn = $body['rows'] ?? null;
+    $firstRow = 2;
+    // A supplier's whole sheet: the heading row is found below the supplier's name and address.
+    if (is_array($body['table'] ?? null) && $body['table']) {
+        ['rows' => $rowsIn, 'first_row' => $firstRow] = import_table_rows($body['table'], PURCHASE_IMPORT_ALIASES, PURCHASE_IMPORT_FUZZY);
+    }
     if (!is_array($rowsIn) || !$rowsIn) {
         fail(422, 'validation_failed', 'No rows to import', ['rows' => 'required']);
     }
-    if (count($rowsIn) > 300) {
+    if (count($rowsIn) > 600) {
         fail(422, 'validation_failed', 'Too many lines on one bill', ['rows' => 'too_long']);
     }
     $lines = [];
     $errors = [];
     $unused = [];
     foreach (array_values($rowsIn) as $i => $raw) {
-        $r = is_array($raw) ? import_map_row($raw, PURCHASE_IMPORT_ALIASES, PURCHASE_IMPORT_NUMBERS, $unused) : [];
+        $r = is_array($raw) ? import_map_row($raw, PURCHASE_IMPORT_ALIASES, PURCHASE_IMPORT_NUMBERS, $unused, PURCHASE_IMPORT_FUZZY) : [];
         if (empty($r['part_no']) && empty($r['name_en']) && empty($r['name_mr'])) {
-            continue; // totals, notes, empty rows
+            continue; // notes, empty rows
         }
         $label = (string) ($r['name_en'] ?? $r['name_mr'] ?? $r['part_no']);
+        // Totals and tax lines below the items are not parts (a "Total" row often has the total qty).
+        if (preg_match('/^\s*(sub\s*-?\s*total|grand\s*total|total|round(ed)?\s*off|less\b|add\b|freight|cgst|sgst|igst|output|input|discount|e\.?\s*&\s*o\.?\s*e)/i', $label)) {
+            continue;
+        }
         if ((float) ($r['qty'] ?? 0) <= 0) {
-            $errors[] = ['row' => $i + 2, 'name' => $label, 'code' => 'qty_missing'];
+            $errors[] = ['row' => $i + $firstRow, 'name' => $label, 'code' => 'qty_missing'];
             continue;
         }
         $part = purchase_import_part($r);

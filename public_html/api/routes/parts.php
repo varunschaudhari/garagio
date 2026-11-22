@@ -208,11 +208,30 @@ const PART_IMPORT_ALIASES = [
     'rack' => ['rack', 'rack_no', 'shelf', 'bin', 'रॅक'],
 ];
 const PART_IMPORT_NUMBERS = ['selling_price', 'last_purchase_price', 'last_purchase_disc_pct', 'gst_rate', 'opening_stock', 'opening_cost', 'min_stock'];
+/** Loose heading rules for other people's sheets, checked in this order after the exact aliases. */
+const PART_IMPORT_FUZZY = [
+    ['min_stock', ['min', 'reorder']],
+    ['gst_rate', ['gst', 'tax']],
+    ['selling_price', ['mrp', 'selling', 'sale', 'sell']],
+    ['last_purchase_disc_pct', ['disc']],
+    ['opening_stock', ['qty', 'quantity', 'stock', 'balance', 'closing']],
+    ['hsn', ['hsn']],
+    ['part_no', ['part_no', 'partno', 'part_number', 'code', 'sku']],
+    ['name_mr', ['marathi', 'मराठी']],
+    ['category', ['category', 'group']],
+    ['brand', ['brand', 'company', 'make']],
+    ['compatible_models', ['model', 'vehicle', 'bike']],
+    ['location', ['location', 'godown']],
+    ['rack', ['rack', 'shelf', 'bin']],
+    ['last_purchase_price', ['rate', 'price', 'cost', 'purchase']],
+    ['unit', ['unit', 'uom']],
+    ['name_en', ['description', 'particular', 'item', 'product', 'name', 'goods', 'नाव']],
+];
 
 /** One sheet row (heading => cell) → part fields; headings that match nothing are collected in $unused. */
 function import_part_row(array $raw, array &$unused): array
 {
-    return import_map_row($raw, PART_IMPORT_ALIASES, PART_IMPORT_NUMBERS, $unused);
+    return import_map_row($raw, PART_IMPORT_ALIASES, PART_IMPORT_NUMBERS, $unused, PART_IMPORT_FUZZY);
 }
 
 /** Next free automatic part number: P00001, P00002 … */
@@ -438,6 +457,11 @@ function part_is_used(int $id): bool
 route('POST', '/parts/import', function () {
     $body = body();
     $rowsIn = $body['rows'] ?? null;
+    $firstRow = 2;
+    // A whole sheet: the heading row is found (shop name / address lines above the table are fine).
+    if (is_array($body['table'] ?? null) && $body['table']) {
+        ['rows' => $rowsIn, 'first_row' => $firstRow] = import_table_rows($body['table'], PART_IMPORT_ALIASES, PART_IMPORT_FUZZY);
+    }
     if (!is_array($rowsIn) || !$rowsIn) {
         fail(422, 'validation_failed', 'No rows to import', ['rows' => 'required']);
     }
@@ -468,9 +492,9 @@ route('POST', '/parts/import', function () {
     $errors = [];
     $unused = [];
     $seen = [];
-    $run = function () use ($rowsIn, $setStock, $findOrCreate, &$catCache, &$locCache, &$n, &$errors, &$unused, &$seen) {
-        foreach ($rowsIn as $i => $raw) {
-            $rowNo = $i + 2; // +1 for header, +1 for 1-based
+    $run = function () use ($rowsIn, $firstRow, $setStock, $findOrCreate, &$catCache, &$locCache, &$n, &$errors, &$unused, &$seen) {
+        foreach (array_values($rowsIn) as $i => $raw) {
+            $rowNo = $i + $firstRow; // row number in the sheet
             $r = is_array($raw) ? import_part_row($raw, $unused) : null;
             try {
                 if ($r === null) {

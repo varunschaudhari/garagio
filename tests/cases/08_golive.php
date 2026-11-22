@@ -162,7 +162,7 @@ test('job flow: Approve without an estimate; the bill can be made right away; De
     $j = flow_job('a');
     eq(true, $j['can_approve']);
     eq(403, post("/jobs/{$j['id']}/approve", [], 'ramesh')['status'], 'mechanics cannot approve');
-    eq('job_not_billable', post('/invoices', ['job_card_id' => $j['id']], 'desk')['json']['code'], 'not before approval');
+    eq(403, post('/invoices', ['job_card_id' => $j['id']], 'ramesh')['status'], 'mechanics do not bill');
     $j = status(200, post("/jobs/{$j['id']}/approve", [], 'desk'))['item'];
     eq('approved', $j['status']);
     eq(false, $j['can_approve']);

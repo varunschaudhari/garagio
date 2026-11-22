@@ -174,8 +174,8 @@ export default function NewPurchase() {
     try {
       const sheet = await pickSheet();
       if (!sheet) return;
-      if (!sheet.rows.length) return toast(t('parts.import_empty'), 'error');
-      const res = await api.post<{ lines: ImportLine[]; errors: { row: number; name: string }[]; unused_columns: string[] }>('/purchases/import-lines', { rows: sheet.rows });
+      if (!sheet.rows) return toast(t('parts.import_empty'), 'error');
+      const res = await api.post<{ lines: ImportLine[]; errors: { row: number; name: string }[]; unused_columns: string[] }>('/purchases/import-lines', { table: sheet.table });
       const added: Line[] = res.lines.map((l) => {
         const part: Part = l.part ?? ({
           id: 0, part_no: l.new_part?.part_no || t('purchases.new_tag'), name_en: l.new_part?.name_en ?? '', name_mr: l.new_part?.name_mr ?? null,
@@ -194,7 +194,8 @@ export default function NewPurchase() {
       });
       setLines((ls) => [...ls, ...added]);
       const fresh = res.lines.filter((l) => !l.part).length;
-      toast(t('purchases.imported', { n: res.lines.length, file: sheet.name }));
+      if (res.lines.length) toast(t('purchases.imported', { n: res.lines.length, file: sheet.name }));
+      else toast(t('purchases.import_nothing'), 'error');
       setImportNote(
         [
           fresh ? t('purchases.import_new_parts', { n: fresh }) : '',

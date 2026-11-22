@@ -364,7 +364,10 @@
     "upi_placeholder": "e.g. name@okaxis",
     "upi_hint": "The shop’s UPI ID from PhonePe / Google Pay / Paytm (profile → UPI ID). Bills with money due then show a scan-to-pay QR. Empty = no QR.",
     "expense_categories": "Expense types",
-    "new_expense_category": "New expense type"
+    "new_expense_category": "New expense type",
+    "shop_full_name": "Full name on bills",
+    "shop_full_name_mr": "Full name on bills (Marathi)",
+    "shop_full_name_hint": "Printed on bills, receipts and WhatsApp messages. The short name above is shown inside the app."
   },
   "users": {
     "title": "Users",
@@ -465,7 +468,7 @@
     "credit_not_allowed": "Credit is only for customers the owner marked as trusted.",
     "credit_limit_exceeded": "This bill would cross the customer’s credit limit.",
     "already_billed": "This job already has a final bill.",
-    "job_not_billable": "Approve the job before making the bill.",
+    "job_not_billable": "This job cannot be billed now.",
     "revision_pending": "A revised estimate is waiting for the customer’s approval.",
     "nothing_to_bill": "Nothing to bill yet.",
     "invoice_final": "This bill is already final.",
@@ -658,7 +661,8 @@
     "import_new_parts": "{{n}} parts are not in your list yet: they are added when you save. Check their MRP.",
     "import_skipped": "Left out (no qty): {{list}}",
     "new_tag": "NEW",
-    "new_part_note": "New part – added to the parts list when the bill is saved"
+    "new_part_note": "New part – added to the parts list when the bill is saved",
+    "import_nothing": "No item lines found in this file. It needs columns like Item / Description, Qty and Rate."
   },
   "reorder": {
     "title": "Reorder list",
@@ -839,7 +843,10 @@
     "next_service_km": "At km",
     "next_service_default": "Usual gap from Settings ({{days}} days / {{km}} km). Change it if the bike needs to come sooner.",
     "next_service_hint": "Leave both empty to go back to the usual gap from Settings. Printed on the bill and used for the WhatsApp reminder.",
-    "next_service_saved": "Next service saved."
+    "next_service_saved": "Next service saved.",
+    "add_part": "Add part",
+    "add_part_note": "Billed at its MRP; it leaves stock when the bill is final.",
+    "pick_part": "Choose a part from the list"
   },
   "estimates": {
     "title": "Estimate",

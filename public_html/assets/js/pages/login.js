@@ -3,7 +3,7 @@ import { t, getLang, setLang, errorText } from '../i18n.js';
 import { api } from '../api.js';
 import { session, setToken } from '../store.js';
 import { icon } from '../ui/icons.js';
-import { logoGlyph } from '../ui/logo.js';
+import { logoSvg } from '../ui/logo.js';
 import { busy } from '../ui/form.js';
 
 export default function login(appRoot, { onDone }) {
@@ -12,14 +12,15 @@ export default function login(appRoot, { onDone }) {
   const root = appRoot.firstElementChild;
   const draw = () => {
     const info = session.info || {};
-    const shop = getLang() === 'mr' ? info.shop_name_mr || info.shop_name : info.shop_name;
+    // The full name from the signboard on the login screen; the app header keeps the short one.
+    const shop = getLang() === 'mr' ? info.shop_full_name_mr || info.shop_name_mr || info.shop_full_name || info.shop_name : info.shop_full_name || info.shop_name;
     document.title = t('auth.login_title') + ' · ' + (info.shop_name || 'Garage Manager');
     setHTML(root, html`
       <div class="auth-wrap">
         <form class="card auth-card stack-lg" novalidate>
           <div class="row" style="justify-content:space-between;align-items:flex-start">
             <div class="row" style="gap:12px">
-              <div class="brand-mark">${raw(logoGlyph())}</div>
+              <div class="brand-mark">${raw(logoSvg())}</div>
               <div><div class="strong" style="font-size:18px">${shop || ''}</div><div class="small muted">${t('app.name')}</div></div>
             </div>
             <div class="seg" role="group" aria-label="${t('common.language')}">

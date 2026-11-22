@@ -19,23 +19,19 @@ function loadXlsx() {
   return xlsxLoading;
 }
 
-/** Rows of the first sheet of an Excel / CSV file: every filled cell under its own heading. */
-export async function readSheetRows(file) {
+/**
+ * The first sheet of an Excel / CSV file as rows of cells (text as shown in Excel). The server finds the heading row
+ * (a supplier's name and address above the table are fine) and matches the headings.
+ */
+export async function readSheetTable(file) {
   const XLSX = await loadXlsx();
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
   const sheet = wb.Sheets[wb.SheetNames[0]];
-  const raw = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
-  // Every filled cell under its own heading; the server matches the headings (Part No, MRP, Rate, Qty …).
-  return raw
-    .map((r) => {
-      const o = {};
-      for (const [k, v] of Object.entries(r)) {
-        if (!String(k).startsWith('__EMPTY') && String(v).trim() !== '') o[String(k).trim()] = String(v).trim();
-      }
-      return o;
-    })
-    .filter((o) => Object.keys(o).length);
+  return XLSX.utils
+    .sheet_to_json(sheet, { header: 1, defval: '', raw: false, blankrows: false })
+    .map((r) => r.map((v) => String(v ?? '').trim()))
+    .filter((r) => r.some((v) => v !== ''));
 }
 
 /** The sample Excel file (made by the server, with a "How to fill" sheet). */
@@ -81,9 +77,10 @@ export function openImport() {
         const file = e.target.files[0];
         if (!file) return;
         try {
-          rows = await readSheetRows(file);
-          $('#imp-count', root).textContent = rows.length ? t('parts.import_rows', { n: rows.length, file: file.name }) : t('parts.import_empty');
-          runBtn.disabled = !rows.length;
+          rows = await readSheetTable(file);
+          const n = Math.max(0, rows.length - 1);
+          $('#imp-count', root).textContent = n ? t('parts.import_rows', { n, file: file.name }) : t('parts.import_empty');
+          runBtn.disabled = !n;
         } catch {
           $('#imp-count', root).textContent = t('errors.file_read');
         }
@@ -94,7 +91,7 @@ export function openImport() {
           try {
             const replace = !!$('#imp-replace', root)?.checked;
             if (replace && !window.confirm(t('parts.import_replace_q') + '\n\n' + t('parts.import_replace_note'))) return;
-            const res = await api.post('/parts/import', { rows, set_stock: $('#imp-stock', root).checked, replace });
+            const res = await api.post('/parts/import', { table: rows, set_stock: $('#imp-stock', root).checked, replace });
             imported = imported || res.created + res.updated > 0;
             toast(t('parts.import_done', res));
             const box = $('#imp-result', root);

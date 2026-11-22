@@ -5,8 +5,8 @@
  * @var string $lang  @var string|null $flash
  */
 $L = static fn (string $key) => bi("est.$key", $lang);
-$shop = setting('shop_name');
-$shopMr = setting('shop_name_mr');
+$shop = shop_full_name('en');
+$shopMr = shop_full_name('mr');
 $phone = setting('shop_phone');
 $base = app_url() . '/e/' . rawurlencode($e['approval_token']);
 $inclusive = setting('prices_include_gst') === '1';
@@ -28,14 +28,14 @@ $desc = static function (array $i) use ($lang): string {
 <meta name="robots" content="noindex">
 <title><?= e($e['est_no']) ?> · <?= e($shop) ?></title>
 <style>
-  :root { --bg:#F7F8FA; --surface:#fff; --border:#E5E7EB; --text:#111827; --muted:#6B7280; --primary:#F97316; --ink:#111827; --ok:#166534; --okbg:#DCFCE7; --warn:#92400E; --warnbg:#FEF3C7; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0F1115; --surface:#171A21; --border:#2A2F3A; --text:#F3F4F6; --muted:#9CA3AF; --primary:#FB923C; --ok:#86EFAC; --okbg:rgba(74,222,128,.14); --warn:#FCD34D; --warnbg:rgba(251,191,36,.14); } }
+  :root { --bg:#F7F8FA; --surface:#fff; --border:#E5E7EB; --text:#111827; --muted:#6B7280; --primary:#C1272D; --ink:#FFFFFF; --ok:#166534; --okbg:#DCFCE7; --warn:#92400E; --warnbg:#FEF3C7; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0F1115; --surface:#171A21; --border:#2A2F3A; --text:#F3F4F6; --muted:#9CA3AF; --primary:#D63339; --ok:#86EFAC; --okbg:rgba(74,222,128,.14); --warn:#FCD34D; --warnbg:rgba(251,191,36,.14); } }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", "Noto Sans Devanagari", Roboto, sans-serif; }
   main { max-width: 560px; margin: 0 auto; padding: 16px; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
   .shop { display: flex; gap: 12px; align-items: center; }
-  .mark { width: 44px; height: 44px; border-radius: 12px; background: var(--primary); display: grid; place-items: center; font-weight: 800; color: var(--ink); flex: none; }
+  .mark { width: 48px; height: 48px; border-radius: 12px; background: #fff; border: 1px solid var(--border); padding: 3px; display: grid; place-items: center; flex: none; }
   h1 { font-size: 20px; margin: 0; }
   .muted, .alt { color: var(--muted); font-size: 14px; }
   table { width: 100%; border-collapse: collapse; }
@@ -55,7 +55,7 @@ $desc = static function (array $i) use ($lang): string {
 <body>
 <main>
   <div class="card shop">
-    <div class="mark">🔧</div>
+    <div class="mark"><?= logo_svg('color', 40) ?></div>
     <div>
       <h1><?= e($lang === 'mr' && $shopMr ? $shopMr : $shop) ?></h1>
       <?php if ($phone): ?><div class="muted"><?= e($phone) ?></div><?php endif; ?>

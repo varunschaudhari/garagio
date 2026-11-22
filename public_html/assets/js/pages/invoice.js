@@ -104,7 +104,7 @@ export default async function invoicePage(ctx) {
       </div>
       ${i.status === 'cancelled' ? html`<div class="banner danger" style="margin-bottom:16px">${icon('ban')}<span>${t('billing.cancelled')}: ${i.cancel_reason}</span></div>` : ''}
       ${i.edited_at ? html`<div class="banner info" style="margin-bottom:16px" id="bill-edited">${icon('pencil')}<span>${t('billing.edited_by', { date: datetime(i.edited_at), name: i.edited_by_name || '—' })}${(i.refunds || []).map((r) => html` · ${t('billing.given_back', { amount: money(r.amount), date: date(r.refunded_on) })} (${t('pay.' + r.mode)})`)}</span></div>` : ''}
-      <div class="grid-2" style="grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:start">
+      <div class="grid-main">
         <div class="card">
           <div class="card-head"><h3>${t('billing.items')}</h3>${draft && !owner ? html`<span class="small muted">${t('billing.owner_discount')}</span>` : ''}</div>
           <div class="table-wrap"><table class="table">

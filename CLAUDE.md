@@ -99,9 +99,11 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Forms in drawers: `openDrawer({ title, body, onSubmit })`; fields via `field({...})`; API 422 field errors shown automatically.
 - Every UI string in BOTH `en.json` and `mr.json`. Bilingual records use `name_en`/`name_mr` → `nm(obj)`.
 - Money `money()` (Indian grouping), dates `DD-MM-YYYY`, Western digits in both languages.
-- Orange buttons use dark ink (#111827): white on #F97316 fails WCAG AA. Deliberate deviation from the spec token table.
-- Look (decision 31): tokens in `css/tokens.css` and `mobile/src/theme/tokens.ts` (change both); `--grad-brand` banner
-  (`.hero`), `.plate` for bike numbers, `.dl dt.grand/dd.grand` for bill totals, round `.kpi-icon` tones
-  (success/warning/danger/info/violet/teal/pink). Logo: `ui/logo.js` (web), `logo_svg()` (bills), `components/brand.tsx`
-  (phone: `Logo`, `GradientPanel`, `Plate`), `tools/make-app-icons.mjs` (Android icons).
+- Brand colour is the logo's red #C1272D with white ink (5.8:1; dark mode #D63339), decision 32. It replaced the orange.
+- Look (decisions 31–32): tokens in `css/tokens.css` and `mobile/src/theme/tokens.ts` (change both); `--grad-brand` banner
+  (`.hero`, grey → red), `.plate` for bike numbers, `.dl dt.grand/dd.grand` for bill totals, round `.kpi-icon` tones
+  (success/warning/danger/info/violet/teal/pink). Logo (grey gear, red ring + spanner, 100×100 SVG; keep every copy the
+  same): `ui/logo.js` (web), `img/icon.svg`, `logo_svg()` (bills), `components/brand.tsx` (phone: `Logo`,
+  `GradientPanel`, `Plate`), `tools/make-app-icons.mjs` (Android icons).
+- Shop name: short `shop_name` inside the app; `shop_full_name($lang)` (lib/util.php) on bills, receipts, WhatsApp, login.
 - One `<h1>` per page (the page heading); the top-bar title is a plain div.

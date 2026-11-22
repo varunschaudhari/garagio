@@ -4,6 +4,8 @@ declare(strict_types=1);
 test('auth: public info names the shop', function () {
     $j = status(200, http('GET', '/public/info'));
     eq('Trimurti Auto', $j['shop_name']);
+    eq('Trimurti Rambhau Auto Spares and Garage', $j['shop_full_name'], 'full name from the signboard for the login');
+    eq('त्रिमूर्ती रामभाऊ ऑटो स्पेअर्स अँड गॅरेज', $j['shop_full_name_mr']);
 });
 
 test('auth: ?r= fallback works without mod_rewrite', function () {

@@ -20,6 +20,9 @@ export interface PublicInfo {
   app: string;
   shop_name: string;
   shop_name_mr: string;
+  /** Full name from the signboard (bills, login); the API falls back to the short name. Older servers lack it. */
+  shop_full_name?: string;
+  shop_full_name_mr?: string;
   min_app_version: string;
   latest_app_url: string;
 }

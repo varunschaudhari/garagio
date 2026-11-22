@@ -2,7 +2,7 @@ import { html, el, raw, $, $$, on } from '../dom.js';
 import { t, getLang, setLang } from '../i18n.js';
 import { session, hasRole, can, ROLES, clearSession } from '../store.js';
 import { icon } from './icons.js';
-import { logoGlyph } from './logo.js';
+import { logoSvg } from './logo.js';
 import { initials } from '../format.js';
 import { api } from '../api.js';
 import { openPalette } from './palette.js';
@@ -95,7 +95,7 @@ export function renderShell(root, { onLogout }) {
     <div class="app ${readCollapsed() ? 'collapsed' : ''}">
       <aside class="sidebar" aria-label="Main">
         <div class="brand">
-          <div class="brand-mark">${raw(logoGlyph())}</div>
+          <div class="brand-mark">${raw(logoSvg())}</div>
           <div class="brand-text" style="min-width:0">
             <div class="brand-name">${getLang() === 'mr' ? session.settings.shop_name_mr || shopName : shopName}</div>
             <div class="brand-sub">${t('app.name')}</div>

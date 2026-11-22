@@ -9,7 +9,8 @@ import { toast } from '../ui/toast.js';
 
 /** Build the order text for one supplier (part no., both names, quantity). */
 function orderText(group, qtys) {
-  const shop = getLang() === 'mr' ? session.settings.shop_name_mr || session.settings.shop_name : session.settings.shop_name;
+  const st = session.settings;
+  const shop = getLang() === 'mr' ? st.shop_full_name_mr || st.shop_name_mr || st.shop_name : st.shop_full_name || st.shop_name;
   const lines = group.items.map((it, i) => {
     const names = [it.name_en, it.name_mr].filter(Boolean).join(' / ');
     return `${i + 1}. ${it.part_no} – ${names} – ${qtys[it.part_id] ?? it.suggested_qty} ${it.unit}`;

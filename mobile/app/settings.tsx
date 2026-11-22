@@ -9,7 +9,7 @@ import { Banner, Button, Card, Field, Loading, OfflineBanner, Segmented, Txt } f
 import { fieldError } from '@/i18n';
 import { space } from '@/theme';
 
-const KEYS = ['shop_name', 'shop_name_mr', 'shop_phone', 'shop_gstin', 'shop_address', 'shop_address_mr', 'approval_limit', 'upi_id'] as const;
+const KEYS = ['shop_name', 'shop_name_mr', 'shop_full_name', 'shop_full_name_mr', 'shop_phone', 'shop_gstin', 'shop_address', 'shop_address_mr', 'approval_limit', 'upi_id'] as const;
 type Key = (typeof KEYS)[number] | 'receipt_width' | 'gst_registered';
 
 /** Owner: the settings most often changed from a phone. Everything else is on the web. */
@@ -51,7 +51,7 @@ export default function SettingsScreen() {
               autoCapitalize={k === 'shop_gstin' ? 'characters' : 'sentences'}
               multiline={k === 'shop_address' || k === 'shop_address_mr'}
               placeholder={k === 'upi_id' ? t('settings.upi_placeholder') : undefined}
-              hint={k === 'approval_limit' ? t('settings.approval_limit_hint') : k === 'upi_id' ? t('settings.upi_hint') : undefined}
+              hint={k === 'approval_limit' ? t('settings.approval_limit_hint') : k === 'upi_id' ? t('settings.upi_hint') : k === 'shop_full_name' ? t('settings.shop_full_name_hint') : undefined}
               error={errs[k]}
             />
           ))}

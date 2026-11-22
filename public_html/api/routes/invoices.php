@@ -381,6 +381,11 @@ route('POST', '/invoices', function () {
                 fail(409, 'already_billed', 'This job already has a final bill');
             }
         }
+        // The shop goes job card → bill: making the bill approves a new job (its estimate, if any).
+        if (in_array($job['status'], ['pending', 'estimate_sent'], true) && can('jobs')) {
+            job_approve_now($job, 'Approved when the bill was made');
+            $job = job_row((int) $job['id']);
+        }
         if (!in_array($job['status'], JOB_BILLABLE, true)) {
             fail(409, 'job_not_billable', 'Approve the job before making the bill');
         }
@@ -388,9 +393,7 @@ route('POST', '/invoices', function () {
         if ($money['revision_pending']) {
             fail(409, 'revision_pending', 'A revised estimate is waiting for the customer\'s approval');
         }
-        if (!job_bill_lines((int) $job['id'])) {
-            fail(409, 'nothing_to_bill', 'Add labour or issue parts before billing');
-        }
+        // An empty bill is fine for now: parts and labour can be added on the job; finalising still needs lines.
         $id = tx(function () use ($job, $in, $body) {
             // Re-check under a row lock: two people may press "Create bill" at the same moment.
             $current = val('SELECT invoice_id FROM job_cards WHERE id = ? FOR UPDATE', [$job['id']]);

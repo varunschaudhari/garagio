@@ -7,6 +7,7 @@ import { money, qty, datetime, date } from '../format.js';
 import { statusChip, skeletonRows } from '../ui/table.js';
 import { field, busy } from '../ui/form.js';
 import { openDrawer } from '../ui/drawer.js';
+import { combo } from '../ui/combo.js';
 import { confirmDialog, promptDialog } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
 import { openEstimateForm } from './estimate-form.js';
@@ -116,14 +117,14 @@ export default async function jobPage(ctx) {
           })}
           ${j.status === 'ready' && canEdit ? html`<button class="btn btn-secondary" data-act="ready-wa">${icon('message-circle')}${t('jobs.ready_whatsapp')}</button>` : ''}
           ${canBill && j.invoice ? html`<a class="btn btn-secondary" href="#/invoices/${j.invoice.id}">${icon('receipt')}${j.invoice.invoice_no || t('billing.draft')}</a>` : ''}
-          ${canBill && !j.invoice && ['approved', 'in_progress', 'waiting_parts', 'ready'].includes(j.status) ? html`<button class="btn btn-secondary" data-act="bill">${icon('receipt')}${t('billing.create_bill')}</button>` : ''}
+          ${canBill && !j.invoice && !['delivered', 'cancelled'].includes(j.status) ? html`<button class="btn btn-primary" data-act="bill">${icon('receipt')}${t('billing.create_bill')}</button>` : ''}
         </div>
       </div>
 
       ${m.revised_needed && !m.revision_pending ? html`<div class="banner warning" style="margin-bottom:16px">${icon('triangle-alert')}<span style="flex:1">${t('jobs.revised_needed')}</span>${canEdit ? html`<button class="btn btn-secondary btn-sm" data-act="estimate">${t('estimates.revise')}</button>` : ''}</div>` : ''}
       ${m.revision_pending ? html`<div class="banner" style="margin-bottom:16px">${icon('info')}<span>${t('jobs.revision_pending')}</span></div>` : ''}
 
-      <div class="grid-2" style="grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:start">
+      <div class="grid-main">
         <div class="stack-lg">
           <section class="card" aria-labelledby="h-est">
             <div class="card-head"><h3 id="h-est">${t('estimates.title')}</h3>
@@ -144,7 +145,8 @@ export default async function jobPage(ctx) {
 
           <section class="card" aria-labelledby="h-parts">
             <div class="card-head"><h3 id="h-parts">${t('jobs.parts_used')}</h3>
-              ${requestable && (canEdit || isMech) ? html`<button class="btn btn-primary btn-sm" data-act="request">${icon('package-search', 16)}${t('requests.new')}</button>` : ''}
+              ${(canEdit || canBill) && !['delivered', 'cancelled'].includes(j.status) && j.invoice?.status !== 'final' ? html`<button class="btn btn-secondary btn-sm" data-act="add-part">${icon('plus', 16)}${t('jobs.add_part')}</button>` : ''}
+              ${requestable && (canEdit || isMech) ? html`<button class="btn btn-ghost btn-sm" data-act="request">${icon('package-search', 16)}${t('requests.new')}</button>` : ''}
             </div>
             ${j.parts.length ? html`<div class="table-wrap"><table class="table responsive"><thead><tr><th>${t('parts.part')}</th><th class="num">${t('common.qty')}</th><th class="num">${t('common.amount')}</th><th></th></tr></thead><tbody>
               ${j.parts.map((p) => {
@@ -153,7 +155,7 @@ export default async function jobPage(ctx) {
                   <td class="primary-cell" data-label="${t('parts.part')}"><div class="t-title">${nm(p)}</div><div class="t-sub">${p.part_no}${Number(p.issued) ? html` · ${datetime(p.issued_at)} · ${p.issued_by_name || ''}` : ''}</div>${Number(p.issued) ? '' : html`<span class="chip info" style="margin-top:4px">${t('jobs.part_planned')}</span>`}</td>
                   <td class="num" data-label="${t('common.qty')}">${qty(left)} ${p.unit}${Number(p.returned_qty) ? html`<div class="t-sub">${qty(p.returned_qty)} ${t('jobs.returned')}</div>` : ''}</td>
                   <td class="num" data-label="${t('common.amount')}">${money(left * p.unit_price)}</td>
-                  <td class="actions">${Number(p.issued) && canStock && left > 0 && !j.invoice ? html`<button class="btn btn-ghost btn-sm" data-return="${p.id}">${icon('undo-2', 16)}${t('jobs.return')}</button>` : ''}${!Number(p.issued) && canEdit && j.invoice?.status !== 'final' ? html`<button class="btn btn-ghost btn-sm" data-unplan="${p.id}">${icon('x', 16)}${t('jobs.remove_part')}</button>` : ''}</td>
+                  <td class="actions">${Number(p.issued) && canStock && left > 0 && !j.invoice ? html`<button class="btn btn-ghost btn-sm" data-return="${p.id}">${icon('undo-2', 16)}${t('jobs.return')}</button>` : ''}${!Number(p.issued) && (canEdit || canBill) && j.invoice?.status !== 'final' ? html`<button class="btn btn-ghost btn-sm" data-unplan="${p.id}">${icon('x', 16)}${t('jobs.remove_part')}</button>` : ''}</td>
                 </tr>`;
               })}</tbody></table></div>` : ''}
             ${j.requests.length ? html`<div class="card-body stack" style="border-top:1px solid var(--border)">
@@ -291,6 +293,41 @@ export default async function jobPage(ctx) {
     });
   });
   on(ctx.el, 'click', '[data-act="ready-wa"]', () => openWhatsApp(async () => (await api.post(`/jobs/${id}/whatsapp`, { template: 'ready' })).url));
+  // A part put straight on the job (no request): billed at its price, out of stock when the bill is final.
+  on(ctx.el, 'click', '[data-act="add-part"]', async () => {
+    let picked = null;
+    const res = await openDrawer({
+      title: t('jobs.add_part'),
+      body: html`<div class="stack">
+        <div class="field"><label for="ap-part">${t('parts.part')}<span class="req">*</span></label><div style="position:relative"><input id="ap-part" class="input" placeholder="${t('purchases.search_part')}" autocomplete="off"></div><div class="hint" id="ap-hint"></div></div>
+        ${field({ name: 'qty', label: t('common.qty'), type: 'number', value: 1, required: true })}
+        <p class="small muted">${t('jobs.add_part_note')}</p>
+      </div>`,
+      onOpen(form) {
+        combo($('#ap-part', form), {
+          fetch: async (q) => (await api.get('/parts', { q, per_page: 8 })).items,
+          render: (p) => html`<div style="flex:1;min-width:0"><div class="strong ellipsis">${p.part_no} · ${nm(p)}</div><div class="small muted">${t('purchases.in_stock')} ${qty(p.current_stock)}</div></div><div class="num">${money(p.selling_price)}</div>`,
+          onSelect: (p) => {
+            picked = p;
+            $('#ap-part', form).value = `${p.part_no} · ${nm(p)}`;
+            $('#ap-hint', form).textContent = `${t('inv.mrp')} ${money(p.selling_price)} · ${t('purchases.in_stock')} ${qty(p.current_stock)}`;
+            $('[name=qty]', form).focus();
+          },
+        });
+      },
+      onSubmit: async (d) => {
+        if (!picked) {
+          toast(t('jobs.pick_part'), 'error');
+          return false;
+        }
+        return api.post(`/jobs/${id}/parts`, { part_id: picked.id, qty: d.qty });
+      },
+    });
+    if (res) {
+      toast(t('common.saved'));
+      draw(res.item);
+    }
+  });
   on(ctx.el, 'click', '[data-act="request"]', async () => {
     if (await openRequestForm(job)) reload();
   });

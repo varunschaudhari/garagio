@@ -21,7 +21,7 @@ export default async function counterSale(ctx) {
 
   setHTML(ctx.el, html`
     <div class="page-head"><div style="flex:1"><a href="#/invoices" class="small muted">${icon('arrow-left', 14)} ${t('billing.invoices')}</a><h1 style="margin-top:6px">${t('billing.new_counter')}</h1></div></div>
-    <div class="grid-2" style="grid-template-columns:minmax(0,3fr) minmax(0,2fr);align-items:start">
+    <div class="grid-main">
       <div class="card">
         <div class="toolbar" style="flex-wrap:wrap">
           <div class="input-group" style="max-width:none;flex:1">${icon('scan-line')}<input class="input" id="cs-code" placeholder="${t('billing.barcode')}" aria-label="${t('billing.barcode')}" style="min-height:48px;font-size:16px"></div>

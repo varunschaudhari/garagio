@@ -5,8 +5,9 @@
  */
 $L = static fn (string $key, array $vars = []) => bi("inv.$key", $lang, $vars);
 $s = settings_all();
-$shopEn = $s['shop_name'];
-$shopMr = $s['shop_name_mr'] ?: '';
+$shopEn = shop_full_name('en');
+$shopMr = shop_full_name('mr');
+$shopMr = $shopMr === $shopEn ? '' : $shopMr;
 $inter = (int) $inv['is_interstate'] === 1;
 // Bills made before GST registration stay plain bills (no GSTIN, no tax columns) even when reprinted later.
 $reg = (int) ($inv['gst_registered'] ?? 1) === 1;
@@ -39,8 +40,8 @@ $desc = static function (array $it) use ($lang): string {
   body { margin: 0; color: #111827; background: #fff; font: 12px/1.45 "Noto Sans Devanagari", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   .page { max-width: 190mm; margin: 0 auto; padding: 8mm 0; position: relative; }
   .bar { display: flex; justify-content: flex-end; gap: 8px; padding: 8px; }
-  .bar button { font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 10px; border: 0; background: #F97316; color: #111827; cursor: pointer; box-shadow: 0 4px 12px rgba(249, 115, 22, .3); }
-  header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 3px solid #EA580C; padding-bottom: 12px; }
+  .bar button { font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 10px; border: 0; background: #C1272D; color: #FFFFFF; cursor: pointer; box-shadow: 0 4px 12px rgba(193, 39, 45, .3); }
+  header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 3px solid #C1272D; padding-bottom: 12px; }
   .shop { display: flex; gap: 12px; align-items: flex-start; }
   .shop .logo { flex: none; }
   .shop .logo svg { display: block; }
@@ -48,18 +49,18 @@ $desc = static function (array $it) use ($lang): string {
   .shop .mr { font-size: 16px; font-weight: 600; }
   .muted, .alt { color: #4B5563; }
   .alt { font-size: 11px; }
-  .title { text-align: right; }
-  .title h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: .02em; color: #C2410C; }
+  .title { text-align: right; flex: none; white-space: nowrap; }
+  .title h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: .02em; color: #B0232A; }
   .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
   .box { border: 1px solid #E5E7EB; border-radius: 10px; padding: 8px 12px; background: #FCFCFD; }
   .box h3 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; color: #4B5563; letter-spacing: .04em; }
   table { width: 100%; border-collapse: collapse; }
-  th { background: #FFF1E6; color: #7C2D12; text-align: left; font-size: 10.5px; padding: 6px; border: 1px solid #F5D0B5; }
+  th { background: #FDECEC; color: #7F1D1D; text-align: left; font-size: 10.5px; padding: 6px; border: 1px solid #F3C4C6; }
   td { padding: 6px; border: 1px solid #E5E7EB; vertical-align: top; }
   .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .totals { display: grid; grid-template-columns: 1fr 260px; gap: 16px; margin-top: 12px; }
   .totals table td { border: 0; padding: 3px 0; }
-  .grand td { font-size: 16px; font-weight: 800; border-top: 2px solid #EA580C !important; padding-top: 6px !important; color: #9A3412; }
+  .grand td { font-size: 16px; font-weight: 800; border-top: 2px solid #C1272D !important; padding-top: 6px !important; color: #8E1C22; }
   .words { margin-top: 10px; }
   footer { display: grid; grid-template-columns: 1fr 200px; gap: 16px; margin-top: 18px; align-items: end; }
   .sign { text-align: center; border-top: 1px solid #111827; padding-top: 6px; margin-top: 46px; }
@@ -76,7 +77,7 @@ $desc = static function (array $it) use ($lang): string {
   <?php if ($inv['status'] === 'cancelled'): ?><div class="stamp"><?= e($L('cancelled')) ?></div><?php endif; ?>
   <header>
     <div class="shop">
-      <div class="logo"><?= logo_svg('color', 52) ?></div>
+      <div class="logo"><?= logo_svg('color', 60) ?></div>
       <div>
       <h1><?= e($shopEn) ?></h1>
       <?php if ($shopMr): ?><div class="mr"><?= e($shopMr) ?></div><?php endif; ?>

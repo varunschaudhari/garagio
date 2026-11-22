@@ -36,12 +36,13 @@
   --text: #111827;
   --text-muted: #6B7280;
 
-  --primary: #F97316;
-  --primary-hover: #EA580C;
-  /* Dark ink on orange: white on #F97316 is 2.8:1 and fails WCAG AA; #111827 is 7.3:1. */
-  --primary-ink: #111827;
-  --primary-soft: #FFF1E6;
-  --primary-text: #C2410C; /* orange used as text on light surfaces (5.2:1) */
+  /* The logo's red (Trimurti Rambhau Auto): white on #C1272D is 5.8:1. */
+  --primary: #C1272D;
+  --primary-hover: #A31F25;
+  --primary-ink: #FFFFFF;
+  --primary-soft: #FDECEC;
+  --primary-text: #B0232A; /* red used as text on light surfaces (6.8:1) */
+  --brand-grey: #58595B; /* the logo's grey */
 
   --success: #16A34A;
   --success-soft: #DCFCE7;
@@ -61,16 +62,16 @@
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06);
   --shadow-hover: 0 2px 6px rgba(16, 24, 40, 0.06), 0 12px 32px rgba(16, 24, 40, 0.1);
   --shadow-pop: 0 8px 32px rgba(16, 24, 40, 0.16);
-  /* Brand gradient (logo, Home banner): white text stays on the darker left part (#C2410C 5.2:1, #EA580C 3.6:1 for big text). */
-  --grad-brand: linear-gradient(135deg, #C2410C 0%, #EA580C 60%, #F97316 100%);
+  /* Brand gradient (Home banner, login): the logo's grey to its red; white text is readable on all of it. */
+  --grad-brand: linear-gradient(135deg, #303236 0%, #5C2A2E 48%, #B3242A 100%);
   /* Extra tones for colourful round icons. */
   --violet-soft: #EDE9FE; --violet-text: #5B21B6;
   --teal-soft: #CCFBF1; --teal-text: #115E59;
   --pink-soft: #FCE7F3; --pink-text: #9D174D;
   --overlay: rgba(17, 24, 39, 0.45);
-  --focus: 0 0 0 3px rgba(249, 115, 22, 0.45);
-  /* Chart mark colour: validated (dataviz validator) for lightness band + 3:1 contrast on both surfaces. */
-  --chart-1: #EA580C;
+  --focus: 0 0 0 3px rgba(193, 39, 45, 0.35);
+  /* Chart mark colour: the brand red, 3:1 or more on both surfaces. */
+  --chart-1: #C1272D;
   --chart-grid: #EEF0F3;
 
   --radius-input: 10px;
@@ -102,11 +103,11 @@
   --border-strong: #3A4150;
   --text: #F3F4F6;
   --text-muted: #9CA3AF;
-  --primary: #FB923C;
-  --primary-hover: #FDBA74;
-  --primary-ink: #111827;
-  --primary-soft: rgba(251, 146, 60, 0.14);
-  --primary-text: #FDBA74;
+  --primary: #D63339;
+  --primary-hover: #E0484E;
+  --primary-ink: #FFFFFF;
+  --primary-soft: rgba(214, 51, 57, 0.16);
+  --primary-text: #FCA5A5;
   --success: #4ADE80; --success-soft: rgba(74, 222, 128, 0.14); --success-text: #86EFAC;
   --warning: #FBBF24; --warning-soft: rgba(251, 191, 36, 0.14); --warning-text: #FCD34D;
   --danger: #F87171; --danger-soft: rgba(248, 113, 113, 0.14); --danger-text: #FCA5A5;
@@ -115,10 +116,10 @@
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
   --overlay: rgba(0, 0, 0, 0.6);
-  --focus: 0 0 0 3px rgba(251, 146, 60, 0.5);
-  --chart-1: #EA580C;
+  --focus: 0 0 0 3px rgba(214, 51, 57, 0.5);
+  --chart-1: #E0484E;
   --chart-grid: #262B35;
-  --grad-brand: linear-gradient(135deg, #7C2D12 0%, #9A3412 50%, #C2410C 100%);
+  --grad-brand: linear-gradient(135deg, #1E1F22 0%, #3B1C1F 50%, #8E1C22 100%);
   --shadow-hover: 0 10px 32px rgba(0, 0, 0, 0.5);
   --violet-soft: rgba(167, 139, 250, 0.16); --violet-text: #C4B5FD;
   --teal-soft: rgba(45, 212, 191, 0.14); --teal-text: #5EEAD4;
@@ -136,11 +137,11 @@
     --border-strong: #3A4150;
     --text: #F3F4F6;
     --text-muted: #9CA3AF;
-    --primary: #FB923C;
-    --primary-hover: #FDBA74;
-    --primary-ink: #111827;
-    --primary-soft: rgba(251, 146, 60, 0.14);
-    --primary-text: #FDBA74;
+    --primary: #D63339;
+    --primary-hover: #E0484E;
+    --primary-ink: #FFFFFF;
+    --primary-soft: rgba(214, 51, 57, 0.16);
+    --primary-text: #FCA5A5;
     --success: #4ADE80; --success-soft: rgba(74, 222, 128, 0.14); --success-text: #86EFAC;
     --warning: #FBBF24; --warning-soft: rgba(251, 191, 36, 0.14); --warning-text: #FCD34D;
     --danger: #F87171; --danger-soft: rgba(248, 113, 113, 0.14); --danger-text: #FCA5A5;
@@ -149,13 +150,13 @@
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
     --overlay: rgba(0, 0, 0, 0.6);
-    --focus: 0 0 0 3px rgba(251, 146, 60, 0.5);
-    --grad-brand: linear-gradient(135deg, #7C2D12 0%, #9A3412 50%, #C2410C 100%);
+    --focus: 0 0 0 3px rgba(214, 51, 57, 0.5);
+    --grad-brand: linear-gradient(135deg, #1E1F22 0%, #3B1C1F 50%, #8E1C22 100%);
     --shadow-hover: 0 10px 32px rgba(0, 0, 0, 0.5);
     --violet-soft: rgba(167, 139, 250, 0.16); --violet-text: #C4B5FD;
     --teal-soft: rgba(45, 212, 191, 0.14); --teal-text: #5EEAD4;
     --pink-soft: rgba(244, 114, 182, 0.14); --pink-text: #F9A8D4;
-  --chart-1: #EA580C;
+    --chart-1: #E0484E;
   --chart-grid: #262B35;
   }
 }

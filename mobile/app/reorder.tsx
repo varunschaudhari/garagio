@@ -20,7 +20,7 @@ export default function ReorderScreen() {
   const [qtys, setQtys] = useState<Record<number, string>>({});
 
   const message = (g: Reorder['groups'][number]) => {
-    const shop = (lang === 'mr' ? info?.shop_name_mr || info?.shop_name : info?.shop_name) ?? '';
+    const shop = (lang === 'mr' ? info?.shop_full_name_mr || info?.shop_name_mr || info?.shop_name : info?.shop_full_name || info?.shop_name) ?? '';
     const lines = g.items.map((it, i) => `${i + 1}. ${it.part_no} – ${[it.name_en, it.name_mr].filter(Boolean).join(' / ')} – ${qtys[it.part_id] ?? qty(it.suggested_qty)} ${it.unit}`);
     return `${t('reorder.message_head', { shop })}\n\n${lines.join('\n')}\n\n${t('reorder.message_foot')}`;
   };

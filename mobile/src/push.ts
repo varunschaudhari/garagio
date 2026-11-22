@@ -33,7 +33,7 @@ export async function registerPush(): Promise<void> {
         // eslint-disable-next-line import/namespace -- re-exported enum the import plugin cannot see; tsc checks it
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 150, 250],
-        lightColor: '#F97316',
+        lightColor: '#C1272D',
       });
     }
     let { status } = await Notifications.getPermissionsAsync();

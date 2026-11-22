@@ -9,7 +9,7 @@ import { toast, toastError } from '../ui/toast.js';
 import { openPartForm } from './part-form.js';
 import { openSupplierForm } from './suppliers.js';
 import { uploadBillPhoto } from '../ui/bill-photo.js';
-import { readSheetRows } from './parts-import.js';
+import { readSheetTable } from './parts-import.js';
 
 const GST_RATES = [0, 5, 12, 18, 28, 40];
 const FIELDS = ['part', 'qty', 'mrp', 'price', 'disc', 'gst'];
@@ -358,9 +358,9 @@ export default async function purchaseNew(ctx) {
     inp.value = '';
     if (!file) return;
     try {
-      const rows = await readSheetRows(file);
+      const rows = await readSheetTable(file);
       if (!rows.length) return toast(t('parts.import_empty'), 'error');
-      const res = await api.post('/purchases/import-lines', { rows });
+      const res = await api.post('/purchases/import-lines', { table: rows });
       if (!ctx.alive()) return;
       for (const l of res.lines) {
         const empty = st.rows.find((r) => !r.part && !r.qty);
@@ -386,7 +386,8 @@ export default async function purchaseNew(ctx) {
       dirty = true;
       refresh();
       const fresh = res.lines.filter((l) => !l.part).length;
-      toast(t('purchases.imported', { n: res.lines.length, file: file.name }));
+      if (res.lines.length) toast(t('purchases.imported', { n: res.lines.length, file: file.name }));
+      else toast(t('purchases.import_nothing'), 'error');
       const notes = [];
       if (fresh) notes.push(t('purchases.import_new_parts', { n: fresh }));
       if (res.errors.length) notes.push(t('purchases.import_skipped', { list: res.errors.map((x) => x.name).join(', ') }));

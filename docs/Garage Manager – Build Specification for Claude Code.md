@@ -517,3 +517,20 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
     the thermal receipt). Home starts with a gradient banner (greeting, today's sales / bills / jobs) above the eight
     tiles, which now have colourful round icons. Bike numbers look like Indian number plates. Bill totals sit on a
     soft orange band. Phone tab bar: active tab on an orange pill; its height includes Android's navigation bar.
+32. **Shop requests of 23 Nov 2026 (answers from the owner):**
+    - The shop's own logo and colours: a grey gear with a red ring and spanner (drawn as SVG, same in the web app,
+      the bills, the phone app and the Android icons; black on the thermal receipt). Buttons and the brand colour are
+      the logo's red #C1272D with white text (5.8:1; dark mode #D63339); the banner gradient runs from the logo's grey
+      to its red. This replaces the orange of decision 31; the rest of that design stays.
+    - Two shop names: the short `shop_name` ("Trimurti Auto") inside the app, and `shop_full_name` / `shop_full_name_mr`
+      ("Trimurti Rambhau Auto Spares and Garage") on bills, receipts, returns, the estimate page, the login screen and
+      WhatsApp messages (falls back to the short name when empty).
+    - A bill can be made straight from any open job card (not delivered / cancelled). If the job is still pending or
+      its estimate is only sent, making the bill approves it (person with the jobs permission). An empty draft is
+      allowed; finalising still needs at least one line. Parts can be added straight on the job (planned, issued 0, at
+      the part's selling price; they leave stock when the bill is finalised) and the open draft bill follows every
+      change to the job's parts and labour.
+    - Excel uploads (parts list and supplier bills) read the sheet as a table: the heading row is found anywhere in
+      the first 40 rows (supplier name and address above the table are fine), headings are matched loosely (Tally /
+      Busy style: Particulars, Qty, Rate, Amount, HSN/SAC, GST %…), and total / tax / round-off rows are skipped.
+      The phone's file picker accepts any file type (some phones label .xlsx oddly).

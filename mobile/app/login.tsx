@@ -29,7 +29,8 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const passRef = useRef<TextInputInstance>(null);
 
-  const shop = (lang === 'mr' ? info?.shop_name_mr || info?.shop_name : info?.shop_name) ?? server?.base ?? '';
+  // The full name from the signboard; inside the app the short name is used.
+  const shop = (lang === 'mr' ? info?.shop_full_name_mr || info?.shop_name_mr || info?.shop_name : info?.shop_full_name || info?.shop_name) ?? server?.base ?? '';
 
   const submit = async () => {
     setError(null);
@@ -118,5 +119,5 @@ export default function Login() {
 const styles = StyleSheet.create({
   wrap: { padding: space[5], gap: space[5], flexGrow: 1, justifyContent: 'center' },
   hero: { alignItems: 'center', gap: space[1], paddingVertical: space[6], paddingHorizontal: space[5] },
-  logoRing: { padding: 5, borderRadius: radius.xl, backgroundColor: '#FFFFFF', marginBottom: space[2] },
+  logoRing: { padding: 2, borderRadius: radius.xl, backgroundColor: 'rgba(255,255,255,0.25)', marginBottom: space[2] },
 });

@@ -159,6 +159,15 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] More → Users: deactivate a user (they are logged out at once); reset a password (they must change it at login).
 - [ ] More → Settings: change the approval limit; a new parts request uses the new limit.
 
+## 23 Nov 2026 – logo, job → bill, Excel
+
+- [ ] App icon, splash and login show the gear logo; buttons are red with white text; the login shows the full shop name.
+- [ ] New job (pending) → "Create bill" is there → tap it → the job becomes approved and an empty draft bill opens.
+- [ ] Job → Parts → "Add part" → pick a part, qty 2 → it shows as planned; the draft bill gets the line; remove it again.
+- [ ] Purchase → "Import from Excel" with a supplier file that has the shop name / address above the table → lines fill.
+- [ ] Stock → Import from Excel with a .xlsx picked from WhatsApp / Downloads (file picker shows all files).
+- [ ] More → Settings shows "Full name on bills"; change it → the next bill PDF uses it.
+
 ## Release APK – 15-minute smoke test
 
 Run on every new APK, installed from the EAS link, against the **HTTPS test site** (not the PC).

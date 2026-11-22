@@ -187,6 +187,8 @@ test('billing: bilingual printable invoice with amount in words; WhatsApp bill m
     ok(str_contains($h['body'], 'कर बीजक') && str_contains($h['body'], 'Tax Invoice'), 'bilingual title');
     ok(str_contains($h['body'], 'Rupees Two Thousand Three Hundred Sixty Only'), 'English words');
     ok(str_contains($h['body'], 'दोन हजार तीनशे साठ रुपये फक्त'), 'Marathi words');
+    ok(str_contains($h['body'], 'Trimurti Rambhau Auto Spares and Garage') && str_contains($h['body'], 'रामभाऊ'), 'full shop name on the bill');
+    ok(str_contains($h['body'], '#C1272D'), 'logo on the bill');
     eq(403, get("/invoices/$a/html", 'ramesh')['status']);
     $wa = status(200, post("/invoices/$a/whatsapp", [], 'desk'));
     ok(str_starts_with($wa['url'], 'https://wa.me/919000000001'));

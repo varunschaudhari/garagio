@@ -45,6 +45,8 @@ export default async function settingsPage(ctx) {
       setHTML(body, settingsForm(html`
         ${field({ name: 'shop_name', label: t('settings.shop_name'), value: s.shop_name, required: true })}
         ${field({ name: 'shop_name_mr', label: t('settings.shop_name_mr'), value: s.shop_name_mr, cls: 'mr-text' })}
+        ${field({ name: 'shop_full_name', label: t('settings.shop_full_name'), value: s.shop_full_name, hint: t('settings.shop_full_name_hint') })}
+        ${field({ name: 'shop_full_name_mr', label: t('settings.shop_full_name_mr'), value: s.shop_full_name_mr, cls: 'mr-text' })}
         ${field({ name: 'shop_address', label: t('settings.shop_address'), type: 'textarea', value: s.shop_address, rows: 2 })}
         ${field({ name: 'shop_address_mr', label: t('settings.shop_address_mr'), type: 'textarea', value: s.shop_address_mr, rows: 2 })}
         ${field({ name: 'shop_phone', label: t('settings.shop_phone'), value: s.shop_phone, type: 'tel' })}

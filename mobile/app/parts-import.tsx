@@ -54,7 +54,7 @@ export default function PartsImport() {
   const { c } = useTheme();
   const [setStock, setSetStock] = useState(true);
   const [replace, setReplace] = useState(false);
-  const [file, setFile] = useState<{ name: string; rows: Row[] } | null>(null);
+  const [file, setFile] = useState<{ name: string; table: Row[]; rows: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [busy, setBusy] = useState<'' | 'sample' | 'pick' | 'import'>('');
 
@@ -82,7 +82,7 @@ export default function PartsImport() {
       if (!picked) return;
       setResult(null);
       setFile(picked);
-      if (!picked.rows.length) toast(t('parts.import_empty'), 'error');
+      if (!picked.rows) toast(t('parts.import_empty'), 'error');
     } catch (e) {
       if (e instanceof SheetReadError) toast(t('parts.import_read_error'), 'error');
       else toastError(e);
@@ -92,7 +92,7 @@ export default function PartsImport() {
   };
 
   const run = async () => {
-    if (!file?.rows.length) return;
+    if (!file?.rows) return;
     if (replace) {
       const sure = await new Promise<boolean>((resolve) =>
         Alert.alert(t('parts.import_replace_q'), t('parts.import_replace_note'), [
@@ -104,7 +104,7 @@ export default function PartsImport() {
     }
     setBusy('import');
     try {
-      const res = await api.post<ImportResult>('/parts/import', { rows: file.rows, set_stock: setStock, replace });
+      const res = await api.post<ImportResult>('/parts/import', { table: file.table, set_stock: setStock, replace });
       setResult(res);
       setFile(null);
       void qc.invalidateQueries({ queryKey: ['parts'] });
@@ -147,13 +147,13 @@ export default function PartsImport() {
 
         {file ? (
           <Card style={{ gap: space[3] }}>
-            <Txt weight="semibold">{file.rows.length ? t('parts.import_rows', { n: file.rows.length, file: file.name }) : t('parts.import_empty')}</Txt>
-            {file.rows.slice(0, 3).map((r, i) => (
+            <Txt weight="semibold">{file.rows ? t('parts.import_rows', { n: file.rows, file: file.name }) : t('parts.import_empty')}</Txt>
+            {file.table.slice(0, 4).map((r, i) => (
               <Txt key={i} size="sm" muted numberOfLines={2}>
-                {Object.entries(r).map(([k, v]) => `${k}: ${v}`).join(' · ')}
+                {r.filter(Boolean).join(' · ')}
               </Txt>
             ))}
-            {file.rows.length ? <Button title={t('parts.import_run')} icon={Upload} onPress={() => void run()} loading={busy === 'import'} needsOnline /> : null}
+            {file.rows ? <Button title={t('parts.import_run')} icon={Upload} onPress={() => void run()} loading={busy === 'import'} needsOnline /> : null}
           </Card>
         ) : null}
 

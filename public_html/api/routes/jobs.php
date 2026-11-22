@@ -345,6 +345,7 @@ route('POST', '/jobs/{id}/labour', function ($p) {
         'amount' => r2((float) $amount),
         'user_id' => uid(),
     ]);
+    job_refresh_draft((int) $j['id']);
     return ['item' => job_detail((int) $j['id'])];
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC]]);
 
@@ -359,6 +360,7 @@ route('DELETE', '/jobs/{id}/labour/{lid}', function ($p) {
         fail(403, 'forbidden', 'You can remove only labour you added');
     }
     q('DELETE FROM job_labour WHERE id = ?', [$l['id']]);
+    job_refresh_draft((int) $j['id']);
     return ['item' => job_detail((int) $j['id'])];
 }, ['roles' => [ROLE_OWNER, ROLE_DESK, ROLE_MECHANIC]]);
 
@@ -423,30 +425,68 @@ route('POST', '/jobs/{id}/return', function ($p) {
  * The customer agreed in person: approve the job. Approves the latest estimate if there is one (its parts and
  * labour go onto the job), otherwise just marks the job approved so work and billing can start.
  */
+/**
+ * Approve a job (its open estimate, if there is one). Also used when the bill is made straight from a new job card:
+ * the shop's way is job card → bill.
+ */
+function job_approve_now(array $j, ?string $note): void
+{
+    $latest = row("SELECT * FROM estimates WHERE job_card_id = ? AND status IN ('draft','sent') ORDER BY id DESC LIMIT 1", [$j['id']]);
+    if (!$latest && !in_array($j['status'], ['pending', 'estimate_sent'], true)) {
+        fail(409, 'already_approved', 'This job is already approved');
+    }
+    tx(function () use ($j, $latest, $note) {
+        if ($latest) {
+            $latest['items'] = rows('SELECT * FROM estimate_items WHERE estimate_id = ? ORDER BY id', [$latest['id']]);
+            approve_estimate($latest, 'desk', $note);
+        } else {
+            update_row('job_cards', (int) $j['id'], ['status' => 'approved']);
+            job_event((int) $j['id'], 'job_status', ['from' => $j['status'], 'to' => 'approved', 'note' => $note]);
+        }
+    });
+    if ($latest) {
+        notify_estimate_approved(job_row((int) $j['id']), $latest);
+    }
+}
+
+/** A job's draft bill follows its parts and labour as they change (discounts kept). */
+function job_refresh_draft(int $jobId): void
+{
+    $inv = val("SELECT i.id FROM invoices i JOIN job_cards j ON j.invoice_id = i.id WHERE j.id = ? AND i.status = 'draft'", [$jobId]);
+    if ($inv) {
+        tx(static fn () => rebuild_draft((int) $inv));
+    }
+}
+
 route('POST', '/jobs/{id}/approve', function ($p) {
     $j = job_row((int) $p['id']);
     $in = clean(body(), ['note' => 'str|max:255']);
     if (job_locked($j)) {
         fail(409, 'job_closed', 'This job is closed or already billed');
     }
-    $latest = row("SELECT * FROM estimates WHERE job_card_id = ? AND status IN ('draft','sent') ORDER BY id DESC LIMIT 1", [$j['id']]);
-    if (!$latest && !in_array($j['status'], ['pending', 'estimate_sent'], true)) {
-        fail(409, 'already_approved', 'This job is already approved');
-    }
-    tx(function () use ($j, $latest, $in) {
-        if ($latest) {
-            $latest['items'] = rows('SELECT * FROM estimate_items WHERE estimate_id = ? ORDER BY id', [$latest['id']]);
-            approve_estimate($latest, 'desk', $in['note'] ?? null);
-        } else {
-            update_row('job_cards', (int) $j['id'], ['status' => 'approved']);
-            job_event((int) $j['id'], 'job_status', ['from' => $j['status'], 'to' => 'approved', 'note' => $in['note'] ?? null]);
-        }
-    });
-    if ($latest) {
-        notify_estimate_approved(job_row((int) $j['id']), $latest);
-    }
+    job_approve_now($j, $in['note'] ?? null);
     return ['item' => job_detail((int) $j['id'])];
 }, ['perm' => 'jobs']);
+
+/*
+ * A part put straight on the job by the front desk or owner (no parts request): billed at its selling price and taken
+ * out of stock when the bill is final (a "planned" part, like estimate parts).
+ */
+route('POST', '/jobs/{id}/parts', function ($p) {
+    $j = job_row((int) $p['id']);
+    job_access($j, true);
+    if (job_locked($j)) {
+        fail(409, 'job_closed', 'This job is billed or closed');
+    }
+    $in = clean(body(), ['part_id' => 'int|req', 'qty' => 'num|req|min:0.01|max:10000']);
+    $part = row('SELECT id, name_en, selling_price FROM parts WHERE id = ? AND active = 1', [$in['part_id']]) ?? not_found('Part');
+    tx(function () use ($j, $part, $in) {
+        insert('job_parts', ['job_card_id' => $j['id'], 'part_id' => $part['id'], 'qty' => $in['qty'], 'issued' => 0, 'unit_price' => $part['selling_price'], 'unit_cost' => 0]);
+        job_event((int) $j['id'], 'job_part_added', ['part_id' => (int) $part['id'], 'qty' => (float) $in['qty']]);
+    });
+    job_refresh_draft((int) $j['id']);
+    return ['item' => job_detail((int) $j['id'])];
+}, ['perm' => ['jobs', 'make_bills']]);
 
 /* Take a planned (estimate) part off the job before billing, e.g. the customer changed their mind. */
 route('DELETE', '/jobs/{id}/parts/{jpid}', function ($p) {
@@ -459,8 +499,9 @@ route('DELETE', '/jobs/{id}/parts/{jpid}', function ($p) {
         q('UPDATE job_parts SET qty = 0, updated_at = ? WHERE id = ?', [now(), $jp['id']]);
         job_event((int) $j['id'], 'job_part_removed', ['part_id' => (int) $jp['part_id'], 'qty' => (float) $jp['qty']]);
     });
+    job_refresh_draft((int) $j['id']);
     return ['item' => job_detail((int) $j['id'])];
-}, ['perm' => 'jobs']);
+}, ['perm' => ['jobs', 'make_bills']]);
 
 /* ------------------------------------------------------------------ WhatsApp: bike ready */
 

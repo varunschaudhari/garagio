@@ -7,7 +7,7 @@
  */
 $L = static fn (string $key, array $vars = []) => tr("inv.$key", $lang, $vars);
 $s = settings_all();
-$shopName = $lang === 'mr' && $s['shop_name_mr'] ? $s['shop_name_mr'] : $s['shop_name'];
+$shopName = shop_full_name($lang);
 $shopAddr = $lang === 'mr' && $s['shop_address_mr'] ? $s['shop_address_mr'] : $s['shop_address'];
 $terms = $lang === 'mr' && $s['invoice_terms_mr'] ? $s['invoice_terms_mr'] : $s['invoice_terms_en'];
 $inter = (int) $inv['is_interstate'] === 1;
@@ -30,7 +30,7 @@ $font = $paper === 80 ? 13 : 11;
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= e($inv['invoice_no'] ?: 'Draft') ?> · <?= e($s['shop_name']) ?></title>
+<title><?= e($inv['invoice_no'] ?: 'Draft') ?> · <?= e($shopName) ?></title>
 <style>
   @page { margin: 0; }
   * { box-sizing: border-box; }
@@ -50,7 +50,7 @@ $font = $paper === 80 ? 13 : 11;
   .qr { width: 32mm; height: 32mm; margin: 4px auto 0; }
   .qr svg { width: 100%; height: 100%; }
   .bar { position: sticky; top: 0; display: flex; justify-content: center; padding: 8px; background: #F3F4F6; }
-  .bar button { font: 600 16px system-ui, sans-serif; padding: 10px 28px; border-radius: 10px; border: 0; background: #F97316; color: #111827; }
+  .bar button { font: 600 16px system-ui, sans-serif; padding: 10px 28px; border-radius: 10px; border: 0; background: #C1272D; color: #FFFFFF; }
   .logo { display: flex; justify-content: center; margin: 0 0 3px; }
   @media print { .bar { display: none; } }
 </style>

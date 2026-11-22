@@ -13,7 +13,7 @@ $shop = setting('shop_name');
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Inter", "Noto Sans Devanagari", system-ui, sans-serif; color: #111827; background: #fff; }
   .bar { position: sticky; top: 0; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #F7F8FA; border-bottom: 1px solid #E5E7EB; font-size: 14px; }
-  .bar button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 0; background: #F97316; color: #fff; cursor: pointer; }
+  .bar button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 0; background: #C1272D; color: #fff; cursor: pointer; }
   .sheet { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: 8px; }
   .label { border: 1px dashed #D1D5DB; padding: 6px; display: flex; gap: 6px; align-items: center; height: 30mm; overflow: hidden; break-inside: avoid; }
   .qr { width: 24mm; height: 24mm; flex: none; }
