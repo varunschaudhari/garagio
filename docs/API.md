@@ -31,7 +31,8 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET/POST /locations`, `PUT /locations/{id}` | all / O I | |
 | `GET/POST /categories`, `PUT /categories/{id}` | all / O I | |
 | `GET/POST /labour-rates`, `PUT /labour-rates/{id}` | all / O | |
-| `GET/POST /users`, `PUT /users/{id}` | O | `reset_password`, `active`, `role`, `permissions: {key: bool}` (not for owners); `GET` adds `permissions` + `role_defaults` |
+| `GET/POST /users`, `PUT /users/{id}` | O | `name`, `username` (unique, `taken`), `phone`, `reset_password`, `active`, `role`, `permissions: {key: bool}` (not for owners), `login` (mechanics only may be `false`: no username / password; `true` later needs `username` + `reset_password`); items carry `login`; `GET` adds `permissions` + `role_defaults` |
+| `DELETE /users/{id}` | O | `{deleted}` when nothing points at the person, else `{hidden}` (inactive); 409 `cannot_demote_self`, `last_owner`, `mechanic_has_open_jobs` |
 | `GET /users/mechanics` | all | |
 
 ## Inventory
@@ -121,7 +122,7 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | Method & path | Roles | Notes |
 |---|---|---|
 | `GET /dashboard` | all | role-aware; `money` block for owner |
-| `GET /mechanics/daily?date=` · `GET /mechanics/summary` | O | |
+| `GET /mechanics/daily?date=` · `GET /mechanics/summary` | O | items carry `active` (daily also `phone`, `username`, `login`); hidden mechanics only when they worked or were paid in the period |
 | `POST /mechanics/{id}/payments` · `GET /mechanics/{id}/payments` · `DELETE /mechanics/payments/{pid}` | O | `kind: daily|advance` |
 | `GET /reports/{sales,purchases,stock,profit,dues,payables,gst,mechanics}` | O (I: stock, purchases, payables) | `from, to, format=csv` |
 | `GET /messages/due` · `POST /messages/log` | O D | service + payment reminders with wa.me links |

@@ -47,7 +47,7 @@ route('GET', '/mechanics/daily', function () {
     $work = mechanic_work($date, $date);
     $paid = mechanic_paid($date, $date);
     $out = [];
-    foreach (rows("SELECT id, name, active FROM users WHERE role = 'mechanic' ORDER BY active DESC, name") as $m) {
+    foreach (rows("SELECT id, name, phone, username, active, password_hash IS NOT NULL AS login FROM users WHERE role = 'mechanic' ORDER BY active DESC, name") as $m) {
         $id = (int) $m['id'];
         $jobs = $work[$id] ?? [];
         if (!(int) $m['active'] && !$jobs && empty($paid[$id])) {
@@ -56,6 +56,10 @@ route('GET', '/mechanics/daily', function () {
         $out[] = [
             'id' => $id,
             'name' => $m['name'],
+            'phone' => $m['phone'],
+            'username' => $m['username'],
+            'login' => (bool) $m['login'],
+            'active' => (int) $m['active'],
             'jobs' => $jobs,
             'jobs_count' => count($jobs),
             'labour_billed' => r2(array_sum(array_column($jobs, 'labour'))),
@@ -75,11 +79,15 @@ route('GET', '/mechanics/summary', function () {
     $work = mechanic_work($from, $to);
     $paid = mechanic_paid($from, $to);
     $out = [];
-    foreach (rows("SELECT id, name FROM users WHERE role = 'mechanic' ORDER BY name") as $m) {
+    foreach (rows("SELECT id, name, active FROM users WHERE role = 'mechanic' ORDER BY active DESC, name") as $m) {
         $id = (int) $m['id'];
         $jobs = $work[$id] ?? [];
+        // A removed (hidden) mechanic still shows when he worked or was paid in the period.
+        if (!(int) $m['active'] && !$jobs && empty($paid[$id])) {
+            continue;
+        }
         $out[] = [
-            'id' => $id, 'name' => $m['name'], 'jobs_count' => count($jobs),
+            'id' => $id, 'name' => $m['name'], 'active' => (int) $m['active'], 'jobs_count' => count($jobs),
             'labour_billed' => r2(array_sum(array_column($jobs, 'labour'))),
             'parts_value' => r2(array_sum(array_column($jobs, 'parts'))),
             'paid_daily' => r2($paid[$id]['daily'] ?? 0),

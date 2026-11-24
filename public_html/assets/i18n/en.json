@@ -403,7 +403,17 @@
       "reports": "Open reports (each report also needs its data permission)",
       "cash_book": "Shop expenses and the end-of-day cash count",
       "change_mrp": "Change a part's MRP (also while billing)"
-    }
+    },
+    "username_hint": "Lower-case letters and numbers. If you change it, they use the new one from their next login.",
+    "no_login": "No app login",
+    "uses_app": "Uses the app (has a login)",
+    "uses_app_hint": "Without a login he can still be given jobs and paid.",
+    "remove": "Remove",
+    "remove_q": "Remove {name}?",
+    "remove_hint": "Someone who appears in jobs, bills or payments is only hidden, so old records keep the name. You can bring them back from Users.",
+    "removed": "Removed",
+    "hidden_done": "Hidden – old records keep the name",
+    "hidden": "Removed"
   },
   "status": {
     "pending": "Pending",
@@ -489,7 +499,9 @@
     "payment_needed": "Collect the extra amount to save this change (credit only for trusted customers).",
     "gst_mode_changed": "GST registration changed since this bill. Cancel it and make a new one.",
     "edit_has_returns": "This bill has returns, so it can't be edited.",
-    "edit_empty": "The bill would be empty. Cancel it instead."
+    "edit_empty": "The bill would be empty. Cancel it instead.",
+    "login_required": "Only a mechanic can be without a login. Give a username and a password.",
+    "mechanic_has_open_jobs": "This mechanic still has open jobs. Give them to another mechanic first."
   },
   "fields": {
     "required": "Required",
@@ -512,7 +524,8 @@
     "future_date": "Date cannot be in the future",
     "before_last_bill": "Cannot be earlier than the last bill",
     "gstin_required": "Enter the shop GSTIN first",
-    "pick_date": "Choose a date"
+    "pick_date": "Choose a date",
+    "taken": "Someone else already uses this"
   },
   "mobile": {
     "setup_title": "Connect to your shop",
@@ -846,7 +859,12 @@
     "next_service_saved": "Next service saved.",
     "add_part": "Add part",
     "add_part_note": "Billed at its MRP; it leaves stock when the bill is final.",
-    "pick_part": "Choose a part from the list"
+    "pick_part": "Choose a part from the list",
+    "stage_processing": "Processing",
+    "stage_completed": "Completed",
+    "stage_completed_hint": "Work done, waiting for the bill or for the customer",
+    "empty_processing": "No bike is being worked on right now.",
+    "empty_completed": "No finished bike is waiting."
   },
   "estimates": {
     "title": "Estimate",
@@ -1146,7 +1164,9 @@
     "saved": "Payment saved",
     "none": "No jobs billed for this mechanic.",
     "your_decision": "Type what you pay each mechanic. The figures above help you decide.",
-    "paid_total": "Total paid"
+    "paid_total": "Total paid",
+    "add": "Add mechanic",
+    "edit": "Edit mechanic"
   },
   "reports": {
     "title": "Reports",

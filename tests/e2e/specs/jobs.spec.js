@@ -76,6 +76,13 @@ test('job board shows the bike in the right column', async ({ page }) => {
   await page.goto('/#/jobs?view=board');
   const col = page.locator('.kanban-col', { hasText: 'In progress' });
   await expect(col).toContainText('MH09GH3456');
+  // Bikes in the shop in two parts: work still going on, and work done.
+  await page.locator('[data-stage="processing"]').click();
+  await expect(page.locator('.kanban-col', { hasText: 'In progress' })).toContainText('MH09GH3456');
+  await expect(page.locator('.kanban-col', { hasText: 'Ready' })).toHaveCount(0);
+  await page.locator('[data-stage="completed"]').click();
+  await expect(page.locator('#jobs-body')).not.toContainText('MH09GH3456');
+  await expect(page).toHaveURL(/stage=completed/);
 });
 
 test('front desk bills the job, takes payment in full and delivers the bike', async ({ page }) => {

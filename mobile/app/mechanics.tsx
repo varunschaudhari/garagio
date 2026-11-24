@@ -1,19 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
-import { HandCoins } from 'lucide-react-native';
+import { HandCoins, Pencil, Trash2, UserPlus } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
 import { useWorkMutation } from '@/api/queries';
+import { confirmRemovePerson, PersonSheet } from '@/components/personSheet';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
-import { Banner, Button, Card, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { Banner, Button, Card, Chip, Divider, Field, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
 import { date, money } from '@/format';
 import { space, useTheme } from '@/theme';
 
 interface MechDay {
   id: number;
   name: string;
+  phone: string | null;
+  username: string | null;
+  login: boolean;
+  active: number;
   jobs: { job_id: number; job_no: string; reg_no: string; labour: number; parts: number }[];
   jobs_count: number;
   labour_billed: number;
@@ -29,7 +34,7 @@ function iso(offset: number) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** Owner: mechanic daily summary and pay. */
+/** Owner: mechanic daily summary and pay; mechanics are added, changed and removed here too. */
 export default function Mechanics() {
   const { t } = useTranslation();
   const { c } = useTheme();
@@ -38,6 +43,8 @@ export default function Mechanics() {
   const [paying, setPaying] = useState<MechDay | null>(null);
   const [amount, setAmount] = useState('');
   const [kind, setKind] = useState<'daily' | 'advance'>('daily');
+  // undefined: no sheet; null: new mechanic
+  const [editing, setEditing] = useState<MechDay | null | undefined>(undefined);
   const pay = useWorkMutation((v: { id: number; body: unknown }) => api.post(`/mechanics/${v.id}/payments`, v.body));
 
   const save = async () => {
@@ -59,12 +66,31 @@ export default function Mechanics() {
         contentContainerStyle={{ padding: space[4], gap: space[4], paddingBottom: space[10] }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} colors={[c.primary]} />}
       >
+        <Button title={t('mechanics.add')} icon={UserPlus} variant="secondary" onPress={() => setEditing(null)} needsOnline />
         <Segmented<string> value={day} onChange={setDay} options={[{ value: iso(0), label: t('common.today') }, { value: iso(-1), label: t('common.yesterday') }, { value: iso(-2), label: date(iso(-2)).slice(0, 5) }]} />
         <Banner text={t('mechanics.your_decision')} />
         {q.isPending ? <Loading /> : null}
         {(q.data?.items ?? []).map((m) => (
           <Card key={m.id} style={{ gap: space[2] }}>
-            <Txt size="lg" weight="bold">{m.name}</Txt>
+            <View style={styles.kv}>
+              <Txt size="lg" weight="bold" style={{ flex: 1 }}>{m.name}</Txt>
+              {m.active ? (
+                <>
+                  <Pressable onPress={() => setEditing(m)} accessibilityRole="button" accessibilityLabel={`${t('common.edit')} · ${m.name}`} hitSlop={8} style={styles.icon}>
+                    <Pencil size={20} color={c.primaryText} />
+                  </Pressable>
+                  <Pressable onPress={() => confirmRemovePerson(m, t, () => void q.refetch())} accessibilityRole="button" accessibilityLabel={`${t('users.remove')} · ${m.name}`} hitSlop={8} style={styles.icon}>
+                    <Trash2 size={20} color={c.danger} />
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+            {!m.active || !m.login ? (
+              <View style={{ flexDirection: 'row', gap: space[2], flexWrap: 'wrap' }}>
+                {!m.active ? <Chip label={t('users.hidden')} /> : null}
+                {!m.login ? <Chip label={t('users.no_login')} tone="warning" /> : null}
+              </View>
+            ) : null}
             <View style={styles.kv}><Txt muted>{t('mechanics.jobs')}</Txt><Txt weight="semibold">{m.jobs_count}</Txt></View>
             <View style={styles.kv}><Txt muted>{t('mechanics.labour')}</Txt><Txt weight="semibold" tabular>{money(m.labour_billed)}</Txt></View>
             <View style={styles.kv}><Txt muted>{t('mechanics.parts')}</Txt><Txt weight="semibold" tabular>{money(m.parts_value)}</Txt></View>
@@ -76,10 +102,21 @@ export default function Mechanics() {
             <View style={styles.kv}>
               <Txt>{t('mechanics.paid')}: <Txt weight="bold">{money(m.paid_daily)}</Txt>{m.paid_advance ? ` · ${t('mechanics.advance')}: ${money(m.paid_advance)}` : ''}</Txt>
             </View>
-            <Button title={t('mechanics.pay')} icon={HandCoins} small onPress={() => { setAmount(''); setKind('daily'); setPaying(m); }} needsOnline />
+            {m.active ? <Button title={t('mechanics.pay')} icon={HandCoins} small onPress={() => { setAmount(''); setKind('daily'); setPaying(m); }} needsOnline /> : null}
           </Card>
         ))}
       </ScrollView>
+      {editing !== undefined ? (
+        <PersonSheet
+          person={editing}
+          mechanic
+          onClose={() => setEditing(undefined)}
+          onSaved={() => {
+            setEditing(undefined);
+            void q.refetch();
+          }}
+        />
+      ) : null}
       {paying ? (
         <Sheet visible onClose={() => setPaying(null)} title={`${t('mechanics.pay')} · ${paying.name}`}>
           <Field label={t('mechanics.amount')} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoFocus />
@@ -93,4 +130,5 @@ export default function Mechanics() {
 
 const styles = StyleSheet.create({
   kv: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  icon: { padding: space[2] },
 });

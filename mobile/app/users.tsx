@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { KeyRound, ShieldCheck } from 'lucide-react-native';
+import { KeyRound, Pencil, ShieldCheck, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { api } from '@/api/client';
 import { useWorkMutation } from '@/api/queries';
+import { confirmRemovePerson, PersonSheet } from '@/components/personSheet';
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Button, Card, Chip, Field, Loading, OfflineBanner, Txt } from '@/components/ui';
@@ -20,7 +21,7 @@ interface UsersResponse {
   role_defaults: Record<Role, Record<Perm, boolean>>;
 }
 
-/** Owner: staff list - activate / deactivate, reset passwords, tick what each person may do. New users are added on the web. */
+/** Owner: staff list - change name / username / phone, activate / deactivate, reset passwords, tick what each person may do, remove. New users are added on the web (mechanics also from Mechanic summary). */
 export default function Users() {
   const { t } = useTranslation();
   const { c } = useTheme();
@@ -30,6 +31,7 @@ export default function Users() {
   const [reset, setReset] = useState<Row | null>(null);
   const [pw, setPw] = useState('');
   const [permUser, setPermUser] = useState<Row | null>(null);
+  const [editing, setEditing] = useState<Row | null>(null);
   const [ticks, setTicks] = useState<Partial<Record<Perm, boolean>>>({});
 
   const keys = q.data?.permissions ?? [];
@@ -58,7 +60,7 @@ export default function Users() {
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Txt weight="semibold">{u.name}{u.id === me?.id ? ` (${t('users.you')})` : ''}</Txt>
-                <Txt size="sm" muted>@{u.username} · {t(`roles.${u.role}`)} · {u.last_login_at ? datetime(u.last_login_at) : t('users.never')}</Txt>
+                <Txt size="sm" muted>{u.username ? `@${u.username}` : t('users.no_login')} · {t(`roles.${u.role}`)} · {u.last_login_at ? datetime(u.last_login_at) : t('users.never')}</Txt>
                 {custom(u) ? <Chip label={t('users.perm_custom')} tone="warning" /> : null}
               </View>
               {u.id !== me?.id ? (
@@ -71,20 +73,43 @@ export default function Users() {
               ) : null}
             </View>
             <View style={{ flexDirection: 'row', gap: space[4], flexWrap: 'wrap' }}>
+              <Pressable onPress={() => setEditing(u)} accessibilityRole="button" style={styles.link}>
+                <Pencil size={16} color={c.primaryText} />
+                <Txt size="sm" color="primaryText" weight="semibold">{t('common.edit')}</Txt>
+              </Pressable>
+              {u.login !== false ? (
               <Pressable onPress={() => { setPw(''); setReset(u); }} accessibilityRole="button" style={styles.link}>
                 <KeyRound size={16} color={c.primaryText} />
                 <Txt size="sm" color="primaryText" weight="semibold">{t('users.reset_password')}</Txt>
               </Pressable>
+              ) : null}
               {u.role !== 'owner' ? (
                 <Pressable onPress={() => { setTicks({ ...(u.perms ?? {}) }); setPermUser(u); }} accessibilityRole="button" style={styles.link}>
                   <ShieldCheck size={16} color={c.primaryText} />
                   <Txt size="sm" color="primaryText" weight="semibold">{t('users.perm_title')}</Txt>
                 </Pressable>
               ) : null}
+              {u.id !== me?.id ? (
+                <Pressable onPress={() => confirmRemovePerson(u, t, () => void q.refetch())} accessibilityRole="button" style={styles.link}>
+                  <Trash2 size={16} color={c.danger} />
+                  <Txt size="sm" color="danger" weight="semibold">{t('users.remove')}</Txt>
+                </Pressable>
+              ) : null}
             </View>
           </Card>
         ))}
       </ScrollView>
+      {editing ? (
+        <PersonSheet
+          person={editing}
+          mechanic={editing.role === 'mechanic' && editing.id !== me?.id}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void q.refetch();
+          }}
+        />
+      ) : null}
       {reset ? (
         <Sheet visible onClose={() => setReset(null)} title={`${t('users.reset_password')} · ${reset.name}`}>
           <Field label={t('users.temp_password')} value={pw} onChangeText={setPw} hint={t('users.temp_password_hint')} autoCapitalize="none" autoFocus />

@@ -168,6 +168,15 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Stock → Import from Excel with a .xlsx picked from WhatsApp / Downloads (file picker shows all files).
 - [ ] More → Settings shows "Full name on bills"; change it → the next bill PDF uses it.
 
+## 24 Nov 2026 – users, mechanics, bikes in the shop
+
+- [ ] Home banner shows "Processing" and "Completed" numbers; tapping each opens the Jobs tab on that tab.
+- [ ] Jobs tab: Processing / Completed tabs with counts; a bike marked Ready moves to Completed; delivered bikes leave.
+- [ ] More → Users → Edit: change a name and a username → the person logs in with the new username.
+- [ ] More → Mechanic summary → Add mechanic with "Uses the app" off → he appears with "No app login" and in the job's mechanic list.
+- [ ] Edit him, turn "Uses the app" on with a username and password → he can log in on another phone.
+- [ ] Remove a mechanic with no jobs → gone; with past jobs → hidden (not offered on new jobs).
+
 ## Release APK – 15-minute smoke test
 
 Run on every new APK, installed from the EAS link, against the **HTTPS test site** (not the PC).

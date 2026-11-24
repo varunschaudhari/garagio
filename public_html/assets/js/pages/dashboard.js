@@ -102,6 +102,7 @@ export default async function dashboard(ctx) {
   const s = d.stock || {};
   const m = d.money;
   const inShop = Object.values(d.jobs_by_status || {}).reduce((a, b) => a + b, 0);
+  const ready = d.jobs_by_status?.ready || 0; // work done; the rest is still in work
 
   const moneyCards = m ? [
     kpi({ label: t('dashboard.sales_today'), value: rupees(m.sales_today), sub: t('dashboard.by_mode', { cash: rupees(m.by_mode.cash), upi: rupees(m.by_mode.upi), card: rupees(m.by_mode.card) }), ic: 'indian-rupee', tone: 'success', href: '#/invoices?from=' + todayISO() }),
@@ -139,7 +140,7 @@ export default async function dashboard(ctx) {
 
   const cards = [];
   if (BUILT_PHASE >= 3) {
-    cards.push(kpi({ label: t('dashboard.jobs_in_shop'), value: inShop, sub: d.delivered_today ? `${t('dashboard.delivered_today')}: ${d.delivered_today}` : '', ic: 'bike', href: '#/jobs' }));
+    cards.push(kpi({ label: t('dashboard.jobs_in_shop'), value: inShop, sub: `${t('jobs.stage_processing')}: ${inShop - ready} · ${t('jobs.stage_completed')}: ${ready}`, ic: 'bike', href: '#/jobs' }));
     if (can('issue_parts')) cards.push(kpi({ label: t('dashboard.approvals_waiting'), value: d.approvals_waiting, ic: 'shield-check', tone: d.approvals_waiting ? 'warning' : '', href: '#/requests?tab=approvals' }));
     cards.push(kpi({ label: t('dashboard.open_requests'), value: d.open_requests, ic: 'package-search', tone: 'info', href: '#/requests' }));
   }
@@ -154,7 +155,8 @@ export default async function dashboard(ctx) {
     if (d.sales) heroStats.push({ v: d.sales.today.count, l: t('dashboard.sales_bills_today'), href: '#/invoices?from=' + todayISO() });
   }
   if (BUILT_PHASE >= 3) {
-    heroStats.push({ v: inShop, l: t('dashboard.jobs_in_shop'), href: '#/jobs' });
+    heroStats.push({ v: inShop - ready, l: t('jobs.stage_processing'), href: '#/jobs?stage=processing' });
+    heroStats.push({ v: ready, l: t('jobs.stage_completed'), href: '#/jobs?stage=completed' });
     if (!m) heroStats.push({ v: d.delivered_today || 0, l: t('dashboard.delivered_today'), href: '#/jobs' });
   }
   if (!m) heroStats.push({ v: s.low_stock_count ?? 0, l: t('dashboard.low_stock'), href: '#/parts?low=1' });

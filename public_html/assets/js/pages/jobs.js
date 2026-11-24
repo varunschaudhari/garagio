@@ -8,6 +8,11 @@ import { dataTable, bindTable, statusChip, emptyState, skeletonRows } from '../u
 import { toastError } from '../ui/toast.js';
 
 const COLUMNS = ['pending', 'estimate_sent', 'approved', 'in_progress', 'waiting_parts', 'ready', 'delivered'];
+/** Bikes in the shop in two parts: work still going on, and work done (waiting for the bill or the customer). */
+export const STAGES = {
+  processing: ['pending', 'estimate_sent', 'approved', 'in_progress', 'waiting_parts'],
+  completed: ['ready'],
+};
 const REFRESH_MS = 30000;
 
 function promisedBadge(j) {
@@ -24,7 +29,7 @@ function flags(j) {
 export default async function jobs(ctx) {
   const mech = hasRole('mechanic');
   ctx.setTitle(mech ? t('jobs.my_jobs') : t('jobs.title'));
-  const st = { view: ctx.query.view || (mech ? 'list' : 'board'), q: ctx.query.q || '', mechanic: ctx.query.mechanic || '', status: ctx.query.status || '' };
+  const st = { view: ctx.query.view || (mech ? 'list' : 'board'), q: ctx.query.q || '', mechanic: ctx.query.mechanic || '', status: ctx.query.status || '', stage: STAGES[ctx.query.stage] ? ctx.query.stage : '' };
   const mechanics = mech ? [] : (await api.get('/users/mechanics')).items;
   if (!ctx.alive()) return;
 
@@ -44,12 +49,13 @@ export default async function jobs(ctx) {
         ${mechanics.map((m) => html`<option value="${m.id}" ${String(m.id) === st.mechanic ? 'selected' : ''}>${m.name}</option>`)}
       </select>`}
       ${st.status ? html`<button class="filter-chip" data-clear-status aria-pressed="true">${t('status.' + st.status)} ${icon('x', 14)}</button>` : ''}
+      <div class="row-wrap" id="jobs-stage" role="group" aria-label="${t('dashboard.jobs_in_shop')}"></div>
     </div>
     <div id="jobs-body">${skeletonRows(5)}</div>`);
   const body = $('#jobs-body', ctx.el);
 
   const load = async () => {
-    replaceQuery({ view: st.view, q: st.q, mechanic: st.mechanic, status: st.status });
+    replaceQuery({ view: st.view, q: st.q, mechanic: st.mechanic, status: st.status, stage: st.stage });
     let data;
     try {
       data = await api.get('/jobs', { board: !st.status, status: st.status, q: st.q, mechanic: st.mechanic, per_page: 300 });
@@ -58,12 +64,17 @@ export default async function jobs(ctx) {
       return;
     }
     if (!ctx.alive()) return;
+    const count = (k) => data.items.filter((j) => STAGES[k].includes(j.status)).length;
+    setHTML($('#jobs-stage', ctx.el), html`${[['', t('common.all'), data.items.length], ['processing', t('jobs.stage_processing'), count('processing')], ['completed', t('jobs.stage_completed'), count('completed')]].map(([k, label, n]) => html`
+      <button class="filter-chip" data-stage="${k}" aria-pressed="${st.stage === k}">${label} <span class="n">${n}</span></button>`)}`);
+    if (st.stage) data.items = data.items.filter((j) => STAGES[st.stage].includes(j.status));
+    const empty = st.stage ? t('jobs.empty_' + st.stage) : t('jobs.empty_board');
     if (st.view === 'board' && !st.status) {
       if (!data.items.length) {
-        setHTML(body, html`<div class="card">${emptyState({ ic: 'bike', title: t('jobs.empty_board') })}</div>`);
+        setHTML(body, html`<div class="card">${emptyState({ ic: 'bike', title: empty })}</div>`);
         return;
       }
-      setHTML(body, html`<div class="kanban">${COLUMNS.map((s) => {
+      setHTML(body, html`<div class="kanban">${COLUMNS.filter((s) => !st.stage || STAGES[st.stage].includes(s)).map((s) => {
         const items = data.items.filter((j) => j.status === s);
         return html`<section class="kanban-col ${items.length ? '' : 'is-empty'}" aria-label="${t('status.' + s)}">
           <h3>${statusChip(s, s === 'delivered' ? t('jobs.delivered_today') : null)}<span class="n">${items.length}</span></h3>
@@ -86,7 +97,7 @@ export default async function jobs(ctx) {
         ],
         rows: data.items,
         rowHref: (j) => '#/jobs/' + j.id,
-        empty: emptyState({ ic: 'bike', title: t('jobs.empty_board') }),
+        empty: emptyState({ ic: 'bike', title: empty }),
       })}</div>`);
     }
   };
@@ -100,6 +111,7 @@ export default async function jobs(ctx) {
   on(ctx.el, 'input', 'input[name=q]', debounce((e) => { st.q = e.target.value.trim(); load(); }, 250));
   on(ctx.el, 'change', 'select[name=mechanic]', (e, s) => { st.mechanic = s.value; load(); });
   on(ctx.el, 'click', '[data-clear-status]', (e, b) => { st.status = ''; b.remove(); load(); });
+  on(ctx.el, 'click', '[data-stage]', (e, b) => { st.stage = b.dataset.stage; load(); });
 
   await load();
   const timer = setInterval(() => document.visibilityState === 'visible' && load(), REFRESH_MS);

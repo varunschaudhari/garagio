@@ -40,6 +40,30 @@ test('mechanic summary: owner records a day payment', async ({ page }) => {
   await expect(page.locator('section.card', { hasText: 'Ramesh (Mechanic)' })).toContainText('₹450.00');
 });
 
+test('mechanic summary: add a mechanic without a login, rename him, remove him', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('/#/mechanics');
+  await page.getByRole('button', { name: 'Add mechanic' }).click();
+  const drawer = page.locator('.drawer');
+  await drawer.locator('input[name=name]').fill('Bapu');
+  await drawer.locator('input[name=phone]').fill('9011100099');
+  await expect(drawer.locator('input[name=username]')).toBeHidden();
+  await drawer.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.toast')).toContainText('Created');
+  await expect(page.locator('section.card', { hasText: 'Bapu' })).toContainText('No app login');
+
+  await page.locator('section.card', { hasText: 'Bapu' }).getByRole('button', { name: 'Edit' }).click();
+  await drawer.locator('input[name=name]').fill('Bapu Shinde');
+  await drawer.getByRole('button', { name: 'Save' }).click();
+  const card = page.locator('section.card', { hasText: 'Bapu Shinde' });
+  await expect(card).toBeVisible();
+
+  await card.getByRole('button', { name: 'Remove · Bapu Shinde' }).click();
+  await page.locator('.modal').getByRole('button', { name: 'Remove' }).click();
+  await expect(page.locator('.toast').last()).toContainText('Removed');
+  await expect(page.locator('section.card', { hasText: 'Bapu Shinde' })).toHaveCount(0);
+});
+
 test('profit report shows the formula and a CSV export downloads', async ({ page }) => {
   await login(page, 'admin');
   await page.goto('/#/reports?tab=profit');

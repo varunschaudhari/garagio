@@ -23,7 +23,9 @@ test('users: owner manages users; others cannot', function () {
     $u = status(200, post('/users', ['name' => 'Ganesh', 'username' => 'Ganesh.M', 'role' => 'mechanic', 'password' => 'Mech@12345', 'phone' => '9000000099'], 'admin'));
     eq('ganesh.m', $u['item']['username']);
     eq(1, $u['item']['must_change_password']);
-    eq(409, post('/users', ['name' => 'Again', 'username' => 'ganesh.m', 'role' => 'mechanic', 'password' => 'Mech@12345'], 'admin')['status']);
+    $dup = post('/users', ['name' => 'Again', 'username' => 'ganesh.m', 'role' => 'mechanic', 'password' => 'Mech@12345'], 'admin');
+    eq(422, $dup['status'], 'login ID already used');
+    eq('taken', $dup['json']['fields']['username'] ?? null);
     eq(409, put('/users/1', ['active' => false], 'admin')['status'], 'owner cannot deactivate self');
     ok(in_array('Ganesh', array_column(status(200, get('/users/mechanics', 'ramesh'))['items'], 'name'), true));
 });

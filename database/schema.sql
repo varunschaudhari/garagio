@@ -20,9 +20,9 @@ CREATE TABLE settings (
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
-  username VARCHAR(50) NOT NULL,
+  username VARCHAR(50) NULL, -- NULL: a mechanic without a login (never opens the app)
   phone VARCHAR(15) NULL,
-  password_hash VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NULL,
   role VARCHAR(20) NOT NULL,
   permissions TEXT NULL,
   language VARCHAR(2) NOT NULL DEFAULT 'mr',
@@ -739,6 +739,7 @@ INSERT INTO schema_migrations (name, applied_at) VALUES ('009_next_service.sql',
 INSERT INTO schema_migrations (name, applied_at) VALUES ('010_bill_photos.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('011_shop_phone.sql', NOW());
 INSERT INTO schema_migrations (name, applied_at) VALUES ('012_bill_edit.sql', NOW());
+INSERT INTO schema_migrations (name, applied_at) VALUES ('013_mechanic_no_login.sql', NOW());
 
 -- circular references
 ALTER TABLE job_cards

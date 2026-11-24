@@ -76,6 +76,13 @@ function Tiles({ subs }: { subs: Record<string, string | undefined> }) {
   );
 }
 
+/** Bikes in the shop: all, work done (ready) and still in work. */
+function shopCounts(by: Record<string, number> | undefined) {
+  const all = Object.values(by ?? {}).reduce((a, b) => a + b, 0);
+  const ready = by?.ready ?? 0;
+  return { all, ready, working: all - ready };
+}
+
 function Kpi({ label, value, sub, icon: Icon, tone, onPress }: { label: string; value: string | number; sub?: string; icon: LucideIcon; tone: Tone; onPress?: () => void }) {
   const { c } = useTheme();
   const [bg, fg] = TONES[tone];
@@ -146,7 +153,8 @@ export default function Home() {
           </Txt>
           <View style={styles.heroStats}>
             {d.data?.money ? <HeroStat value={rupees(d.data.money.sales_today)} label={t('dashboard.sales_today')} onPress={() => router.push('/money')} /> : null}
-            <HeroStat value={String(Object.values(d.data?.jobs_by_status ?? {}).reduce((a, b) => a + b, 0))} label={t('dashboard.jobs_in_shop')} onPress={() => router.push('/jobs')} />
+            <HeroStat value={String(shopCounts(d.data?.jobs_by_status).working)} label={t('jobs.stage_processing')} onPress={() => router.push({ pathname: '/jobs', params: { stage: 'processing' } })} />
+            <HeroStat value={String(shopCounts(d.data?.jobs_by_status).ready)} label={t('jobs.stage_completed')} onPress={() => router.push({ pathname: '/jobs', params: { stage: 'completed' } })} />
             {!d.data?.money && s ? <HeroStat value={String(s.low_stock_count)} label={t('dashboard.low_stock')} onPress={() => router.push('/parts')} /> : null}
           </View>
         </GradientPanel>
@@ -232,7 +240,7 @@ export default function Home() {
         ) : null}
         {s ? (
           <View style={styles.grid}>
-            <Kpi label={t('dashboard.jobs_in_shop')} value={Object.values(d.data?.jobs_by_status ?? {}).reduce((a, b) => a + b, 0)} icon={Bike} tone="primary" onPress={() => router.push('/jobs')} />
+            <Kpi label={t('dashboard.jobs_in_shop')} value={shopCounts(d.data?.jobs_by_status).all} sub={`${t('jobs.stage_processing')}: ${shopCounts(d.data?.jobs_by_status).working} · ${t('jobs.stage_completed')}: ${shopCounts(d.data?.jobs_by_status).ready}`} icon={Bike} tone="primary" onPress={() => router.push('/jobs')} />
             {can(user, 'issue_parts') ? <Kpi label={t('dashboard.approvals_waiting')} value={d.data?.approvals_waiting ?? 0} icon={ShieldCheck} tone={d.data?.approvals_waiting ? 'danger' : 'success'} onPress={() => router.push(hasTab(user, 'approvals') ? '/approvals' : { pathname: '/parts-requests', params: { mode: 'approvals' } })} /> : null}
             <Kpi label={t('dashboard.open_requests')} value={d.data?.open_requests ?? 0} icon={Inbox} tone="info" onPress={() => router.push(hasTab(user, 'queue') ? '/queue' : hasTab(user, 'requests') ? '/requests' : '/parts-requests')} />
             <Kpi label={t('dashboard.low_stock')} value={s.low_stock_count} icon={TriangleExclamationPoint} tone={s.low_stock_count ? 'danger' : 'success'} onPress={() => router.push('/parts')} />

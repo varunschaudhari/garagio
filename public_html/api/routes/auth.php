@@ -26,7 +26,7 @@ route('POST', '/auth/login', function () {
         fail(429, 'login_locked', 'Too many failed attempts. Try again in ' . LOGIN_LOCK_MINUTES . ' minutes.');
     }
     $u = row('SELECT * FROM users WHERE username = ?', [$username]);
-    if (!$u || !password_verify($in['password'], $u['password_hash'])) {
+    if (!$u || $u['password_hash'] === null || !password_verify($in['password'], $u['password_hash'])) {
         record_login_attempt($username, $ip, false);
         fail(401, 'bad_credentials', 'Wrong username or password');
     }

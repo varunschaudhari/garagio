@@ -4,7 +4,10 @@ export type Lang = 'mr' | 'en';
 export interface User {
   id: number;
   name: string;
-  username: string;
+  /** null: a mechanic without a login (never opens the app). */
+  username: string | null;
+  /** Has a login (username + password). */
+  login?: boolean;
   phone: string | null;
   role: Role;
   language: Lang;

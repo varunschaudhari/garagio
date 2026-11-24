@@ -113,7 +113,7 @@ function user_or_null(): ?array
         return null;
     }
     $u = row('SELECT * FROM users WHERE id = ?', [(int) $payload['sub']]);
-    if (!$u || !(int) $u['active'] || password_fingerprint($u['password_hash']) !== ($payload['pf'] ?? '')) {
+    if (!$u || !(int) $u['active'] || $u['password_hash'] === null || password_fingerprint($u['password_hash']) !== ($payload['pf'] ?? '')) {
         return null;
     }
     return $GLOBALS['GM_USER'] = $u;
@@ -238,6 +238,7 @@ function public_user(array $u): array
         'id' => (int) $u['id'],
         'name' => $u['name'],
         'username' => $u['username'],
+        'login' => ($u['password_hash'] ?? null) !== null || !array_key_exists('password_hash', $u),
         'phone' => $u['phone'],
         'role' => $u['role'],
         'perms' => user_perms($u),

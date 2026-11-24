@@ -534,3 +534,18 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
       the first 40 rows (supplier name and address above the table are fine), headings are matched loosely (Tally /
       Busy style: Particulars, Qty, Rate, Amount, HSN/SAC, GST %…), and total / tax / round-off rows are skipped.
       The phone's file picker accepts any file type (some phones label .xlsx oddly).
+33. **Shop requests of 24 Nov 2026 (answers from the owner):**
+    - The owner changes a person's name, phone and username (login ID) on the web and the phone. A new username
+      works from the next login; people already logged in stay logged in. A username used by someone else is refused
+      on the field (`taken`).
+    - Mechanics may be without a login (`users.username` and `password_hash` NULL, migration 013): they are given
+      jobs and paid but never open the app. "Uses the app" gives a login (username + temporary password); turning it
+      off ends his open sessions. Every other role needs a login.
+    - Mechanic summary (web and phone) adds, edits and removes mechanics. Removing anyone (also from Users): deleted
+      when nothing in the records points at them, otherwise hidden (inactive) so old jobs, bills and pay keep the
+      name; brought back from Users. Not yourself, not the last owner, not a mechanic with open jobs. A hidden
+      mechanic still shows in the summary for days he worked or was paid.
+    - Bikes in the shop come in two parts: **Processing** (pending, estimate sent, approved, in progress, waiting
+      for parts) and **Completed** (ready: work done, waiting for the bill or the customer; leaves on delivery).
+      Home shows both numbers; the web Jobs page has All / Processing / Completed chips (`?stage=`), the phone's
+      Jobs tab two tabs.

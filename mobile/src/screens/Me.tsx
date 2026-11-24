@@ -73,7 +73,7 @@ export default function Me() {
           <Txt size="xl" weight="bold">
             {user.name}
           </Txt>
-          <Line label={t('users.username')} value={'@' + user.username} />
+          <Line label={t('users.username')} value={'@' + (user.username ?? '')} />
           <Divider />
           <Line label={t('users.role')} value={t(`roles.${user.role}`)} />
         </Card>
