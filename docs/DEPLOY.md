@@ -138,8 +138,12 @@ asks for the server address – enter `https://trimurti.foreverstory.in` – and
 Android app with package `in.trimurtiauto.garage`, then `npx eas-cli credentials` → *Android* → *Push
 Notifications* → upload the FCM v1 service-account key. Rebuild the APK.
 
-When you publish a new APK, set **Settings → App → Minimum app version** to force old phones to update, and
-put the APK link in **Link to latest APK**.
+**Publishing an APK to the phones:** `node tools/publish-apk.mjs` (Node 18+) attaches the newest APK in `dist/` to a
+GitHub release `app-v<version>` as `trimurti-garage.apk`, using the GitHub login git already has on this computer
+(nothing to set up; the repository must stay public so phones download without logging in). The fixed link
+`https://github.com/varunschaudhari/garagio/releases/latest/download/trimurti-garage.apk` always serves the newest
+one. Put it once in **Settings → App → Link to latest APK**; for each new APK raise **Minimum app version** (deploy the
+website first): phones then show an update screen with a Download button when the app is opened.
 
 ## 8a. Reading handwritten job cards (optional)
 

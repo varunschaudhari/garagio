@@ -41,6 +41,8 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
 - Release: `node tools/make-release.mjs` → `dist/` site / database / docs zips from HEAD.
 - APK without Expo account: `node tools/build-apk-local.mjs` (prebuild + Gradle in C:gmbmobile, CMake 3.31 for long
   paths, key in ~/.garagio/ - never commit it). Files on this laptop get the Windows Hidden flag; the script clears it.
+- Publish the APK to phones: `node tools/publish-apk.mjs` (GitHub release `app-v<version>`, asset `trimurti-garage.apk`,
+  git's saved GitHub login; link `…/releases/latest/download/trimurti-garage.apk` in Settings → App).
 - Deploy: `.github/workflows/deploy.yml` (CI green on main → test site; manual → live) → cPanel API →
   `.cpanel.yml` → `tools/cpanel-deploy.sh` (backup, git-archive copy, migrations, deploy.json). APK: `apk.yml`.
 - Schema changes after release: new `public_html/api/migrations/NNN_name.sql` + same change in `schema.sql`
