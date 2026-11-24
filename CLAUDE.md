@@ -61,7 +61,12 @@ When a phase's web screens go live, raise `BUILT_PHASE` in `public_html/assets/j
   the go-live ledger wipe is `stock_restart_ledger()`, also in `lib/stock.php`.
 - Line discounts go through `clean_discounts()`; unused customer money is applied with `apply_customer_advance()`.
 - Return payloads through `strip_cost()` wherever cost fields (COST_FIELDS) may appear.
-- Excel: downloads with `xlsx_build(['Sheet' => rows])`; uploads arrive as heading => cell rows, mapped by
+- Excel: downloads with `xlsx_response($file, ['Sheet' => table])` (lib/xlsx.php). A table is `['columns' => [key => heading],
+  'rows', 'totals', 'types']` (types text/money/num/date/datetime, guessed by `xlsx_types()`): real dates, money format,
+  frozen heading, filters. Reports are `report_<name>()` functions (`report_spec()` → `report_send()`: JSON / xlsx / csv);
+  data exports and the everything-workbook are in routes/exports.php (`export_*()`); `cash_days()` = `cash_day()` for a
+  range (keep both in step). Plain rows still work (`xlsx_build(['Sheet' => rows])`, parts sample).
+  Uploads arrive as heading => cell rows, mapped by
   `import_map_row($raw, ALIASES, NUMBERS, $unused)` (lib/xlsx.php). Aliases: `PART_IMPORT_ALIASES` (parts.php),
   `PURCHASE_IMPORT_ALIASES` (purchases.php). Clients read sheets with SheetJS (`readSheetRows` web, `src/excel.ts` phone).
 - Uploaded photos: `save_uploaded_image($dir)` / `image_response($file)` (lib/util.php), files under `api/storage/`

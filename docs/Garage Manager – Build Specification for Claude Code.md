@@ -549,3 +549,17 @@ Defaults chosen where the spec was silent. Change them here first if any are wro
       for parts) and **Completed** (ready: work done, waiting for the bill or the customer; leaves on delivery).
       Home shows both numbers; the web Jobs page has All / Processing / Completed chips (`?stage=`), the phone's
       Jobs tab two tabs.
+34. **Excel downloads (24 Nov 2026, owner asked for all four):**
+    - Reports download as real Excel (.xlsx) instead of CSV: numbers stay numbers (money with 2 decimals and
+      thousands separators), dates are real Excel dates shown DD-MM-YYYY, the heading row is frozen with filter
+      buttons, a bold totals row. Codes are in words (Counter sale, Job bill, Cash, UPI). CSV still works (`format=csv`).
+    - New downloads: the parts list in the import-sheet layout (edit in Excel, upload back; purchase rate and
+      discount only for people who may see costs), customers with their bikes (dues only with see_money), every line
+      sold (with cost and margin for see_costs), every line bought, job cards opened in a range, and the cash book
+      (day by day, expenses, payments received, supplier payments).
+    - "Everything in one file": one workbook with a sheet per area for a date range, holding only what the person may
+      see (each sheet needs the same permission as its report or list).
+    - Web: Reports → Excel downloads (and a Download Excel button on every report); Excel buttons on Parts, Customers,
+      Jobs and Cash book. Phone: Reports (this report / everything, this or last month), Cash book (month), Parts
+      import screen (parts list), shared through Android's share sheet. Headings are English (for the CA); names and
+      items keep their Marathi.

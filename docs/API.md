@@ -124,7 +124,12 @@ Many routes are gated by a **permission** instead (the role gives the default, t
 | `GET /dashboard` | all | role-aware; `money` block for owner |
 | `GET /mechanics/daily?date=` · `GET /mechanics/summary` | O | items carry `active` (daily also `phone`, `username`, `login`); hidden mechanics only when they worked or were paid in the period |
 | `POST /mechanics/{id}/payments` · `GET /mechanics/{id}/payments` · `DELETE /mechanics/payments/{pid}` | O | `kind: daily|advance` |
-| `GET /reports/{sales,purchases,stock,profit,dues,payables,gst,mechanics}` | O (I: stock, purchases, payables) | `from, to, format=csv` |
+| `GET /reports/{sales,purchases,stock,profit,dues,payables,gst,mechanics}` | O (I: stock, purchases, payables) | `from, to, format=xlsx` (Excel) or `format=csv` |
+| `GET /exports/parts` | edit_parts or reports | parts list .xlsx in the import layout (purchase rate / discount only with see_costs) |
+| `GET /exports/customers` | customers | customers with bikes (dues only with see_money) |
+| `GET /exports/sale-items` · `/exports/purchase-items` | reports + see_money · purchases | every bill line in `from, to` (cost and margin with see_costs) |
+| `GET /exports/jobs` · `/exports/cash` | jobs · cash_book | job cards opened in `from, to`; cash book day by day + expenses + payments received + supplier payments |
+| `GET /exports/workbook` | reports | one .xlsx, a sheet per area for `from, to`, only the sheets the person may see |
 | `GET /messages/due` · `POST /messages/log` | O D | service + payment reminders with wa.me links |
 | `GET /backups` · `POST /backups` · `GET /backups/latest` | O | gzipped SQL dumps |
 | `GET /admin/health` | O | server, config, cron and data checks: `{status, checks:[{key, status: ok / warn / fail, value}]}` |

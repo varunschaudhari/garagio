@@ -70,6 +70,62 @@ function cash_day(string $date): array
     ];
 }
 
+/**
+ * The cash_day() figures for every day of a range with one query per kind (the Excel cash book). Days with no money
+ * moving and no count are left out. Keep in step with cash_day() (a test compares them).
+ */
+function cash_days(string $from, string $to): array
+{
+    $by = static function (string $sql) use ($from, $to): array {
+        $out = [];
+        foreach (rows($sql, [$from, $to]) as $r) {
+            $out[$r['d']] = (float) $r['amt'];
+        }
+        return $out;
+    };
+    $received = $by("SELECT received_on AS d, SUM(amount) AS amt FROM customer_payments WHERE mode = 'cash' AND received_on BETWEEN ? AND ? GROUP BY received_on");
+    $returns = $by("SELECT return_date AS d, SUM(refund_amount) AS amt FROM sale_returns WHERE refund_mode = 'cash' AND return_date BETWEEN ? AND ? GROUP BY return_date");
+    $billRefunds = $by("SELECT refunded_on AS d, SUM(amount) AS amt FROM bill_refunds WHERE mode = 'cash' AND refunded_on BETWEEN ? AND ? GROUP BY refunded_on");
+    $suppliers = $by("SELECT paid_on AS d, SUM(amount) AS amt FROM supplier_payments WHERE mode = 'cash' AND paid_on BETWEEN ? AND ? GROUP BY paid_on");
+    $expenses = $by("SELECT spent_on AS d, SUM(amount) AS amt FROM expenses WHERE mode = 'cash' AND spent_on BETWEEN ? AND ? GROUP BY spent_on");
+    $mechanics = $by('SELECT DATE(created_at) AS d, SUM(amount) AS amt FROM mechanic_payments WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY DATE(created_at)');
+    $other = [];
+    foreach (rows("SELECT received_on AS d, mode, SUM(amount) AS amt FROM customer_payments WHERE mode <> 'cash' AND received_on BETWEEN ? AND ? GROUP BY received_on, mode", [$from, $to]) as $r) {
+        $other[$r['d']][$r['mode']] = r2((float) $r['amt']);
+    }
+    $closes = [];
+    foreach (rows('SELECT close_date, counted, difference, taken_out FROM cash_closes WHERE close_date BETWEEN ? AND ?', [$from, $to]) as $c) {
+        $closes[$c['close_date']] = $c;
+    }
+    $prev = row('SELECT close_date, counted, taken_out FROM cash_closes WHERE close_date < ? ORDER BY close_date DESC LIMIT 1', [$from]);
+    $days = [];
+    for ($d = $from; $d <= $to; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $opening = $prev ? r2((float) $prev['counted'] - (float) $prev['taken_out']) : 0.0;
+        $in = r2($received[$d] ?? 0);
+        $out = [
+            'refunds' => r2(r2($returns[$d] ?? 0) + r2($billRefunds[$d] ?? 0)),
+            'supplier_payments' => r2($suppliers[$d] ?? 0),
+            'expenses' => r2($expenses[$d] ?? 0),
+            'mechanic_payments' => r2($mechanics[$d] ?? 0),
+        ];
+        $cashOut = r2(array_sum($out));
+        $close = $closes[$d] ?? null;
+        if ($close || $in || $cashOut || !empty($other[$d])) {
+            $days[] = ['date' => $d, 'opening' => $opening, 'received' => $in] + $out + [
+                'expected' => r2($opening + $in - $cashOut),
+                'counted' => $close ? (float) $close['counted'] : null,
+                'difference' => $close ? (float) $close['difference'] : null,
+                'taken_out' => $close ? (float) $close['taken_out'] : null,
+                'upi' => $other[$d]['upi'] ?? 0.0, 'card' => $other[$d]['card'] ?? 0.0, 'bank' => $other[$d]['bank'] ?? 0.0,
+            ];
+        }
+        if ($close) {
+            $prev = $close;
+        }
+    }
+    return $days;
+}
+
 route('GET', '/expenses', function () {
     [$limit, $offset] = paging(50, 500);
     $where = [];

@@ -8,7 +8,7 @@ import { Alert, ScrollView, Switch, View } from 'react-native';
 import { api, apiUrl } from '@/api/client';
 import { toast, toastError } from '@/components/toast';
 import { Banner, Button, Card, Divider, OfflineBanner, Txt } from '@/components/ui';
-import { pickSheet, SheetReadError, type SheetRow } from '@/excel';
+import { pickSheet, shareExcel, SheetReadError, XLSX_MIME, type SheetRow } from '@/excel';
 import { useSession } from '@/store/session';
 import { space, useTheme } from '@/theme';
 
@@ -26,7 +26,6 @@ interface ImportResult {
   unused_columns: string[];
 }
 
-const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /** Field names in an import error → the words the shop knows. */
 const FIELD_LABEL: Record<string, string> = {
@@ -56,7 +55,19 @@ export default function PartsImport() {
   const [replace, setReplace] = useState(false);
   const [file, setFile] = useState<{ name: string; table: Row[]; rows: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const [busy, setBusy] = useState<'' | 'sample' | 'pick' | 'import'>('');
+  const [busy, setBusy] = useState<'' | 'sample' | 'list' | 'pick' | 'import'>('');
+
+  /** The shop's whole parts list in the import layout: change it in Excel and upload it back. */
+  const getList = async () => {
+    setBusy('list');
+    try {
+      await shareExcel('/exports/parts', {}, 'parts-list.xlsx', t('exports.share_title'));
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setBusy('');
+    }
+  };
 
   const getSample = async () => {
     if (!server) return;
@@ -125,6 +136,8 @@ export default function PartsImport() {
           <Txt>{t('parts.import_help')}</Txt>
           <Txt size="sm" muted>{t('parts.sample.headings')}</Txt>
           <Button title={t('parts.import_sample_share')} icon={FileDown} variant="secondary" onPress={() => void getSample()} loading={busy === 'sample'} needsOnline />
+          <Button title={t('exports.parts')} icon={FileSpreadsheet} variant="secondary" onPress={() => void getList()} loading={busy === 'list'} needsOnline />
+          <Txt size="sm" muted>{t('exports.parts_hint')}</Txt>
         </Card>
 
         <Card style={{ gap: space[3] }}>

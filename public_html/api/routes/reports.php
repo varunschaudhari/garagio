@@ -2,22 +2,51 @@
 declare(strict_types=1);
 
 /*
- * Reports. All accept from, to (YYYY-MM-DD) and format=csv.
+ * Reports. All accept from, to (YYYY-MM-DD) and format=xlsx (Excel) or format=csv.
  * Owner: everything. Inventory manager: stock, purchases, payables (decision 13).
+ * Each report is a function returning its table (report_sales() ...), so the Excel workbook of everything
+ * (routes/exports.php) can put them on sheets.
  */
+
+/** Sheet titles in Excel downloads. */
+const REPORT_TITLES = ['sales' => 'Sales bills', 'purchases' => 'Purchases', 'stock' => 'Stock value', 'profit' => 'Profit',
+    'dues' => 'Customer dues', 'payables' => 'Supplier payables', 'gst' => 'GST summary', 'mechanics' => 'Mechanics'];
 
 function report_range(): array
 {
     return [qp_date('from', date('Y-m-01')), qp_date('to', today())];
 }
 
-/**
- * Send rows as JSON ({columns, rows, totals}) or CSV.
- * $columns: [key => English header]
- */
-function report_out(string $name, array $columns, array $rows, array $totals = [], array $extra = [])
+/** A report's table. $columns: [key => English heading]. Also an Excel table sheet (lib/xlsx.php). */
+function report_spec(string $name, array $columns, array $rows, array $totals = [], array $extra = []): array
+{
+    return ['name' => $name, 'columns' => $columns, 'rows' => $rows, 'totals' => $totals, 'extra' => $extra];
+}
+
+/** A report for Excel: codes in words (the screens translate them themselves). */
+function report_for_excel(array $spec): array
+{
+    $words = ['job' => 'Job bill', 'counter' => 'Counter sale', 'return' => 'Return'];
+    foreach ($spec['rows'] as &$r) {
+        if (isset($r['type'])) {
+            $r['type'] = $words[$r['type']] ?? $r['type'];
+        }
+        if (isset($r['mode'])) {
+            $r['mode'] = tr('pay.' . $r['mode'], 'en');
+        }
+    }
+    unset($r);
+    return $spec;
+}
+
+/** Send a report as JSON ({columns, rows, totals}), Excel (format=xlsx) or CSV (format=csv). */
+function report_send(array $spec)
 {
     [$from, $to] = report_range();
+    ['name' => $name, 'columns' => $columns, 'rows' => $rows, 'totals' => $totals] = $spec;
+    if (qp('format') === 'xlsx') {
+        return xlsx_response("$name-$from-to-$to.xlsx", [REPORT_TITLES[$name] ?? $name => report_for_excel($spec)]);
+    }
     if (qp('format') === 'csv') {
         $data = array_map(static fn ($r) => array_map(static fn ($k) => $r[$k] ?? '', array_keys($columns)), $rows);
         if ($totals) {
@@ -25,7 +54,7 @@ function report_out(string $name, array $columns, array $rows, array $totals = [
         }
         return csv_response("$name-$from-to-$to.csv", array_values($columns), $data);
     }
-    return ['report' => $name, 'from' => $from, 'to' => $to, 'columns' => array_keys($columns), 'rows' => $rows, 'totals' => $totals] + $extra;
+    return ['report' => $name, 'from' => $from, 'to' => $to, 'columns' => array_keys($columns), 'rows' => $rows, 'totals' => $totals] + $spec['extra'];
 }
 
 function sum_cols(array $rows, array $keys): array
@@ -76,7 +105,8 @@ function profit_figures(string $from, string $to): array
     return $out;
 }
 
-route('GET', '/reports/sales', function () {
+function report_sales(): array
+{
     [$from, $to] = report_range();
     $rows = rows(
         "SELECT i.invoice_date AS date, i.invoice_no, i.inv_type AS type, COALESCE(c.name, i.cust_name) AS customer, i.cust_gstin AS gstin,
@@ -97,11 +127,14 @@ route('GET', '/reports/sales', function () {
         $rows = array_merge($rows, $returns);
         usort($rows, static fn ($a, $b) => [$a['date'], $a['type'] === 'return', $a['invoice_no']] <=> [$b['date'], $b['type'] === 'return', $b['invoice_no']]);
     }
-    return report_out('sales', ['date' => 'Date', 'invoice_no' => 'Invoice no', 'type' => 'Type', 'customer' => 'Customer', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'round_off' => 'Round off', 'total' => 'Total', 'paid' => 'Paid', 'balance' => 'Balance'],
+    return report_spec('sales', ['date' => 'Date', 'invoice_no' => 'Invoice no', 'type' => 'Type', 'customer' => 'Customer', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'round_off' => 'Round off', 'total' => 'Total', 'paid' => 'Paid', 'balance' => 'Balance'],
         $rows, sum_cols($rows, ['taxable', 'cgst', 'sgst', 'igst', 'round_off', 'total', 'paid', 'balance']));
-}, ['perm' => 'reports', 'also' => 'see_money']);
+}
 
-route('GET', '/reports/purchases', function () {
+route('GET', '/reports/sales', fn () => report_send(report_sales()), ['perm' => 'reports', 'also' => 'see_money']);
+
+function report_purchases(): array
+{
     [$from, $to] = report_range();
     $rows = rows(
         "SELECT p.bill_date AS date, p.bill_no, s.name AS supplier, s.gstin, p.taxable_total AS taxable, p.cgst, p.sgst, p.igst,
@@ -109,12 +142,15 @@ route('GET', '/reports/purchases', function () {
          FROM purchases p JOIN suppliers s ON s.id = p.supplier_id WHERE p.status <> 'cancelled' AND p.bill_date BETWEEN ? AND ? ORDER BY p.bill_date, p.id",
         [$from, $to]
     );
-    return report_out('purchases', ['date' => 'Date', 'bill_no' => 'Bill no', 'supplier' => 'Supplier', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'other_charges' => 'Other', 'round_off' => 'Round off', 'total' => 'Total', 'mode' => 'Payment'],
+    return report_spec('purchases', ['date' => 'Date', 'bill_no' => 'Bill no', 'supplier' => 'Supplier', 'gstin' => 'GSTIN', 'taxable' => 'Taxable', 'cgst' => 'CGST', 'sgst' => 'SGST', 'igst' => 'IGST', 'other_charges' => 'Other', 'round_off' => 'Round off', 'total' => 'Total', 'mode' => 'Payment'],
         $rows, sum_cols($rows, ['taxable', 'cgst', 'sgst', 'igst', 'other_charges', 'round_off', 'total']));
-}, ['perm' => 'reports', 'also' => 'purchases']);
+}
+
+route('GET', '/reports/purchases', fn () => report_send(report_purchases()), ['perm' => 'reports', 'also' => 'purchases']);
 
 /* Stock valuation at net (weighted-average) cost, as of now. */
-route('GET', '/reports/stock', function () {
+function report_stock(): array
+{
     $params = [];
     $w = 'p.active = 1 AND p.current_stock <> 0';
     if ($loc = qp_int('location')) {
@@ -129,11 +165,14 @@ route('GET', '/reports/stock', function () {
          WHERE $w ORDER BY l.sort_order, p.rack, p.part_no",
         $params
     );
-    return report_out('stock', ['part_no' => 'Part no', 'name' => 'Name', 'category' => 'Category', 'location' => 'Location', 'rack' => 'Rack', 'stock' => 'Stock', 'unit' => 'Unit', 'avg_cost' => 'Net cost', 'value' => 'Value', 'mrp' => 'MRP', 'mrp_value' => 'Value at MRP'],
+    return report_spec('stock', ['part_no' => 'Part no', 'name' => 'Name', 'category' => 'Category', 'location' => 'Location', 'rack' => 'Rack', 'stock' => 'Stock', 'unit' => 'Unit', 'avg_cost' => 'Net cost', 'value' => 'Value', 'mrp' => 'MRP', 'mrp_value' => 'Value at MRP'],
         $rows, sum_cols($rows, ['value', 'mrp_value']));
-}, ['perm' => 'reports', 'also' => 'see_costs']);
+}
 
-route('GET', '/reports/profit', function () {
+route('GET', '/reports/stock', fn () => report_send(report_stock()), ['perm' => 'reports', 'also' => 'see_costs']);
+
+function report_profit(): array
+{
     [$from, $to] = report_range();
     $f = profit_figures($from, $to);
     // Month by month inside the range
@@ -145,12 +184,15 @@ route('GET', '/reports/profit', function () {
         $rows[] = ['month' => date('Y-m', $cur)] + profit_figures($mFrom, $mTo);
         $cur = strtotime('+1 month', $cur);
     }
-    return report_out('profit', ['month' => 'Month', 'sales' => 'Sales (taxable)', 'parts_sales' => 'Parts sales', 'labour_sales' => 'Labour sales', 'parts_cost' => 'Parts cost', 'gross_margin' => 'Gross margin', 'mechanic_payments' => 'Mechanic payments', 'expenses' => 'Expenses', 'profit' => 'Profit'],
+    return report_spec('profit', ['month' => 'Month', 'sales' => 'Sales (taxable)', 'parts_sales' => 'Parts sales', 'labour_sales' => 'Labour sales', 'parts_cost' => 'Parts cost', 'gross_margin' => 'Gross margin', 'mechanic_payments' => 'Mechanic payments', 'expenses' => 'Expenses', 'profit' => 'Profit'],
         $rows, $f, ['summary' => $f]);
-}, ['perm' => 'reports', 'also' => 'see_money']);
+}
+
+route('GET', '/reports/profit', fn () => report_send(report_profit()), ['perm' => 'reports', 'also' => 'see_money']);
 
 /* Customer dues by age of the unpaid bills; dues older than any bill (opening / unallocated) are "old". */
-route('GET', '/reports/dues', function () {
+function report_dues(): array
+{
     $today = today();
     $rows = [];
     foreach (rows("SELECT c.id, c.name, c.phone, ROUND(" . CUSTOMER_BALANCE_SQL . ", 2) AS balance FROM customers c HAVING balance > 0.004 ORDER BY balance DESC") as $c) {
@@ -164,22 +206,28 @@ route('GET', '/reports/dues', function () {
         }
         $rows[] = ['customer' => $c['name'], 'phone' => $c['phone'], 'customer_id' => (int) $c['id']] + array_map('r2', $b) + ['old' => r2(max(0, (float) $c['balance'] - $inBills)), 'total' => (float) $c['balance']];
     }
-    return report_out('dues', ['customer' => 'Customer', 'phone' => 'Phone', 'd0_30' => '0–30 days', 'd31_60' => '31–60 days', 'd61_90' => '61–90 days', 'd90' => 'Over 90 days', 'old' => 'Old dues', 'total' => 'Total'],
+    return report_spec('dues', ['customer' => 'Customer', 'phone' => 'Phone', 'd0_30' => '0–30 days', 'd31_60' => '31–60 days', 'd61_90' => '61–90 days', 'd90' => 'Over 90 days', 'old' => 'Old dues', 'total' => 'Total'],
         $rows, sum_cols($rows, ['d0_30', 'd31_60', 'd61_90', 'd90', 'old', 'total']));
-}, ['perm' => 'reports', 'also' => 'see_money']);
+}
 
-route('GET', '/reports/payables', function () {
+route('GET', '/reports/dues', fn () => report_send(report_dues()), ['perm' => 'reports', 'also' => 'see_money']);
+
+function report_payables(): array
+{
     $rows = rows(
         "SELECT s.id AS supplier_id, s.name AS supplier, s.phone, ROUND(" . SUPPLIER_BALANCE_SQL . ", 2) AS balance,
                 (SELECT MAX(bill_date) FROM purchases p WHERE p.supplier_id = s.id AND p.status <> 'cancelled') AS last_bill,
                 (SELECT MAX(paid_on) FROM supplier_payments sp WHERE sp.supplier_id = s.id) AS last_payment
          FROM suppliers s HAVING balance > 0.004 ORDER BY balance DESC"
     );
-    return report_out('payables', ['supplier' => 'Supplier', 'phone' => 'Phone', 'last_bill' => 'Last bill', 'last_payment' => 'Last payment', 'balance' => 'Payable'], $rows, sum_cols($rows, ['balance']));
-}, ['perm' => 'reports', 'also' => 'purchases']);
+    return report_spec('payables', ['supplier' => 'Supplier', 'phone' => 'Phone', 'last_bill' => 'Last bill', 'last_payment' => 'Last payment', 'balance' => 'Payable'], $rows, sum_cols($rows, ['balance']));
+}
+
+route('GET', '/reports/payables', fn () => report_send(report_payables()), ['perm' => 'reports', 'also' => 'purchases']);
 
 /* Monthly GST summary: output tax (sales) − input tax (purchases), by rate and head. */
-route('GET', '/reports/gst', function () {
+function report_gst(): array
+{
     [$from, $to] = report_range();
     $out = rows(
         "SELECT ii.gst_rate AS rate, SUM(ii.taxable) AS taxable, SUM(ii.cgst) AS cgst, SUM(ii.sgst) AS sgst, SUM(ii.igst) AS igst
@@ -233,12 +281,15 @@ route('GET', '/reports/gst', function () {
     }
     unset($r);
     $keys = ['out_taxable', 'out_cgst', 'out_sgst', 'out_igst', 'in_taxable', 'in_cgst', 'in_sgst', 'in_igst', 'net_cgst', 'net_sgst', 'net_igst', 'net_total'];
-    return report_out('gst', ['rate' => 'GST %', 'out_taxable' => 'Sales taxable', 'out_cgst' => 'Output CGST', 'out_sgst' => 'Output SGST', 'out_igst' => 'Output IGST',
+    return report_spec('gst', ['rate' => 'GST %', 'out_taxable' => 'Sales taxable', 'out_cgst' => 'Output CGST', 'out_sgst' => 'Output SGST', 'out_igst' => 'Output IGST',
         'in_taxable' => 'Purchase taxable', 'in_cgst' => 'Input CGST', 'in_sgst' => 'Input SGST', 'in_igst' => 'Input IGST', 'net_cgst' => 'Net CGST', 'net_sgst' => 'Net SGST', 'net_igst' => 'Net IGST', 'net_total' => 'Net GST payable'],
         $rows, sum_cols($rows, $keys));
-}, ['perm' => 'reports', 'also' => 'see_money']);
+}
 
-route('GET', '/reports/mechanics', function () {
+route('GET', '/reports/gst', fn () => report_send(report_gst()), ['perm' => 'reports', 'also' => 'see_money']);
+
+function report_mechanics(): array
+{
     [$from, $to] = report_range();
     $work = mechanic_work($from, $to);
     $paid = mechanic_paid($from, $to);
@@ -252,6 +303,8 @@ route('GET', '/reports/mechanics', function () {
             'paid_daily' => r2($paid[$id]['daily'] ?? 0), 'paid_advance' => r2($paid[$id]['advance'] ?? 0),
         ];
     }
-    return report_out('mechanics', ['mechanic' => 'Mechanic', 'jobs' => 'Jobs billed', 'labour' => 'Labour billed', 'parts' => 'Parts fitted', 'paid_daily' => 'Paid (daily)', 'paid_advance' => 'Advances'],
+    return report_spec('mechanics', ['mechanic' => 'Mechanic', 'jobs' => 'Jobs billed', 'labour' => 'Labour billed', 'parts' => 'Parts fitted', 'paid_daily' => 'Paid (daily)', 'paid_advance' => 'Advances'],
         $rows, sum_cols($rows, ['jobs', 'labour', 'parts', 'paid_daily', 'paid_advance']));
-}, ['perm' => 'reports', 'also' => 'see_money']);
+}
+
+route('GET', '/reports/mechanics', fn () => report_send(report_mechanics()), ['perm' => 'reports', 'also' => 'see_money']);

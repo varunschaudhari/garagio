@@ -8,6 +8,7 @@ import { dataTable, bindTable, pager, emptyState, skeletonRows } from '../ui/tab
 import { field } from '../ui/form.js';
 import { openDrawer } from '../ui/drawer.js';
 import { toast, toastError } from '../ui/toast.js';
+import { downloadExcel } from '../ui/excel.js';
 
 const PER_PAGE = 50;
 const LANGS = () => [{ value: 'mr', label: 'मराठी' }, { value: 'en', label: 'English' }];
@@ -69,6 +70,7 @@ export default async function customers(ctx) {
   setHTML(ctx.el, html`
     <div class="page-head">
       <h1>${t('customers.title')}</h1>
+      <button class="btn btn-secondary" data-act="export" title="${t('exports.customers_hint')}">${icon('file-spreadsheet')}${t('exports.excel')}</button>
       <button class="btn btn-primary" data-act="new">${icon('plus')}${t('customers.new')}</button>
     </div>
     <div class="card">
@@ -115,6 +117,7 @@ export default async function customers(ctx) {
     st.page = 1;
     load();
   });
+  on(ctx.el, 'click', '[data-act="export"]', (e, b) => downloadExcel('/exports/customers', {}, b));
   on(ctx.el, 'click', '[data-act="new"]', async () => {
     const c = await openCustomerForm();
     if (c) location.hash = '#/customers/' + c.id;

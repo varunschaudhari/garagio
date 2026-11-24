@@ -1,11 +1,12 @@
 import { html, setHTML, $, on } from '../dom.js';
 import { t } from '../i18n.js';
-import { api, downloadApiFile } from '../api.js';
+import { api } from '../api.js';
 import { hasRole, can } from '../store.js';
 import { icon } from '../ui/icons.js';
 import { money, qty, date, todayISO } from '../format.js';
 import { skeletonRows, emptyState } from '../ui/table.js';
 import { toastError } from '../ui/toast.js';
+import { monthRange, downloadExcel } from '../ui/excel.js';
 
 const ALL = ['sales', 'purchases', 'stock', 'profit', 'dues', 'payables', 'gst', 'mechanics'];
 /** Reports that are a snapshot "as of now" rather than a date range. */
@@ -13,15 +14,16 @@ const NO_RANGE = ['stock', 'dues', 'payables'];
 const TEXT_COLS = new Set(['date', 'invoice_no', 'type', 'customer', 'gstin', 'bill_no', 'supplier', 'mode', 'part_no', 'name', 'category', 'location', 'rack', 'unit', 'month', 'phone', 'last_bill', 'last_payment', 'mechanic']);
 const QTY_COLS = new Set(['stock', 'jobs', 'rate']);
 
-function monthRange(offset) {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + offset);
-  const p = (x) => String(x).padStart(2, '0');
-  const first = `${d.getFullYear()}-${p(d.getMonth() + 1)}-01`;
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return [first, `${last.getFullYear()}-${p(last.getMonth() + 1)}-${p(last.getDate())}`];
-}
+/** The "Excel downloads" tab: [key, API path, may this person have it?]. Dates apply where it says so. */
+const DOWNLOADS = [
+  ['workbook', '/exports/workbook', () => true],
+  ['sale_items', '/exports/sale-items', () => can('see_money')],
+  ['purchase_items', '/exports/purchase-items', () => can('purchases')],
+  ['jobs', '/exports/jobs', () => can('jobs')],
+  ['cash', '/exports/cash', () => can('cash_book')],
+  ['customers', '/exports/customers', () => can('customers')],
+  ['parts', '/exports/parts', () => true],
+];
 
 function cell(key, v) {
   if (v === null || v === undefined || v === '') return '—';
@@ -38,13 +40,14 @@ export default async function reports(ctx) {
   ctx.setTitle(t('reports.title'));
   // Each report needs the permission for its data (see the API).
   const NEEDS = { sales: 'see_money', profit: 'see_money', dues: 'see_money', gst: 'see_money', mechanics: 'see_money', stock: 'see_costs', purchases: 'purchases', payables: 'purchases' };
-  const tabs = ALL.filter((k) => can(NEEDS[k]));
+  const tabs = [...ALL.filter((k) => can(NEEDS[k])), 'exports'];
   let tab = tabs.includes(ctx.query.tab) ? ctx.query.tab : tabs[0];
   let [from, to] = [ctx.query.from || monthRange(0)[0], ctx.query.to || todayISO()];
 
   setHTML(ctx.el, html`
-    <div class="page-head"><h1>${t('reports.title')}</h1></div>
-    <div class="tabs" role="tablist">${tabs.map((k) => html`<button role="tab" data-tab="${k}" aria-selected="${k === tab}">${t('reports.' + k)}</button>`)}</div>
+    <div class="page-head"><h1>${t('reports.title')}</h1><span class="spacer"></span>
+      <button class="btn btn-secondary" data-go-exports>${icon('file-spreadsheet')}${t('exports.title')}</button></div>
+    <div class="tabs" role="tablist">${tabs.map((k) => html`<button role="tab" data-tab="${k}" aria-selected="${k === tab}">${k === 'exports' ? html`${icon('file-spreadsheet', 16)} ${t('exports.title')}` : t('reports.' + k)}</button>`)}</div>
     <div class="card">
       <div class="toolbar" id="r-tools"></div>
       <div id="r-body">${skeletonRows(5)}</div>
@@ -64,11 +67,21 @@ export default async function reports(ctx) {
           <button class="filter-chip" data-preset="last">${t('reports.last_month')}</button>
         </div>` : html`<span class="muted">${date(todayISO())}</span>`}
       <span class="spacer"></span>
-      <button class="btn btn-secondary" data-act="csv">${icon('download')}${t('reports.export')}</button>`);
+      ${tab === 'exports' ? '' : html`<button class="btn btn-secondary" data-act="xlsx">${icon('file-spreadsheet')}${t('exports.download_excel')}</button>`}`);
   };
 
   const load = async () => {
     history.replaceState(null, '', `#/reports?tab=${tab}&from=${from}&to=${to}`);
+    if (tab === 'exports') {
+      setHTML(body, html`<div class="banner" style="margin:16px 16px 0">${icon('info')}<span>${t('exports.range_note')}</span></div>
+        <div class="list">${DOWNLOADS.filter(([, , ok]) => ok()).map(([k, path]) => html`
+          <div class="list-item" style="gap:12px">
+            <span class="kpi-icon ${k === 'workbook' ? 'success' : 'info'}">${icon('file-spreadsheet', 20)}</span>
+            <div style="flex:1;min-width:0"><div class="strong">${t('exports.' + k)}</div><div class="small muted">${t('exports.' + k + '_hint')}</div></div>
+            <button class="btn ${k === 'workbook' ? 'btn-primary' : 'btn-secondary'} btn-sm" data-download="${path}">${icon('download', 16)}${t('exports.download')}</button>
+          </div>`)}</div>`);
+      return;
+    }
     setHTML(body, skeletonRows(5));
     let r;
     try {
@@ -117,7 +130,13 @@ export default async function reports(ctx) {
     drawTools();
     load();
   });
-  on(tools, 'click', '[data-act="csv"]', () => downloadApiFile('/reports/' + tab, { from, to, format: 'csv' }, `${tab}.csv`).catch(toastError));
+  on(ctx.el, 'click', '[data-go-exports]', () => {
+    const tabBtn = ctx.el.querySelector('[role=tab][data-tab="exports"]');
+    tabBtn.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    tabBtn.click();
+  });
+  on(tools, 'click', '[data-act="xlsx"]', (e, b) => downloadExcel('/reports/' + tab, { from, to, format: 'xlsx' }, b));
+  on(body, 'click', '[data-download]', (e, b) => downloadExcel(b.dataset.download, { from, to }, b));
 
   drawTools();
   await load();

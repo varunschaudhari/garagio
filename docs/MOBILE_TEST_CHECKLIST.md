@@ -177,6 +177,14 @@ Tabs: front desk Jobs · New job · Billing · Customers · Me; owner Home · Ap
 - [ ] Edit him, turn "Uses the app" on with a username and password → he can log in on another phone.
 - [ ] Remove a mechanic with no jobs → gone; with past jobs → hidden (not offered on new jobs).
 
+## 24 Nov 2026 – Excel files
+
+- [ ] More → Reports → "This report in Excel" → the share sheet opens; send it to WhatsApp; it opens in Excel / Sheets with dates and ₹ amounts.
+- [ ] Reports → "Everything in one file" (last month) → one file with many sheets.
+- [ ] Cash book → Excel → This month → share.
+- [ ] Stock → Import from Excel → "Parts list" → share; edit a price in Excel, import it back → the price changes.
+- [ ] Front desk or mechanic phone: no Everything button where they have no Reports.
+
 ## Release APK – 15-minute smoke test
 
 Run on every new APK, installed from the EAS link, against the **HTTPS test site** (not the PC).

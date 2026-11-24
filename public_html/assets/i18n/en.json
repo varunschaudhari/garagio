@@ -1178,7 +1178,6 @@
     "payables": "Supplier payables",
     "gst": "GST summary",
     "mechanics": "Mechanic performance",
-    "export": "Export CSV",
     "this_month": "This month",
     "last_month": "Last month",
     "today": "Today",
@@ -1425,5 +1424,28 @@
     "photo_saved": "Photo saved.",
     "take_photo": "Take photo",
     "from_gallery": "From gallery"
+  },
+  "exports": {
+    "title": "Excel downloads",
+    "download": "Download",
+    "download_excel": "Download Excel",
+    "excel": "Excel",
+    "range_note": "The dates above apply to bills, purchases, cash book and job cards. Customer and parts lists are as of today.",
+    "workbook": "Everything in one file",
+    "workbook_hint": "One sheet each: bills, items sold, purchases, cash book, job cards, customers, dues, stock, parts, GST, mechanics, profit (what you may see).",
+    "sale_items": "Items sold",
+    "sale_items_hint": "Every line of every bill: part, quantity, MRP, discount, rate, amount.",
+    "purchase_items": "Items bought",
+    "purchase_items_hint": "Every line of the supplier bills.",
+    "jobs": "Job cards",
+    "jobs_hint": "Job cards opened in these dates, with mechanic, status and bill.",
+    "cash": "Cash book",
+    "cash_hint": "Cash day by day, expenses, money received and paid to suppliers.",
+    "customers": "Customers and bikes",
+    "customers_hint": "All customers with phone numbers and their bikes.",
+    "parts": "Parts list",
+    "parts_hint": "Same layout as the import sheet: change it in Excel and upload it back.",
+    "share_title": "Share Excel file",
+    "this_report": "This report in Excel"
   }
 }

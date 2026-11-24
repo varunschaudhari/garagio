@@ -4,11 +4,13 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { api } from '@/api/client';
-import { Banner, Card, Divider, EmptyState, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { Banner, Button, Card, Divider, EmptyState, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { toastError } from '@/components/toast';
+import { shareExcel } from '@/excel';
 import { date, money, qty } from '@/format';
 import { useSession, can } from '@/store/session';
 import { space, useTheme } from '@/theme';
-import { ChartColumn } from 'lucide-react-native';
+import { ChartColumn, FileSpreadsheet } from 'lucide-react-native';
 
 type ReportKey = 'profit' | 'gst' | 'dues' | 'payables' | 'stock';
 interface Report {
@@ -39,7 +41,7 @@ function fmt(key: string, v: string | number | null | undefined) {
   return money(Number(v));
 }
 
-/** Owner (all) / inventory (stock, payables): key reports on the phone; CSV export is on the web. */
+/** Owner (all) / inventory (stock, payables): key reports on the phone, and Excel files to share (WhatsApp, Drive). */
 export default function Reports() {
   const { t } = useTranslation();
   const { c } = useTheme();
@@ -52,6 +54,18 @@ export default function Reports() {
   const [from, to] = monthRange(month);
   const q = useQuery({ queryKey: ['report', key, from, to], queryFn: () => api.get<Report>(`/reports/${key}`, { from, to }) });
   const r = q.data;
+  const [sharing, setSharing] = useState<'' | 'report' | 'all'>('');
+  const share = async (what: 'report' | 'all') => {
+    setSharing(what);
+    try {
+      if (what === 'report') await shareExcel(`/reports/${key}`, { from, to, format: 'xlsx' }, `${key}-${from}.xlsx`, t('exports.share_title'));
+      else await shareExcel('/exports/workbook', { from, to }, `trimurti-garage-${from}.xlsx`, t('exports.share_title'));
+    } catch (e) {
+      toastError(e);
+    } finally {
+      setSharing('');
+    }
+  };
   const valueCols = r ? r.columns.filter((col) => col !== TITLE[key] && !['customer_id', 'supplier_id', 'phone'].includes(col)) : [];
 
   return (
@@ -106,6 +120,13 @@ export default function Reports() {
             <EmptyState icon={ChartColumn} title={t('common.no_results')} />
           )
         ) : null}
+        <Card style={{ gap: space[3] }}>
+          <Txt weight="bold">{t('exports.title')}</Txt>
+          <Segmented<0 | -1> value={month} onChange={setMonth} options={[{ value: 0, label: t('reports.this_month') }, { value: -1, label: t('reports.last_month') }]} />
+          <Button title={t('exports.this_report')} icon={FileSpreadsheet} variant="secondary" onPress={() => void share('report')} loading={sharing === 'report'} disabled={!!sharing} needsOnline />
+          <Button title={t('exports.workbook')} icon={FileSpreadsheet} onPress={() => void share('all')} loading={sharing === 'all'} disabled={!!sharing} needsOnline />
+          <Txt size="sm" muted>{t('exports.workbook_hint')}</Txt>
+        </Card>
       </ScrollView>
     </View>
   );

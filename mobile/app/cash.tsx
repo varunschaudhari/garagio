@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, Check, Eye, EyeOff, Image as ImageIcon, Pencil, Plus, Trash2, Undo2 } from 'lucide-react-native';
+import { Camera, Check, Eye, EyeOff, FileSpreadsheet, Image as ImageIcon, Pencil, Plus, Trash2, Undo2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,6 +8,7 @@ import { BillPhotoPicker, BillPhotoViewer, pickBillPhoto, uploadBillPhoto } from
 import { Sheet } from '@/components/sheet';
 import { toast, toastError } from '@/components/toast';
 import { Button, Card, Divider, Field, IconButton, Loading, OfflineBanner, Segmented, Txt } from '@/components/ui';
+import { monthRange, shareExcel } from '@/excel';
 import { date, datetime, money } from '@/format';
 import { nm } from '@/i18n';
 import { useSession } from '@/store/session';
@@ -79,6 +80,15 @@ export default function CashScreen() {
   const qc = useQueryClient();
   const owner = useSession((s) => s.user?.role === 'owner');
   const day = isoToday();
+  /** The cash book of a month as an Excel file to share. */
+  const shareCash = async (offset: number) => {
+    const [from, to] = monthRange(offset);
+    try {
+      await shareExcel('/exports/cash', { from, to }, `cash-book-${from}.xlsx`, t('exports.share_title'));
+    } catch (e) {
+      toastError(e);
+    }
+  };
   const q = useQuery({ queryKey: ['cash-day', day], queryFn: () => api.get<CashDay>('/cash/day', { date: day }) });
   const [sheet, setSheet] = useState(false);
   const cats = useQuery({ queryKey: ['expense-categories'], queryFn: () => api.get<{ items: ExpenseCategory[] }>('/expense-categories').then((r) => r.items) });
@@ -247,6 +257,20 @@ export default function CashScreen() {
           )}
           {!cl ? <Button title={t('cash.add_expense')} icon={Plus} variant="secondary" onPress={() => { setAmount(''); setNote(''); setPhoto(null); setCat(cats.data?.[0]?.id ?? null); setSheet(true); }} needsOnline /> : null}
           {owner ? <Button title={t('cash.edit_categories')} icon={Pencil} variant="ghost" small onPress={() => setEditCats(true)} /> : null}
+          <Button
+            title={t('exports.excel')}
+            icon={FileSpreadsheet}
+            variant="ghost"
+            small
+            needsOnline
+            onPress={() =>
+              Alert.alert(t('exports.cash'), t('exports.cash_hint'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('reports.last_month'), onPress: () => void shareCash(-1) },
+                { text: t('reports.this_month'), onPress: () => void shareCash(0) },
+              ])
+            }
+          />
         </Card>
       </ScrollView>
 

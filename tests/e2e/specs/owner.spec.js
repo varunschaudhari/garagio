@@ -64,21 +64,44 @@ test('mechanic summary: add a mechanic without a login, rename him, remove him',
   await expect(page.locator('section.card', { hasText: 'Bapu Shinde' })).toHaveCount(0);
 });
 
-test('profit report shows the formula and a CSV export downloads', async ({ page }) => {
+test('profit report shows the formula and an Excel file downloads', async ({ page }) => {
   await login(page, 'admin');
   await page.goto('/#/reports?tab=profit');
   await expect(page.getByText('Profit = sales (without GST)')).toBeVisible();
   await expect(page.locator('.kpi', { hasText: 'Mechanic pay' })).toContainText('₹450.00');
   await page.getByRole('tab', { name: 'GST summary' }).click();
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Export CSV' }).click()]);
-  expect(dl.suggestedFilename()).toMatch(/^gst-.*\.csv$/);
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download Excel' }).click()]);
+  expect(dl.suggestedFilename()).toMatch(/^gst-.*\.xlsx$/);
+});
+
+test('Excel downloads: everything in one file, and the lists from their pages', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('/#/reports?tab=exports');
+  await expect(page.locator('#r-body')).toContainText('Everything in one file');
+  await expect(page.locator('#r-body')).toContainText('Parts list');
+  const [all] = await Promise.all([page.waitForEvent('download'), page.locator('[data-download="/exports/workbook"]').click()]);
+  expect(all.suggestedFilename()).toMatch(/^trimurti-garage-.*\.xlsx$/);
+
+  await page.goto('/#/parts');
+  const [parts] = await Promise.all([page.waitForEvent('download'), page.locator('[data-act="export"]').click()]);
+  expect(parts.suggestedFilename()).toMatch(/^parts-list-.*\.xlsx$/);
+
+  await page.goto('/#/jobs');
+  await page.locator('[data-act="export"]').click();
+  await page.locator('.modal [data-preset="last"]').click();
+  const [jobs] = await Promise.all([page.waitForEvent('download'), page.locator('.modal').getByRole('button', { name: 'Download' }).click()]);
+  expect(jobs.suggestedFilename()).toMatch(/^job-cards-.*\.xlsx$/);
 });
 
 test('inventory manager sees only stock, purchase and payables reports', async ({ page }) => {
   await login(page, 'stock');
   await page.goto('/#/reports');
-  await expect(page.getByRole('tab')).toHaveCount(3);
+  await expect(page.getByRole('tab')).toHaveCount(4); // stock, purchases, payables + Excel downloads
   await expect(page.getByRole('tab', { name: 'Profit' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Excel downloads' }).click();
+  await expect(page.locator('#r-body')).toContainText('Items bought');
+  await expect(page.locator('#r-body')).not.toContainText('Items sold');
+  await expect(page.locator('#r-body')).not.toContainText('Customers and bikes');
 });
 
 test('reminders page lists payment dues with a WhatsApp send button', async ({ page }) => {

@@ -10,6 +10,7 @@ import { openDrawer } from '../ui/drawer.js';
 import { confirmDialog } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
 import { uploadBillPhoto, viewBillPhoto, billPhotoInput } from '../ui/bill-photo.js';
+import { excelRangeDialog } from '../ui/excel.js';
 
 const MODES = ['cash', 'upi', 'bank'];
 
@@ -30,6 +31,7 @@ export default async function cashPage(ctx) {
     <div class="page-head">
       <div style="flex:1;min-width:240px"><h1>${t('cash.title')}</h1><div class="sub">${t('cash.sub')}</div></div>
       <input class="input" type="date" id="cash-date" value="${day}" max="${todayISO()}" style="width:auto" aria-label="${t('cash.date')}">
+      <button class="btn btn-secondary" data-act="export" title="${t('exports.cash_hint')}">${icon('file-spreadsheet')}${t('exports.excel')}</button>
       <button class="btn btn-primary" data-act="expense">${icon('plus')}${t('cash.add_expense')}</button>
     </div>
     <div id="cash-body">${skeletonRows(6)}</div>`);
@@ -178,6 +180,7 @@ export default async function cashPage(ctx) {
       toastError(err);
     }
   });
+  on(ctx.el, 'click', '[data-act="export"]', () => excelRangeDialog({ title: t('exports.cash'), path: '/exports/cash' }));
   on(ctx.el, 'click', '[data-act="expense"]', async () => {
     let cats;
     try {

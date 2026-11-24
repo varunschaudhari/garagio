@@ -8,6 +8,7 @@ import { dataTable, bindTable, pager, emptyState, skeletonRows } from '../ui/tab
 import { openModal } from '../ui/modal.js';
 import { toast, toastError } from '../ui/toast.js';
 import { openPartForm, loadMasters } from './part-form.js';
+import { downloadExcel } from '../ui/excel.js';
 
 const PER_PAGE = 50;
 
@@ -32,6 +33,7 @@ export default async function parts(ctx) {
       ${canEdit ? html`
         <button class="btn btn-secondary" data-act="labels">${icon('qr-code')}${t('parts.labels')}</button>
         <button class="btn btn-secondary" data-act="import">${icon('upload')}${t('parts.import')}</button>
+        <button class="btn btn-secondary" data-act="export" title="${t('exports.parts_hint')}">${icon('file-spreadsheet')}${t('exports.excel')}</button>
         <button class="btn btn-primary" data-act="new">${icon('plus')}${t('parts.new')}</button>` : ''}
     </div>
     <div class="card">
@@ -107,6 +109,7 @@ export default async function parts(ctx) {
     if (saved) location.hash = '#/parts/' + saved.id;
   });
   on(ctx.el, 'click', '[data-act="labels"]', () => labelsDialog(locations, st.location));
+  on(ctx.el, 'click', '[data-act="export"]', (e, b) => downloadExcel('/exports/parts', {}, b));
   on(ctx.el, 'click', '[data-act="import"]', async () => {
     const mod = await import('./parts-import.js');
     if (await mod.openImport()) load();
